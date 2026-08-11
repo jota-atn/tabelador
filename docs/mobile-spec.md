@@ -1,6 +1,6 @@
 # Especificação: Tabelador Mobile (Android + Widget)
 
-> Status: **planejamento / scaffold criado** — o projeto Flutter existe em `mobile/`, mas ainda é o app padrão. Nenhuma tela do Tabelador foi implementada.
+> Status: **app funcionando, sem o widget** — fases 1 a 7 de 10 implementadas em `mobile/`. Dá pra cadastrar itens, criar tabelas, montar o horário arrastando e ver a semana. Falta o widget de tela inicial (fases 8–10), que é o motivo original do port.
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
