@@ -10,9 +10,17 @@ import '../theme/item_palette.dart';
 /// prova é que `resolveCellStyle` produz combinações legíveis nos dois temas,
 /// e que as 12 cores continuam distinguíveis numa célula de ~55dp.
 class DensityLab extends StatefulWidget {
-  const DensityLab({super.key, required this.onToggleBrightness});
+  const DensityLab({
+    super.key,
+    required this.onToggleBrightness,
+    required this.monetDisponivel,
+  });
 
   final VoidCallback onToggleBrightness;
+
+  /// Se o sistema entregou um esquema de cores dinâmico. Falso significa que o
+  /// tema está saindo da semente de fallback.
+  final bool monetDisponivel;
 
   @override
   State<DensityLab> createState() => _DensityLabState();
@@ -43,6 +51,8 @@ class _DensityLabState extends State<DensityLab> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
         children: [
+          _MonetProbe(disponivel: widget.monetDisponivel),
+          const SizedBox(height: 16),
           SegmentedButton<ColorDensity>(
             segments: [
               for (final d in ColorDensity.values)
@@ -65,6 +75,100 @@ class _DensityLabState extends State<DensityLab> {
           ),
           const SizedBox(height: 10),
           _PaletteStrip(density: _density),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mostra se o Monet chegou e qual acento o app está usando.
+///
+/// Existe porque "parece que não mudou nada" não distingue entre o sistema não
+/// entregar cor dinâmica e a mudança ser sutil demais pra notar num container.
+class _MonetProbe extends StatelessWidget {
+  const _MonetProbe({required this.disponivel});
+
+  final bool disponivel;
+
+  static String _hex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).toUpperCase().padLeft(6, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                disponivel ? Icons.check_circle_outline : Icons.info_outline,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  disponivel
+                      ? 'Cor dinâmica ativa'
+                      : 'Cor dinâmica indisponível — usando a semente',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final (nome, cor) in [
+                ('primary', scheme.primary),
+                ('secondary', scheme.secondary),
+                ('tertiary', scheme.tertiary),
+              ])
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 34,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: cor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nome,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        _hex(cor),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

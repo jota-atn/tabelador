@@ -34,7 +34,12 @@ class _TabeladorAppState extends State<TabeladorApp> {
         theme: buildAppTheme(lightDynamic, Brightness.light),
         darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
         themeMode: _mode,
-        home: DensityLab(onToggleBrightness: _toggleBrightness),
+        home: DensityLab(
+          onToggleBrightness: _toggleBrightness,
+          // Diagnóstico da fase 2: saber se o aparelho realmente entrega o
+          // Monet, em vez de deduzir isso olhando a cor de um botão.
+          monetDisponivel: lightDynamic != null || darkDynamic != null,
+        ),
       ),
     );
   }
