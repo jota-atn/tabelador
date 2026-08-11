@@ -40,24 +40,28 @@ Cada item guarda uma **chave de cor**, não um RGB solto. A chave define uma sem
 
 Motivo: cor arbitrária de color picker fica ilegível no tema escuro ou briga com a paleta dinâmica do sistema. Hardcodar hex por tema seria 4 valores × 12 cores pra manter em sincronia. Com semente, ajustar um tom é mexer num número, e o widget resolve os mesmos tons na hora de montar o snapshot.
 
-| chave | nome | hue HCT | uso típico |
-|---|---|---|---|
-| `tomate` | vermelho | 25 | monitoria, prova |
-| `tangerina` | laranja | 55 | |
-| `ambar` | amarelo | 85 | almoço, pausa |
-| `oliva` | verde-oliva | 110 | |
-| `salvia` | verde suave | 135 | livre |
-| `esmeralda` | verde | 165 | |
-| `turquesa` | ciano | 195 | |
-| `oceano` | azul | 235 | |
-| `indigo` | azul-violeta | 275 | |
-| `ametista` | roxo | 305 | |
-| `framboesa` | rosa | 345 | |
-| `grafite` | neutro | chroma ~6 | slot sem importância |
+| chave | nome | hue HCT | chroma | uso típico |
+|---|---|---|---|---|
+| `tomate` | vermelho | 25 | 50 | monitoria, prova |
+| `tangerina` | laranja | 58 | 50 | |
+| `ambar` | amarelo | 92 | 50 | almoço, pausa |
+| `oliva` | verde-oliva | 122 | 50 | |
+| `salvia` | verde acinzentado | 145 | **30** | livre |
+| `esmeralda` | verde | 174 | 50 | |
+| `turquesa` | ciano | 204 | 50 | |
+| `oceano` | azul | 240 | 50 | |
+| `indigo` | azul-violeta | 272 | 50 | |
+| `ametista` | roxo | 312 | 50 | |
+| `framboesa` | rosa | 345 | 50 | |
+| `grafite` | neutro | 250 | 6 | slot sem importância |
 
-Chroma ~50 nas cromáticas, pra todas parecerem da mesma família em vez de um saco de cores avulsas.
+Chroma 50 nas cromáticas, pra parecerem uma família só em vez de um saco de cores avulsas — com **uma exceção deliberada**: `salvia` usa chroma 30.
 
-Os gaps de hue variam de 25° a 40° em vez de 30° cravado: verde ocupa uma faixa enorme do espectro e amarelo-laranja é apertado, então espaçar uniformemente daria três verdes quase iguais e nenhum laranja decente. `oliva` (110) e `salvia` (135) são o par mais arriscado — validar na tela de prévia e afastar se preciso.
+Motivo da exceção: no aparelho, `oliva` e `salvia` ficaram próximas demais pra separar de relance. Entre amarelo e ciano o olho separa matizes mal, e afastar só o matiz espremeria `oliva` contra `ambar`. Dessaturar dá uma segunda pista além do matiz, e ainda acerta o nome — sálvia é uma erva de verde acinzentado.
+
+Os espaçamentos são irregulares porque grau de matiz em HCT não é distância percebida. Os valores saíram de medir a distância entre todos os 66 pares nos tons 40 e 80 e afastar os piores. O teste `nenhum par de cores fica próximo demais` segura isso contra regressão, com piso de 25 — que é piso de alarme, não meta.
+
+Par ainda apertado, a validar no aparelho: **`esmeralda` × `turquesa` no tema claro** (26,1). No tom 40 verde, ciano e azul saturados convergem pro escuro, e a métrica euclidiana em RGB subestima essa faixa.
 
 ### Aplicação da cor: três densidades, à escolha do usuário
 

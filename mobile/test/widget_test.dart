@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tabelador/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('o laboratório abre em Suave e troca de densidade', (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Paleta e densidade'), findsOneWidget);
+    expect(find.text('CÁLC'), findsWidgets);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // As três opções de densidade estão na tela e Sólido é selecionável.
+    for (final label in ['Discreto', 'Suave', 'Sólido']) {
+      expect(find.text(label), findsOneWidget);
+    }
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.text('Sólido'));
+    await tester.pumpAndSettle();
+    expect(find.text('CÁLC'), findsWidgets);
+  });
+
+  testWidgets('o botão de tema inverte o brilho', (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+
+    final antes = Theme.of(tester.element(find.byType(Scaffold))).brightness;
+
+    await tester.tap(find.byType(IconButton));
+    await tester.pumpAndSettle();
+
+    final depois = Theme.of(tester.element(find.byType(Scaffold))).brightness;
+    expect(depois, isNot(antes));
   });
 }
