@@ -14,9 +14,19 @@ Diferença de postura em relação ao script: no Python, cada célula é uma str
 
 ### Plataforma e visual
 - **Só Android** por enquanto (sem Mac disponível pra iOS).
-- **Material 3** com **cores dinâmicas (Monet)** — a paleta do app segue o wallpaper do sistema, via pacote `dynamic_color`, com `ColorScheme.fromSeed` como fallback em aparelhos que não expõem o Monet.
+- **Material 3** com **cores dinâmicas (Monet)** — via pacote `dynamic_color`, com `ColorScheme.fromSeed` como fallback em aparelhos que não expõem o Monet.
 - **Tema claro e escuro** seguindo o do sistema.
 - O widget segue as regras de widget do **Android 12+**: cantos arredondados do sistema, fundo adaptativo, redimensionamento responsivo. Alvo de teste: Poco M5 Pro 5G.
+
+### Princípio visual: neutro e minimalista
+
+**Chroma só onde identifica uma disciplina. Todo o resto é neutro.** Essa é a regra que decide qualquer dúvida de UI daqui pra frente.
+
+- **Chrome neutro**: app bar, fundos, cards, navegação e botões usam só a rampa neutra do M3 (`surface`, `surfaceContainer`, `onSurface`, `onSurfaceVariant`). Sem app bar colorida, sem superfície tingida.
+- **Material You restrito a acentos interativos** — seleção, FAB, aba ativa, indicador de arraste. A cor dinâmica do sistema não pinta superfícies grandes.
+- **Hierarquia por tipografia e espaço**, não por cor: dois pesos, três tamanhos. Onde daria vontade de destacar com cor, destaca-se com peso ou respiro.
+- **Poucas linhas**: o `fancy_grid` do script é 100% borda; aqui, espaçamento resolve a separação e fios de `outlineVariant` aparecem só onde a leitura exige.
+- **Estados vazios sem enfeite**: slot livre é espaço em branco com um rótulo discreto, não um card cinza cheio de ícone.
 
 ### Dados
 - **Múltiplas tabelas nomeadas** (ex: "2026.1", "2026.2"), uma marcada como **ativa**.
@@ -25,9 +35,44 @@ Diferença de postura em relação ao script: no Python, cada célula é uma str
 - **Cor mora na entidade**, não em regra de texto. ALMOÇO e LIVRE viram itens cadastrados como qualquer outro — o `dict cores` hardcoded do Python deixa de existir.
 
 ### Cores: paleta curada, não seletor livre
-Cada item guarda uma **chave de cor** (ex: `tomato`, `sage`, `indigo`), não um RGB solto. O app resolve essa chave pros papéis tonais do M3 (`colorContainer` / `onColorContainer`) em cada tema.
 
-Motivo: cor arbitrária escolhida num color picker fica ilegível no tema escuro, ou briga com a paleta dinâmica do sistema. Com chave + papel tonal, a mesma disciplina fica legível no claro, no escuro e no widget sem o usuário precisar pensar em contraste. Paleta prevista: ~12 tons bem separados no círculo cromático, o suficiente pra uma grade semanal sem repetir.
+Cada item guarda uma **chave de cor**, não um RGB solto. A chave define uma semente em HCT (hue + chroma) e o app gera a rampa tonal com `material_color_utilities` — que já vem junto do Flutter, não é dependência nova.
+
+Motivo: cor arbitrária de color picker fica ilegível no tema escuro ou briga com a paleta dinâmica do sistema. Hardcodar hex por tema seria 4 valores × 12 cores pra manter em sincronia. Com semente, ajustar um tom é mexer num número, e o widget resolve os mesmos tons na hora de montar o snapshot.
+
+| chave | nome | hue HCT | uso típico |
+|---|---|---|---|
+| `tomate` | vermelho | 25 | monitoria, prova |
+| `tangerina` | laranja | 55 | |
+| `ambar` | amarelo | 85 | almoço, pausa |
+| `oliva` | verde-oliva | 110 | |
+| `salvia` | verde suave | 135 | livre |
+| `esmeralda` | verde | 165 | |
+| `turquesa` | ciano | 195 | |
+| `oceano` | azul | 235 | |
+| `indigo` | azul-violeta | 275 | |
+| `ametista` | roxo | 305 | |
+| `framboesa` | rosa | 345 | |
+| `grafite` | neutro | chroma ~6 | slot sem importância |
+
+Chroma ~50 nas cromáticas, pra todas parecerem da mesma família em vez de um saco de cores avulsas.
+
+Os gaps de hue variam de 25° a 40° em vez de 30° cravado: verde ocupa uma faixa enorme do espectro e amarelo-laranja é apertado, então espaçar uniformemente daria três verdes quase iguais e nenhum laranja decente. `oliva` (110) e `salvia` (135) são o par mais arriscado — validar na tela de prévia e afastar se preciso.
+
+### Aplicação da cor: barra de acento
+
+Preenchimento de célula foi **descartado**. Numa grade 5×6 são até 30 blocos coloridos simultâneos — vira colcha de retalhos e contradiz o princípio minimalista.
+
+A célula ocupada é **fundo neutro + texto neutro + filete colorido de 3dp na lateral**. A cor ocupa ~5% dos pixels da célula: identifica de relance sem dominar a tela. Como a área é minúscula, o filete usa chroma cheio.
+
+| | filete | fundo da célula | texto |
+|---|---|---|---|
+| tema claro | tom 40 | `surfaceContainer` | `onSurface` |
+| tema escuro | tom 80 | `surfaceContainer` | `onSurface` |
+
+Tons 40/80 são os mesmos que o M3 usa pra cor de acento sobre superfície neutra, então o contraste vem garantido pelo sistema — o usuário nunca escolhe uma combinação ilegível, porque não escolhe combinação nenhuma, só a chave.
+
+**A cor é reforço, nunca a única informação.** A sigla está sempre visível na célula e no widget. Isso importa porque `tomate` e `esmeralda` são praticamente o mesmo tom pra quem tem deuteranopia (~8% dos homens): com a sigla ali, a cor é codificação redundante, não o único jeito de distinguir uma disciplina da outra.
 
 ### Sigla obrigatória
 Todo item tem **nome completo** e **sigla curta**. A célula da grade semanal tem ~55dp e o widget é ainda mais apertado — ali entra a sigla; o nome completo aparece no editor do dia, no detalhe e na biblioteca.
@@ -85,20 +130,18 @@ Uma chave `today_schedule_json` no `SharedPreferences` nativo (via `home_widget`
       "sigla": "CÁLC II",
       "tipo": "Aula",
       "local": "Bloco C, sala 204",
-      "colorLight": "#FFD8E4",
-      "colorDark": "#4A2532",
-      "onColorLight": "#31111D",
-      "onColorDark": "#FFD8E4"
+      "accentLight": "#8C4A5E",
+      "accentDark": "#FFB1C6"
     }
   ]
 }
 ```
 
-Cores já resolvidas em hex nos dois temas, porque `RemoteViews` não tem como consultar a paleta do Flutter em runtime.
+Cores já resolvidas em hex, porque `RemoteViews` não tem como consultar a paleta do Flutter em runtime. Como a cor virou só o filete, cada slot carrega **um** acento por tema em vez de par fundo/texto — o fundo e o texto do widget saem das cores neutras do sistema.
 
 ## Telas
 
-1. **Visão semana** (tela inicial) — a grade 5×6 completa, colorida, só leitura. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Toque num dia abre o editor daquele dia. Seletor de tabela ativa no topo.
+1. **Visão semana** (tela inicial) — a grade 5×6 completa em fundo neutro, cada célula ocupada com seu filete de acento, só leitura. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Toque num dia abre o editor daquele dia. Seletor de tabela ativa no topo.
 2. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens fixa embaixo. Arrasta o item da paleta pra linha do horário. Navegação entre dias por swipe ou setas.
 3. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, professor, notas.
 4. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade.
@@ -114,7 +157,7 @@ Cores já resolvidas em hex nos dois temas, porque `RemoteViews` não tem como c
 
 - Mostra **só o dia de hoje** da tabela ativa.
 - Fim de semana / dia sem nada: estado vazio explícito, não widget em branco.
-- Cantos arredondados via `system_app_widget_background_radius`; fundo usando as cores do sistema (`@android:color/system_accent1_*` no Android 12+) pra combinar com a tela inicial.
+- Cantos arredondados via `system_app_widget_background_radius`; fundo e texto usando as cores **neutras** do sistema (`@android:color/system_neutral1_*` no Android 12+), com o filete colorido de cada linha como único ponto de chroma. Assim ele convive com os outros widgets da tela inicial em vez de gritar.
 - Redimensionável, com `targetCellWidth`/`targetCellHeight` (Android 12+): em tamanho pequeno mostra os próximos 2–3 horários, em tamanho grande o dia inteiro.
 - Toque no widget abre o app na visão semana.
 
