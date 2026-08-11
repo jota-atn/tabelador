@@ -91,7 +91,9 @@ A grade trata segunda igual a sexta, mas o uso real é abrir o app no meio da qu
 
 - coluna do dia atual sobre superfície levemente elevada (`surfaceContainerHigh`);
 - rótulo do dia atual em peso maior;
-- fio de `outline` marcando a faixa de horário corrente.
+- rótulo do horário corrente em peso maior e cor de acento. Um marcador ao
+  lado do texto foi descartado: disputa largura com ele e estoura assim que a
+  fonte do sistema aumenta.
 
 ### Sigla obrigatória
 Todo item tem **nome completo** e **sigla curta**. A célula da grade semanal tem ~55dp e o widget é ainda mais apertado — ali entra a sigla; o nome completo aparece no editor do dia, no detalhe e na biblioteca.
@@ -201,16 +203,20 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 
 ## Roadmap
 
-1. ~~Scaffold do app Flutter~~ ✅ feito — `mobile/`, org `com.jota`, só Android.
-2. Tema M3 + cores dinâmicas + paleta curada + as três densidades como função pura `(chave, densidade, tema) → (fundo, texto, filete)`.
-3. Modelo (`Item`, `Tabela`) + persistência + provider.
-4. Biblioteca de itens (CRUD) e lista de tabelas.
-5. Visão semana (só leitura), com destaque de hoje e do horário corrente.
-6. Editor do dia com arrastar.
-7. Tela de aparência (escolha da densidade por miniatura).
+1. ~~Scaffold do app Flutter~~ ✅
+2. ~~Tema M3 + cores dinâmicas + paleta curada + as três densidades como função pura `(chave, densidade, tema) → (fundo, texto, filete)`~~ ✅
+3. ~~Modelo (`Item`, `Tabela`) + persistência + provider~~ ✅
+4. ~~Biblioteca de itens (CRUD) e lista de tabelas~~ ✅
+5. ~~Visão semana (só leitura), com destaque de hoje e do horário corrente~~ ✅
+6. ~~Editor do dia com arrastar~~ ✅
+7. ~~Tela de aparência (escolha da densidade por miniatura)~~ ✅
 8. Widget nativo Android (XML, `AppWidgetProvider` Kotlin, manifest) + snapshot na densidade escolhida.
 9. Estratégia de refresh (foreground + tick natural do SO).
 10. Polimento: estados vazios, ícone, preview do widget.
+
+O app fecha o ciclo de uso a partir da fase 7: cadastrar item, criar tabela,
+montar o horário e ver a semana. Falta o widget, que é o motivo original do
+port.
 
 A função de resolução da fase 2 é o ponto de reuso do projeto: a grade, o editor, as miniaturas da tela de aparência e o snapshot do widget consomem todos ela. Errar ali propaga pra tudo; acertar ali resolve tudo de uma vez.
 

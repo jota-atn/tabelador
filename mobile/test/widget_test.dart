@@ -10,8 +10,18 @@ void main() {
   // Future que ninguém observa e o teste passa sem exercitar nada.
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets('abre na semana, sem tabela ativa', (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nenhuma tabela ativa'), findsOneWidget);
+  });
+
   testWidgets('a densidade escolhida sobrevive a reabrir o app', (tester) async {
     await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Aparência'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Sólido'));
@@ -23,30 +33,13 @@ void main() {
     expect(state.densidade, ColorDensity.solido);
   });
 
-  testWidgets('o laboratório abre em Suave e troca de densidade', (tester) async {
-    await tester.pumpWidget(const TabeladorApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Paleta e densidade'), findsOneWidget);
-    expect(find.text('CÁLC'), findsWidgets);
-
-    // As três opções de densidade estão na tela e Sólido é selecionável.
-    for (final label in ['Discreto', 'Suave', 'Sólido']) {
-      expect(find.text(label), findsOneWidget);
-    }
-
-    await tester.tap(find.text('Sólido'));
-    await tester.pumpAndSettle();
-    expect(find.text('CÁLC'), findsWidgets);
-  });
-
   testWidgets('o botão de tema inverte o brilho', (tester) async {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();
 
     // Ancora num widget único: com o shell, há vários Scaffolds na árvore.
     Brightness brilhoAtual() =>
-        Theme.of(tester.element(find.text('Paleta e densidade'))).brightness;
+        Theme.of(tester.element(find.text('Nenhuma tabela ativa'))).brightness;
 
     final antes = brilhoAtual();
 

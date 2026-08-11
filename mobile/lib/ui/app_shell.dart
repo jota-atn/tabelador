@@ -2,23 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
-import 'density_lab.dart';
 import 'itens_screen.dart';
+import 'semana_screen.dart';
 import 'tabelas_screen.dart';
 
 /// A navegação principal do app.
-///
-/// A aba "Semana" ainda mostra o laboratório de cores da fase 2 — a visão
-/// semana de verdade chega na fase 5 e entra no lugar dele.
 class AppShell extends StatefulWidget {
-  const AppShell({
-    super.key,
-    required this.onToggleBrightness,
-    required this.monetDisponivel,
-  });
+  const AppShell({super.key, required this.onToggleBrightness});
 
   final VoidCallback onToggleBrightness;
-  final bool monetDisponivel;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -41,10 +33,7 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: _aba,
         children: [
-          DensityLab(
-            onToggleBrightness: widget.onToggleBrightness,
-            monetDisponivel: widget.monetDisponivel,
-          ),
+          SemanaScreen(onToggleBrightness: widget.onToggleBrightness),
           const ItensScreen(),
           const TabelasScreen(),
         ],
