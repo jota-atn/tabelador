@@ -345,14 +345,13 @@ class _Cell extends StatelessWidget {
       child: Row(
         children: [
           if (style.hasAccent)
-            Container(width: style.accentWidth, color: style.accent)
-          else
-            const SizedBox(width: 5),
+            Container(width: style.accentWidth, color: style.accent),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Text(
                 s.sigla,
+                textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -363,6 +362,9 @@ class _Cell extends StatelessWidget {
               ),
             ),
           ),
+          // Espelha a largura do filete do outro lado, pra sigla ficar
+          // centralizada na célula inteira e não no espaço que sobrou dele.
+          if (style.hasAccent) SizedBox(width: style.accentWidth),
         ],
       ),
     );
