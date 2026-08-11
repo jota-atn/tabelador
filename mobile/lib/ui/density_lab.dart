@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../state/app_state.dart';
 import '../theme/color_density.dart';
 import '../theme/item_palette.dart';
 
@@ -9,7 +11,7 @@ import '../theme/item_palette.dart';
 /// Não usa o modelo de dados real — ele só chega na fase 3. O que essa tela
 /// prova é que `resolveCellStyle` produz combinações legíveis nos dois temas,
 /// e que as 12 cores continuam distinguíveis numa célula de ~55dp.
-class DensityLab extends StatefulWidget {
+class DensityLab extends StatelessWidget {
   const DensityLab({
     super.key,
     required this.onToggleBrightness,
@@ -23,22 +25,16 @@ class DensityLab extends StatefulWidget {
   final bool monetDisponivel;
 
   @override
-  State<DensityLab> createState() => _DensityLabState();
-}
-
-class _DensityLabState extends State<DensityLab> {
-  ColorDensity _density = ColorDensity.fallback;
-
-  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final state = context.watch<AppState>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paleta e densidade'),
         actions: [
           IconButton(
-            onPressed: widget.onToggleBrightness,
+            onPressed: onToggleBrightness,
             icon: Icon(
               scheme.brightness == Brightness.dark
                   ? Icons.light_mode_outlined
@@ -51,18 +47,20 @@ class _DensityLabState extends State<DensityLab> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
         children: [
-          _MonetProbe(disponivel: widget.monetDisponivel),
+          _MonetProbe(disponivel: monetDisponivel),
           const SizedBox(height: 16),
           SegmentedButton<ColorDensity>(
             segments: [
               for (final d in ColorDensity.values)
                 ButtonSegment(value: d, label: Text(d.label)),
             ],
-            selected: {_density},
-            onSelectionChanged: (s) => setState(() => _density = s.first),
+            selected: {state.densidade},
+            // Grava direto na preferência: fechar e reabrir o app tem que
+            // lembrar da escolha.
+            onSelectionChanged: (s) => state.definirDensidade(s.first),
           ),
           const SizedBox(height: 20),
-          _WeekGrid(density: _density),
+          _WeekGrid(density: state.densidade),
           const SizedBox(height: 28),
           Text(
             'AS 12 CHAVES',
@@ -74,7 +72,7 @@ class _DensityLabState extends State<DensityLab> {
             ),
           ),
           const SizedBox(height: 10),
-          _PaletteStrip(density: _density),
+          _PaletteStrip(density: state.densidade),
         ],
       ),
     );

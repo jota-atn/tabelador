@@ -1,6 +1,8 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'ui/density_lab.dart';
 
@@ -27,18 +29,21 @@ class _TabeladorAppState extends State<TabeladorApp> {
 
   @override
   Widget build(BuildContext context) {
-    return DynamicColorBuilder(
-      builder: (lightDynamic, darkDynamic) => MaterialApp(
-        title: 'Tabelador',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(lightDynamic, Brightness.light),
-        darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
-        themeMode: _mode,
-        home: DensityLab(
-          onToggleBrightness: _toggleBrightness,
-          // Diagnóstico da fase 2: saber se o aparelho realmente entrega o
-          // Monet, em vez de deduzir isso olhando a cor de um botão.
-          monetDisponivel: lightDynamic != null || darkDynamic != null,
+    return ChangeNotifierProvider(
+      create: (_) => AppState()..carregar(),
+      child: DynamicColorBuilder(
+        builder: (lightDynamic, darkDynamic) => MaterialApp(
+          title: 'Tabelador',
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(lightDynamic, Brightness.light),
+          darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
+          themeMode: _mode,
+          home: DensityLab(
+            onToggleBrightness: _toggleBrightness,
+            // Diagnóstico da fase 2: saber se o aparelho realmente entrega o
+            // Monet, em vez de deduzir isso olhando a cor de um botão.
+            monetDisponivel: lightDynamic != null || darkDynamic != null,
+          ),
         ),
       ),
     );
