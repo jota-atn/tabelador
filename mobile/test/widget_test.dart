@@ -44,12 +44,15 @@ void main() {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();
 
-    final antes = Theme.of(tester.element(find.byType(Scaffold))).brightness;
+    // Ancora num widget único: com o shell, há vários Scaffolds na árvore.
+    Brightness brilhoAtual() =>
+        Theme.of(tester.element(find.text('Paleta e densidade'))).brightness;
 
-    await tester.tap(find.byType(IconButton));
+    final antes = brilhoAtual();
+
+    await tester.tap(find.byTooltip('Alternar tema'));
     await tester.pumpAndSettle();
 
-    final depois = Theme.of(tester.element(find.byType(Scaffold))).brightness;
-    expect(depois, isNot(antes));
+    expect(brilhoAtual(), isNot(antes));
   });
 }

@@ -329,9 +329,9 @@ class _Cell extends StatelessWidget {
     if (s == null) return const SizedBox.shrink();
 
     final style = resolveCellStyle(
-      color: s.color,
-      density: density,
-      scheme: Theme.of(context).colorScheme,
+      cor: s.color,
+      densidade: density,
+      esquema: Theme.of(context).colorScheme,
     );
 
     return Container(
@@ -385,9 +385,9 @@ class _PaletteStrip extends StatelessWidget {
         for (final color in ItemColor.values)
           Builder(builder: (context) {
             final style = resolveCellStyle(
-              color: color,
-              density: density,
-              scheme: scheme,
+              cor: color,
+              densidade: density,
+              esquema: scheme,
             );
             return Container(
               width: 104,

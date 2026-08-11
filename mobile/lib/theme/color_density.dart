@@ -74,37 +74,37 @@ class CellStyle {
 /// snapshot enviado ao widget nativo passam todos por aqui. Errar nessa função
 /// propaga pras quatro superfícies; acertar resolve as quatro de uma vez.
 CellStyle resolveCellStyle({
-  required ItemColor color,
-  required ColorDensity density,
-  required ColorScheme scheme,
+  required ItemColor cor,
+  required ColorDensity densidade,
+  required ColorScheme esquema,
 }) {
-  final dark = scheme.brightness == Brightness.dark;
+  final escuro = esquema.brightness == Brightness.dark;
 
   // Tons 40/80 são os que o M3 usa como acento sobre superfície neutra;
   // 90/30 como container; 10/90 como texto sobre esse container.
-  final accent = color.tone(dark ? 80 : 40);
+  final filete = cor.tone(escuro ? 80 : 40);
 
-  switch (density) {
+  switch (densidade) {
     case ColorDensity.discreto:
       return CellStyle(
-        background: scheme.surfaceContainer,
-        foreground: scheme.onSurface,
-        accent: accent,
+        background: esquema.surfaceContainer,
+        foreground: esquema.onSurface,
+        accent: filete,
         accentWidth: 3,
       );
 
     case ColorDensity.suave:
       return CellStyle(
-        background: color.tone(dark ? 20 : 95),
-        foreground: scheme.onSurface,
-        accent: accent,
+        background: cor.tone(escuro ? 20 : 95),
+        foreground: esquema.onSurface,
+        accent: filete,
         accentWidth: 4,
       );
 
     case ColorDensity.solido:
       return CellStyle(
-        background: color.tone(dark ? 30 : 90),
-        foreground: color.tone(dark ? 90 : 10),
+        background: cor.tone(escuro ? 30 : 90),
+        foreground: cor.tone(escuro ? 90 : 10),
         accent: Colors.transparent,
         accentWidth: 0,
       );

@@ -96,9 +96,9 @@ void main() {
       final scheme = _scheme(Brightness.light);
       for (final color in ItemColor.values) {
         final style = resolveCellStyle(
-          color: color,
-          density: ColorDensity.discreto,
-          scheme: scheme,
+          cor: color,
+          densidade: ColorDensity.discreto,
+          esquema: scheme,
         );
         expect(style.background, scheme.surfaceContainer);
         expect(style.accentWidth, 3);
@@ -110,9 +110,9 @@ void main() {
       final scheme = _scheme(Brightness.light);
       for (final color in ItemColor.values.where((c) => c != ItemColor.grafite)) {
         final style = resolveCellStyle(
-          color: color,
-          density: ColorDensity.suave,
-          scheme: scheme,
+          cor: color,
+          densidade: ColorDensity.suave,
+          esquema: scheme,
         );
         expect(style.background, isNot(scheme.surfaceContainer));
         expect(style.hasAccent, isTrue);
@@ -124,9 +124,9 @@ void main() {
         final scheme = _scheme(brightness);
         for (final color in ItemColor.values) {
           final style = resolveCellStyle(
-            color: color,
-            density: ColorDensity.solido,
-            scheme: scheme,
+            cor: color,
+            densidade: ColorDensity.solido,
+            esquema: scheme,
           );
           expect(style.accentWidth, 0);
           expect(style.hasAccent, isFalse);
@@ -139,8 +139,8 @@ void main() {
       final dark = _scheme(Brightness.dark);
       for (final density in ColorDensity.values) {
         for (final color in ItemColor.values) {
-          final l = resolveCellStyle(color: color, density: density, scheme: light);
-          final d = resolveCellStyle(color: color, density: density, scheme: dark);
+          final l = resolveCellStyle(cor: color, densidade: density, esquema: light);
+          final d = resolveCellStyle(cor: color, densidade: density, esquema: dark);
           expect(
             d.background.computeLuminance(),
             lessThan(l.background.computeLuminance()),
@@ -159,9 +159,9 @@ void main() {
         for (final density in ColorDensity.values) {
           for (final color in ItemColor.values) {
             final style = resolveCellStyle(
-              color: color,
-              density: density,
-              scheme: scheme,
+              cor: color,
+              densidade: density,
+              esquema: scheme,
             );
             expect(
               _contrast(style.foreground, style.background),

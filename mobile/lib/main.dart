@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
-import 'ui/density_lab.dart';
+import 'ui/app_shell.dart';
 
 void main() => runApp(const TabeladorApp());
 
@@ -38,7 +38,7 @@ class _TabeladorAppState extends State<TabeladorApp> {
           theme: buildAppTheme(lightDynamic, Brightness.light),
           darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
           themeMode: _mode,
-          home: DensityLab(
+          home: AppShell(
             onToggleBrightness: _toggleBrightness,
             // Diagnóstico da fase 2: saber se o aparelho realmente entrega o
             // Monet, em vez de deduzir isso olhando a cor de um botão.
