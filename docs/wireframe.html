@@ -1,0 +1,1182 @@
+<title>Tabelador Mobile — wireframe</title>
+
+<style>
+  /* ---------- página ---------- */
+  :root {
+    --ground:      #F1F2F4;
+    --surface:     #FFFFFF;
+    --ink:         #14171B;
+    --ink-soft:    #4A5058;
+    --muted:       #767C85;
+    --rule:        #DCDFE3;
+    --rule-soft:   #E7E9EC;
+    --accent:      #3C5F92;
+    --accent-soft: #E2E9F4;
+    --bezel:       #C9CCD1;
+    --bezel-in:    #E9EBEE;
+
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #101215;
+      --surface:     #191C20;
+      --ink:         #E4E7EA;
+      --ink-soft:    #B0B6BE;
+      --muted:       #848B94;
+      --rule:        #2B3037;
+      --rule-soft:   #22262B;
+      --accent:      #8FB2E4;
+      --accent-soft: #1D2A3C;
+      --bezel:       #33383F;
+      --bezel-in:    #23272C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #101215;
+    --surface:     #191C20;
+    --ink:         #E4E7EA;
+    --ink-soft:    #B0B6BE;
+    --muted:       #848B94;
+    --rule:        #2B3037;
+    --rule-soft:   #22262B;
+    --accent:      #8FB2E4;
+    --accent-soft: #1D2A3C;
+    --bezel:       #33383F;
+    --bezel-in:    #23272C;
+  }
+  :root[data-theme="light"] {
+    --ground:      #F1F2F4;
+    --surface:     #FFFFFF;
+    --ink:         #14171B;
+    --ink-soft:    #4A5058;
+    --muted:       #767C85;
+    --rule:        #DCDFE3;
+    --rule-soft:   #E7E9EC;
+    --accent:      #3C5F92;
+    --accent-soft: #E2E9F4;
+    --bezel:       #C9CCD1;
+    --bezel-in:    #E9EBEE;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  /* ---------- cabeçalho ---------- */
+  .masthead { display: flex; flex-direction: column; gap: 18px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  h1 {
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.08;
+    letter-spacing: -.025em;
+    font-weight: 660;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .lede {
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding-top: 6px;
+    border-top: 1px solid var(--rule);
+  }
+  .meta span::after { content: "·"; margin-left: 10px; color: var(--rule); }
+  .meta span:last-child::after { content: ""; }
+
+  /* ---------- seções ---------- */
+  section { display: flex; flex-direction: column; gap: 24px; }
+
+  .sec-head { display: flex; flex-direction: column; gap: 7px; }
+  h2 {
+    font-size: 21px;
+    letter-spacing: -.014em;
+    font-weight: 640;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .sec-head p { margin: 0; color: var(--ink-soft); max-width: 68ch; font-size: 14.5px; }
+
+  /* ---------- regras ---------- */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .rule-card { background: var(--surface); padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 7px; }
+  .rule-card h3 { margin: 0; font-size: 13px; font-weight: 620; letter-spacing: -.005em; }
+  .rule-card p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+
+  /* ---------- paleta ---------- */
+  .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .pal { background: var(--surface); padding: 13px 13px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .pal-id { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .pal-key { font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .pal-hue { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .pal-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* ---------- moldura de celular ---------- */
+  .decks { display: flex; flex-wrap: wrap; gap: 34px 30px; align-items: flex-start; }
+  .deck { display: flex; flex-direction: column; gap: 12px; width: 292px; }
+  .deck-cap { display: flex; flex-direction: column; gap: 5px; }
+  .deck-cap b { font-size: 13px; font-weight: 620; letter-spacing: -.005em; }
+  .deck-cap span { font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+  .theme-tag {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+
+  .phone {
+    border-radius: 26px;
+    padding: 7px;
+    background: var(--bezel);
+    box-shadow: 0 1px 2px rgba(0,0,0,.14), 0 10px 26px -14px rgba(0,0,0,.4);
+  }
+
+  /* ---------- tokens do app (Material 3 neutro) ---------- */
+  .dev {
+    --surf:        #FCFCFD;
+    --surf-c:      #EFF0F3;
+    --surf-c-hi:   #E6E8EB;
+    --on-surf:     #1A1C1E;
+    --on-surf-var: #44474B;
+    --outline-var: #C8CACD;
+    --acc:         #3C5F92;
+    --on-acc:      #FFFFFF;
+    --acc-c:       #DBE4F5;
+    --on-acc-c:    #1B3355;
+
+    border-radius: 20px;
+    background: var(--surf);
+    color: var(--on-surf);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 570px;
+    font-size: 12px;
+  }
+  .dev.is-dark {
+    --surf:        #121417;
+    --surf-c:      #1E2124;
+    --surf-c-hi:   #282B2F;
+    --on-surf:     #E3E2E5;
+    --on-surf-var: #C3C6CA;
+    --outline-var: #43474C;
+    --acc:         #A9C7F5;
+    --on-acc:      #102A4C;
+    --acc-c:       #27405E;
+    --on-acc-c:    #D6E3FA;
+  }
+
+  /* barra de status */
+  .statusbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 16px 5px;
+    font-family: var(--mono); font-size: 10px; color: var(--on-surf);
+  }
+  .statusbar i { font-style: normal; letter-spacing: .12em; opacity: .75; }
+
+  /* app bar */
+  .appbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 12px; gap: 10px;
+  }
+  .appbar .title { font-size: 17px; font-weight: 620; letter-spacing: -.01em; display: flex; align-items: center; gap: 5px; }
+  .appbar .title small { font-size: 10px; opacity: .55; }
+  .appbar .acts { display: flex; gap: 4px; }
+  .icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 13px; color: var(--on-surf-var);
+  }
+
+  /* grade da semana */
+  .grid-head, .grid-row { display: grid; grid-template-columns: 40px repeat(5, 1fr); gap: 3px; }
+  .weekgrid { padding: 0 10px; display: flex; flex-direction: column; gap: 3px; }
+  .grid-head div {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .07em;
+    color: var(--on-surf-var); text-align: center; padding-bottom: 5px;
+  }
+  .grid-row { border-top: 1px solid var(--outline-var); padding: 3px 0; }
+  .grid-row:first-of-type { border-top: 0; }
+  .hr-label {
+    font-family: var(--mono); font-size: 9px; color: var(--on-surf-var);
+    display: flex; align-items: center; font-variant-numeric: tabular-nums;
+  }
+  .cell {
+    background: var(--bl); border-radius: 5px;
+    display: flex; align-items: center; gap: 4px;
+    min-height: 32px; overflow: hidden;
+  }
+  .dev.is-dark .cell { background: var(--bd); }
+  .cell .bar { width: 4px; align-self: stretch; flex: none; background: var(--cl); }
+  .dev.is-dark .cell .bar { background: var(--cd); }
+  .cell .sig {
+    font-size: 8.5px; font-weight: 560; letter-spacing: .015em;
+    color: var(--on-surf); padding-right: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dev .cell.empty, .dev.is-dark .cell.empty { background: transparent; }
+
+  /* faixa do dia de hoje — neutra, atrás das células */
+  .weekgrid { position: relative; }
+  .today-band {
+    --colw: calc((100% - 55px) / 5);
+    position: absolute; top: 0; bottom: -2px;
+    left: calc(49px + 2 * var(--colw));
+    width: var(--colw);
+    background: var(--surf-c-hi);
+    border-radius: 7px;
+    z-index: 0;
+  }
+  .grid-head, .grid-row { position: relative; z-index: 1; }
+  .grid-head div.today { color: var(--on-surf); font-weight: 700; }
+  .grid-row.now .hr-label { color: var(--on-surf); font-weight: 600; }
+  .grid-row.now .hr-label::before {
+    content: ""; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--acc); margin-right: 3px; flex: none;
+  }
+
+  /* nav inferior */
+  .navbar {
+    margin-top: auto;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    padding: 8px 6px 14px; gap: 4px;
+  }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--on-surf-var); }
+  .nav-item .pill {
+    padding: 2px 16px; border-radius: 999px; font-size: 12px; line-height: 1.35;
+  }
+  .nav-item.on .pill { background: var(--acc-c); color: var(--on-acc-c); }
+  .nav-item.on span { color: var(--on-surf); font-weight: 580; }
+  .nav-item span { font-size: 9.5px; }
+
+  /* editor do dia */
+  .daynav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 16px 12px;
+  }
+  .daynav b { font-size: 15px; font-weight: 620; letter-spacing: .01em; }
+  .daynav .arw { color: var(--on-surf-var); font-size: 15px; }
+  .slots { display: flex; flex-direction: column; padding: 0 12px; }
+  .slot {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 0; border-top: 1px solid var(--outline-var);
+  }
+  .slot:first-child { border-top: 0; }
+  .slot .t {
+    font-family: var(--mono); font-size: 9px; color: var(--on-surf-var);
+    width: 34px; flex: none; font-variant-numeric: tabular-nums;
+  }
+  .slot .body {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--bl); border-radius: 6px; overflow: hidden; min-height: 38px;
+  }
+  .dev.is-dark .slot .body:not(.vazio):not(.alvo) { background: var(--bd); }
+  .slot .body .bar { width: 4px; align-self: stretch; flex: none; background: var(--cl); }
+  .dev.is-dark .slot .body .bar { background: var(--cd); }
+  .slot .txt { display: flex; flex-direction: column; gap: 1px; padding: 4px 8px 4px 0; min-width: 0; }
+  .slot .txt b { font-size: 11px; font-weight: 580; letter-spacing: -.005em; }
+  .slot .txt small { font-size: 9px; color: var(--on-surf-var); }
+  .slot .body.vazio {
+    background: transparent; border: 1px dashed var(--outline-var);
+    color: var(--on-surf-var); font-size: 9.5px;
+    align-items: center; padding-left: 9px;
+  }
+  .slot .body.alvo {
+    background: var(--acc-c); border: 1px dashed var(--acc);
+    color: var(--on-acc-c); font-size: 9.5px; padding-left: 9px;
+  }
+
+  /* paleta de itens (bandeja inferior) */
+  .tray {
+    margin-top: auto;
+    border-top: 1px solid var(--outline-var);
+    padding: 11px 12px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--surf);
+  }
+  .tray-lbl {
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--on-surf-var);
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surf-c); border-radius: 999px;
+    padding: 5px 10px 5px 6px; font-size: 9.5px; font-weight: 560;
+    color: var(--on-surf);
+  }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cl); flex: none; }
+  .dev.is-dark .chip .dot { background: var(--cd); }
+  .chip.add { color: var(--on-surf-var); padding-left: 10px; }
+
+  .chip.lifted {
+    position: absolute; left: 96px; top: 250px;
+    box-shadow: 0 8px 18px -6px rgba(0,0,0,.45);
+    transform: rotate(-2.5deg) scale(1.06);
+    background: var(--surf-c-hi);
+    z-index: 3;
+  }
+  .stage { position: relative; display: flex; flex-direction: column; flex: 1; }
+
+  /* biblioteca */
+  .search {
+    margin: 0 14px 12px; border-radius: 999px; background: var(--surf-c);
+    padding: 9px 14px; font-size: 10.5px; color: var(--on-surf-var);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .lib { display: flex; flex-direction: column; padding: 0 4px; }
+  .lib-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+  }
+  .lib-row .bar { width: 3px; height: 26px; border-radius: 2px; background: var(--cl); flex: none; }
+  .dev.is-dark .lib-row .bar { background: var(--cd); }
+  .lib-row .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .lib-row .txt b { font-size: 11.5px; font-weight: 570; letter-spacing: -.005em; }
+  .lib-row .txt small { font-size: 9px; color: var(--on-surf-var); }
+  .lib-row .sigtag {
+    font-family: var(--mono); font-size: 9px; color: var(--on-surf-var);
+    border: 1px solid var(--outline-var); border-radius: 3px; padding: 1px 5px;
+    flex: none;
+  }
+  .fab {
+    position: absolute; right: 16px; bottom: 18px;
+    width: 48px; height: 48px; border-radius: 15px;
+    background: var(--acc-c); color: var(--on-acc-c);
+    display: grid; place-items: center; font-size: 20px;
+    box-shadow: 0 4px 10px -3px rgba(0,0,0,.35);
+  }
+
+  /* tabelas */
+  .tables { display: flex; flex-direction: column; gap: 8px; padding: 0 14px; }
+  .tcard {
+    background: var(--surf-c); border-radius: 12px; padding: 13px 14px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .tcard .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tcard b { font-size: 13.5px; font-weight: 620; }
+  .tcard small { font-size: 9.5px; color: var(--on-surf-var); font-variant-numeric: tabular-nums; }
+  .badge {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase;
+    background: var(--acc-c); color: var(--on-acc-c);
+    border-radius: 3px; padding: 2px 6px;
+  }
+  .tcard.off { background: transparent; box-shadow: inset 0 0 0 1px var(--outline-var); }
+
+  /* tela de aparência */
+  .sec-lbl {
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--on-surf-var); padding: 0 18px 9px;
+  }
+  .dens { display: flex; flex-direction: column; gap: 9px; padding: 0 14px; }
+  .dens-opt {
+    display: flex; gap: 11px; align-items: center;
+    padding: 11px; border-radius: 12px;
+    box-shadow: inset 0 0 0 1px var(--outline-var);
+  }
+  .dens-opt.on { background: var(--acc-c); box-shadow: inset 0 0 0 2px var(--acc); }
+  .mini { display: flex; flex-direction: column; gap: 2px; width: 76px; flex: none; }
+  .mini-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+  .mini-c { height: 9px; border-radius: 2px; display: flex; overflow: hidden; }
+  .mini-c i { flex: none; }
+  .dens-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .dens-txt b { font-size: 12px; font-weight: 620; }
+  .dens-txt small { font-size: 9px; color: var(--on-surf-var); }
+  .dens-opt.on .dens-txt b, .dens-opt.on .dens-txt small { color: var(--on-acc-c); }
+  .radio {
+    margin-left: auto; width: 15px; height: 15px; border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px var(--on-surf-var); flex: none;
+  }
+  .dens-opt.on .radio { box-shadow: inset 0 0 0 4.5px var(--acc); }
+
+  /* ---------- widget na tela inicial ---------- */
+  .home {
+    border-radius: 20px; overflow: hidden; height: 570px;
+    background:
+      radial-gradient(120% 90% at 25% 8%, #35424A 0%, #222A31 42%, #171C21 100%);
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 34px 14px 16px;
+  }
+  .home-clock {
+    color: #EDEFF1; font-weight: 300; letter-spacing: -.02em;
+    font-size: 40px; line-height: 1; padding-left: 6px;
+  }
+  .home-date { color: #B9C0C6; font-size: 11px; padding-left: 7px; margin-top: -6px; }
+
+  .wdg {
+    --wsurf:  rgba(233, 236, 239, .93);
+    --wtext:  #1A1C1E;
+    --wsoft:  #4A4E53;
+    --wline:  rgba(26,28,30,.11);
+    background: var(--wsurf);
+    border-radius: 22px;
+    padding: 13px 14px 12px;
+    display: flex; flex-direction: column; gap: 9px;
+    color: var(--wtext);
+  }
+  .wdg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .wdg-head b { font-size: 12px; font-weight: 640; letter-spacing: .04em; }
+  .wdg-head small { font-family: var(--mono); font-size: 9px; color: var(--wsoft); }
+  .wdg-rows { display: flex; flex-direction: column; }
+  .wrow {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 0; border-top: 1px solid var(--wline);
+  }
+  .wrow:first-child { border-top: 0; }
+  .wrow .t {
+    font-family: var(--mono); font-size: 9px; color: var(--wsoft);
+    width: 30px; flex: none; font-variant-numeric: tabular-nums;
+  }
+  .wbody {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--bl); border-radius: 6px; overflow: hidden; min-height: 32px;
+  }
+  .wbody .bar { width: 4px; align-self: stretch; background: var(--cl); flex: none; }
+  .wrow .txt { display: flex; flex-direction: column; gap: 0; min-width: 0; padding: 3px 6px 3px 0; }
+  .wrow .txt b { font-size: 11px; font-weight: 580; }
+  .wrow .txt small { font-size: 8.5px; color: var(--wsoft); }
+  .wrow.now { }
+  .wrow.now .txt b::after {
+    content: "agora"; font-family: var(--mono); font-size: 7.5px; font-weight: 400;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--wsoft); margin-left: 6px;
+  }
+
+  .dock { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 8px; }
+  .app-ico { aspect-ratio: 1; border-radius: 14px; background: rgba(255,255,255,.13); }
+
+  /* ---------- rodapé ---------- */
+  .note {
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    display: flex; flex-direction: column; gap: 9px;
+    font-size: 13px; color: var(--ink-soft);
+    max-width: 74ch;
+  }
+  .note b { color: var(--ink); font-weight: 620; }
+  .note ul { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 6px; }
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 5px; border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Tabelador · spec v2 · wireframe</div>
+    <h1>Do <span style="font-family:var(--mono);font-size:.82em;letter-spacing:-.01em">fancy_grid</span> pro bolso</h1>
+    <p class="lede">
+      Como a tabela de horário do script Python se comporta como app Android: chrome neutro,
+      cor só onde ela identifica uma disciplina, e a semana inteira legível de relance.
+      Wireframe de estrutura e cor — não é o visual final.
+    </p>
+    <div class="meta">
+      <span>6 telas</span>
+      <span>Material 3 neutro</span>
+      <span>claro + escuro</span>
+      <span>paleta de 12 chaves</span>
+      <span>densidade Suave</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>As quatro regras que o wireframe está testando</h2>
+      <p>Se alguma delas não se sustentar na tela do celular, é aqui que precisa mudar — antes do modelo de dados depender das chaves de cor.</p>
+    </div>
+    <div class="rules">
+      <div class="rule-card">
+        <h3>Chroma só no dado</h3>
+        <p>App bar, fundos, navegação e botões saem da rampa neutra. Nenhuma superfície grande é tingida.</p>
+      </div>
+      <div class="rule-card">
+        <h3>Densidade é escolha de quem usa</h3>
+        <p>Discreto, Suave ou Sólido. As telas aqui estão em Suave, o padrão: célula preenchida no tom mais claro da rampa, com filete por cima.</p>
+      </div>
+      <div class="rule-card">
+        <h3>A sigla é a informação</h3>
+        <p>A cor é reforço redundante. Quem tem deuteranopia lê a grade igual, porque o texto sempre está lá.</p>
+      </div>
+      <div class="rule-card">
+        <h3>Vazio é vazio</h3>
+        <p>Slot livre não vira card cinza. Some da grade e deixa o horário respirar.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Paleta — 12 chaves, nos dois temas</h2>
+      <p>Cada amostra na densidade padrão, Suave: fundo no tom 95 (claro) ou 20 (escuro), filete no tom 40 ou 80. O par a vigiar é <code>oliva</code> e <code>salvia</code>.</p>
+    </div>
+    <div class="palette">
+      <div class="pal" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E">
+        <div class="pal-id"><span class="pal-key">tomate</span><span class="pal-hue">25°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">MONIT</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">MONIT</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#925008;--cd:#FFB877;--bl:#FFEDE1;--bd:#4D2700">
+        <div class="pal-id"><span class="pal-key">tangerina</span><span class="pal-hue">55°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">LAB</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">LAB</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00">
+        <div class="pal-id"><span class="pal-key">ambar</span><span class="pal-hue">85°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">ALMOÇO</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">ALMOÇO</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600">
+        <div class="pal-id"><span class="pal-key">oliva</span><span class="pal-hue">110°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">EDA</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">EDA</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D">
+        <div class="pal-id"><span class="pal-key">salvia</span><span class="pal-hue">135°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">LIVRE</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">LIVRE</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#006C55;--cd:#71DCB8;--bl:#B8FFE4;--bd:#00382B">
+        <div class="pal-id"><span class="pal-key">esmeralda</span><span class="pal-hue">165°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">ALGO</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">ALGO</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A">
+        <div class="pal-id"><span class="pal-key">turquesa</span><span class="pal-hue">195°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">FÍS I</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">FÍS I</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62">
+        <div class="pal-id"><span class="pal-key">oceano</span><span class="pal-hue">235°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">CÁLC II</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">CÁLC II</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585">
+        <div class="pal-id"><span class="pal-key">indigo</span><span class="pal-hue">275°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">P.O.O</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">P.O.O</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78">
+        <div class="pal-id"><span class="pal-key">ametista</span><span class="pal-hue">305°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">BD</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">BD</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F">
+        <div class="pal-id"><span class="pal-key">framboesa</span><span class="pal-hue">345°</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">IHC</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">IHC</span></div></div></div>
+        </div>
+      </div>
+      <div class="pal" style="--cl:#5B5F64;--cd:#C5C8CD;--bl:#F0F1F5;--bd:#2D3135">
+        <div class="pal-id"><span class="pal-key">grafite</span><span class="pal-hue">neutro</span></div>
+        <div class="pal-pair">
+          <div class="dev" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">VAGO</span></div></div></div>
+          <div class="dev is-dark" style="height:auto"><div class="weekgrid" style="padding:0"><div class="cell"><span class="bar"></span><span class="sig">VAGO</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Visão semana — o teste principal</h2>
+      <p>Oito disciplinas, 30 slots, a mesma semana nos dois temas, na densidade Suave. A pergunta que essa tela responde: dá pra distinguir as matérias de relance, ou a grade vira ruído?</p>
+    </div>
+    <div class="decks">
+
+      <!-- SEMANA / CLARO -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title">2026.1 <small>▾</small></div>
+              <div class="acts"><div class="icon">☰</div><div class="icon">⋮</div></div>
+            </div>
+            <div class="weekgrid">
+              <span class="today-band"></span>
+              <div class="grid-head"><div></div><div>SEG</div><div>TER</div><div class="today">QUA</div><div>QUI</div><div>SEX</div></div>
+
+              <div class="grid-row">
+                <div class="hr-label">08:00</div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell empty"></div>
+              </div>
+
+              <div class="grid-row now">
+                <div class="hr-label">10:00</div>
+                <div class="cell" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A"><span class="bar"></span><span class="sig">FÍS I</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A"><span class="bar"></span><span class="sig">FÍS I</span></div>
+                <div class="cell" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78"><span class="bar"></span><span class="sig">BD</span></div>
+                <div class="cell" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78"><span class="bar"></span><span class="sig">BD</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">12:00</div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">14:00</div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F"><span class="bar"></span><span class="sig">IHC</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F"><span class="bar"></span><span class="sig">IHC</span></div>
+                <div class="cell" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E"><span class="bar"></span><span class="sig">MONIT</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">16:00</div>
+                <div class="cell" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E"><span class="bar"></span><span class="sig">MONIT</span></div>
+                <div class="cell" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585"><span class="bar"></span><span class="sig">P.O.O</span></div>
+                <div class="cell" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D"><span class="bar"></span><span class="sig">LIVRE</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D"><span class="bar"></span><span class="sig">LIVRE</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">18:00</div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585"><span class="bar"></span><span class="sig">P.O.O</span></div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell empty"></div>
+              </div>
+            </div>
+
+            <div class="navbar">
+              <div class="nav-item on"><div class="pill">▦</div><span>Semana</span></div>
+              <div class="nav-item"><div class="pill">◎</div><span>Itens</span></div>
+              <div class="nav-item"><div class="pill">▤</div><span>Tabelas</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema claro</span>
+          <b>Visão semana</b>
+          <span>Quarta é hoje: a coluna sobe pra superfície elevada e o rótulo engrossa — tudo em neutro, sem competir com a cor dos itens. O ponto nas 10:00 marca o horário corrente.</span>
+        </div>
+      </div>
+
+      <!-- SEMANA / ESCURO -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev is-dark">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title">2026.1 <small>▾</small></div>
+              <div class="acts"><div class="icon">☰</div><div class="icon">⋮</div></div>
+            </div>
+            <div class="weekgrid">
+              <span class="today-band"></span>
+              <div class="grid-head"><div></div><div>SEG</div><div>TER</div><div class="today">QUA</div><div>QUI</div><div>SEX</div></div>
+
+              <div class="grid-row">
+                <div class="hr-label">08:00</div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell empty"></div>
+              </div>
+
+              <div class="grid-row now">
+                <div class="hr-label">10:00</div>
+                <div class="cell" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A"><span class="bar"></span><span class="sig">FÍS I</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A"><span class="bar"></span><span class="sig">FÍS I</span></div>
+                <div class="cell" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78"><span class="bar"></span><span class="sig">BD</span></div>
+                <div class="cell" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78"><span class="bar"></span><span class="sig">BD</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">12:00</div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+                <div class="cell" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00"><span class="bar"></span><span class="sig">ALM</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">14:00</div>
+                <div class="cell" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="bar"></span><span class="sig">EDA</span></div>
+                <div class="cell" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F"><span class="bar"></span><span class="sig">IHC</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F"><span class="bar"></span><span class="sig">IHC</span></div>
+                <div class="cell" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E"><span class="bar"></span><span class="sig">MONIT</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">16:00</div>
+                <div class="cell" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E"><span class="bar"></span><span class="sig">MONIT</span></div>
+                <div class="cell" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585"><span class="bar"></span><span class="sig">P.O.O</span></div>
+                <div class="cell" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D"><span class="bar"></span><span class="sig">LIVRE</span></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D"><span class="bar"></span><span class="sig">LIVRE</span></div>
+              </div>
+
+              <div class="grid-row">
+                <div class="hr-label">18:00</div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585"><span class="bar"></span><span class="sig">P.O.O</span></div>
+                <div class="cell" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="bar"></span><span class="sig">CÁLC</span></div>
+                <div class="cell empty"></div>
+              </div>
+            </div>
+
+            <div class="navbar">
+              <div class="nav-item on"><div class="pill">▦</div><span>Semana</span></div>
+              <div class="nav-item"><div class="pill">◎</div><span>Itens</span></div>
+              <div class="nav-item"><div class="pill">▤</div><span>Tabelas</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema escuro</span>
+          <b>A mesma semana</b>
+          <span>Fundo cai do tom 95 pro 20 e o filete sobe do 40 pro 80. É o mesmo dado com a mesma leitura — não é o tema claro invertido.</span>
+        </div>
+      </div>
+
+      <!-- EDITOR DO DIA -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title" style="font-size:15px"><span class="icon" style="width:20px">←</span> Quarta</div>
+              <div class="acts"><div class="icon">✓</div></div>
+            </div>
+            <div class="daynav">
+              <span class="arw">‹</span>
+              <b>QUARTA</b>
+              <span class="arw">›</span>
+            </div>
+            <div class="stage">
+              <div class="slots">
+                <div class="slot">
+                  <span class="t">08:00</span>
+                  <div class="body" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62">
+                    <span class="bar"></span>
+                    <span class="txt"><b>Cálculo II</b><small>Aula · Bloco C, 204</small></span>
+                  </div>
+                </div>
+                <div class="slot">
+                  <span class="t">10:00</span>
+                  <div class="body" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A">
+                    <span class="bar"></span>
+                    <span class="txt"><b>Física I</b><small>Aula · Bloco A, 110</small></span>
+                  </div>
+                </div>
+                <div class="slot">
+                  <span class="t">12:00</span>
+                  <div class="body" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00">
+                    <span class="bar"></span>
+                    <span class="txt"><b>Almoço</b><small>Pausa</small></span>
+                  </div>
+                </div>
+                <div class="slot">
+                  <span class="t">14:00</span>
+                  <div class="body alvo">solte aqui</div>
+                </div>
+                <div class="slot">
+                  <span class="t">16:00</span>
+                  <div class="body" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D">
+                    <span class="bar"></span>
+                    <span class="txt"><b>Livre</b><small>—</small></span>
+                  </div>
+                </div>
+                <div class="slot">
+                  <span class="t">18:00</span>
+                  <div class="body vazio">vazio</div>
+                </div>
+              </div>
+
+              <div class="chip lifted" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585">
+                <span class="dot"></span>P.O.O
+              </div>
+
+              <div class="tray">
+                <div class="tray-lbl">Arraste pra um horário</div>
+                <div class="chips">
+                  <div class="chip" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62"><span class="dot"></span>CÁLC II</div>
+                  <div class="chip" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600"><span class="dot"></span>EDA</div>
+                  <div class="chip" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A"><span class="dot"></span>FÍS I</div>
+                  <div class="chip" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78"><span class="dot"></span>BD</div>
+                  <div class="chip" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E"><span class="dot"></span>MONIT</div>
+                  <div class="chip" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F"><span class="dot"></span>IHC</div>
+                  <div class="chip add">＋ novo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema claro</span>
+          <b>Editor do dia — arrastando</b>
+          <span>P.O.O saiu da bandeja e paira sobre as 14:00. O alvo é a linha inteira: ~260dp de largura contra os 55dp de uma célula da grade semanal.</span>
+        </div>
+      </div>
+
+      <!-- BIBLIOTECA -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev is-dark">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title">Itens</div>
+              <div class="acts"><div class="icon">⇅</div></div>
+            </div>
+            <div class="search">⌕ Buscar disciplina ou atividade</div>
+            <div class="stage">
+              <div class="lib">
+                <div class="lib-row" style="--cl:#2B5EA7;--cd:#A6C8FF;--bl:#EAF1FF;--bd:#002F62">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Cálculo II</b><small>Aula · Bloco C, 204 · Prof. Marinho</small></span>
+                  <span class="sigtag">CÁLC II</span>
+                </div>
+                <div class="lib-row" style="--cl:#626900;--cd:#CBD35C;--bl:#F5FCC7;--bd:#313600">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Estrutura de Dados</b><small>Aula · Lab 3</small></span>
+                  <span class="sigtag">EDA</span>
+                </div>
+                <div class="lib-row" style="--cl:#006A70;--cd:#56D9E4;--bl:#CFF8FF;--bd:#00363A">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Física I</b><small>Aula · Bloco A, 110</small></span>
+                  <span class="sigtag">FÍS I</span>
+                </div>
+                <div class="lib-row" style="--cl:#7C42AB;--cd:#E2B6FF;--bl:#FBECFF;--bd:#4A0D78">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Banco de Dados</b><small>Aula · Lab 1</small></span>
+                  <span class="sigtag">BD</span>
+                </div>
+                <div class="lib-row" style="--cl:#4E55B8;--cd:#BEC2FF;--bl:#F1EFFF;--bd:#1B2585">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Programação Orientada a Objetos</b><small>Aula · Lab 2</small></span>
+                  <span class="sigtag">P.O.O</span>
+                </div>
+                <div class="lib-row" style="--cl:#AB365C;--cd:#FFB1C8;--bl:#FFECF0;--bd:#6A002F">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Interação Humano-Computador</b><small>Aula · Bloco D, 8</small></span>
+                  <span class="sigtag">IHC</span>
+                </div>
+                <div class="lib-row" style="--cl:#A83A32;--cd:#FFB3A4;--bl:#FFEDE9;--bd:#67130E">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Monitoria de Algoritmos</b><small>Monitoria · Lab 3</small></span>
+                  <span class="sigtag">MONIT</span>
+                </div>
+                <div class="lib-row" style="--cl:#7C5800;--cd:#EAC24C;--bl:#FFEFD5;--bd:#402D00">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Almoço</b><small>Pausa</small></span>
+                  <span class="sigtag">ALM</span>
+                </div>
+                <div class="lib-row" style="--cl:#446B33;--cd:#AAD68F;--bl:#E1FFC7;--bd:#183A0D">
+                  <span class="bar"></span>
+                  <span class="txt"><b>Livre</b><small>Pausa</small></span>
+                  <span class="sigtag">LIVRE</span>
+                </div>
+              </div>
+              <div class="fab">＋</div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema escuro</span>
+          <b>Biblioteca de itens</b>
+          <span>Aqui o nome completo aparece inteiro. A sigla vira etiqueta à direita — é ela que vai pra grade e pro widget.</span>
+        </div>
+      </div>
+
+      <!-- TABELAS -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title">Tabelas</div>
+              <div class="acts"><div class="icon">＋</div></div>
+            </div>
+            <div class="stage">
+              <div class="tables">
+                <div class="tcard">
+                  <div class="top"><b>2026.1</b><span class="badge">ativa</span></div>
+                  <small>6 horários · 08:00–20:00 · intervalo de 2h</small>
+                  <small>editada hoje, 09:12</small>
+                </div>
+                <div class="tcard off">
+                  <div class="top"><b>2025.2</b></div>
+                  <small>6 horários · 08:00–20:00 · intervalo de 2h</small>
+                  <small>editada em 12 dez 2025</small>
+                </div>
+                <div class="tcard off">
+                  <div class="top"><b>Estágio</b></div>
+                  <small>4 horários · 13:00–21:00 · intervalo de 2h</small>
+                  <small>editada em 3 fev 2026</small>
+                </div>
+                <div class="tcard off">
+                  <div class="top"><b>Academia</b></div>
+                  <small>3 horários · 18:00–21:00 · intervalo de 1h</small>
+                  <small>editada em 20 jan 2026</small>
+                </div>
+              </div>
+            </div>
+            <div class="navbar">
+              <div class="nav-item"><div class="pill">▦</div><span>Semana</span></div>
+              <div class="nav-item"><div class="pill">◎</div><span>Itens</span></div>
+              <div class="nav-item on"><div class="pill">▤</div><span>Tabelas</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema claro</span>
+          <b>Lista de tabelas</b>
+          <span>Só a ativa ganha preenchimento; as outras são contorno. Hora inicial, intervalo e quantidade são por tabela — "Academia" usa intervalo de 1h.</span>
+        </div>
+      </div>
+
+      <!-- APARÊNCIA -->
+      <div class="deck">
+        <div class="phone">
+          <div class="dev">
+            <div class="statusbar"><span>9:41</span><i>▮▮▮ ▮</i></div>
+            <div class="appbar">
+              <div class="title" style="font-size:15px"><span class="icon" style="width:20px">←</span> Aparência</div>
+            </div>
+            <div class="sec-lbl">Densidade de cor</div>
+            <div class="dens">
+
+              <div class="dens-opt">
+                <div class="mini">
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#2B5EA7"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#626900"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#2B5EA7"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#626900"></i></span>
+                    <span class="mini-c"></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#006A70"></i></span>
+                    <span class="mini-c"></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#006A70"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#4E55B8"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#4E55B8"></i></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#EFF0F3"><i style="width:2px;background:#7C5800"></i></span>
+                  </div>
+                </div>
+                <span class="dens-txt"><b>Discreto</b><small>Cor só na aresta</small></span>
+                <span class="radio"></span>
+              </div>
+
+              <div class="dens-opt on">
+                <div class="mini">
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#EAF1FF"><i style="width:2px;background:#2B5EA7"></i></span>
+                    <span class="mini-c" style="background:#F5FCC7"><i style="width:2px;background:#626900"></i></span>
+                    <span class="mini-c" style="background:#EAF1FF"><i style="width:2px;background:#2B5EA7"></i></span>
+                    <span class="mini-c" style="background:#F5FCC7"><i style="width:2px;background:#626900"></i></span>
+                    <span class="mini-c"></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#CFF8FF"><i style="width:2px;background:#006A70"></i></span>
+                    <span class="mini-c"></span>
+                    <span class="mini-c" style="background:#CFF8FF"><i style="width:2px;background:#006A70"></i></span>
+                    <span class="mini-c" style="background:#F1EFFF"><i style="width:2px;background:#4E55B8"></i></span>
+                    <span class="mini-c" style="background:#F1EFFF"><i style="width:2px;background:#4E55B8"></i></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#FFEFD5"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#FFEFD5"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#FFEFD5"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#FFEFD5"><i style="width:2px;background:#7C5800"></i></span>
+                    <span class="mini-c" style="background:#FFEFD5"><i style="width:2px;background:#7C5800"></i></span>
+                  </div>
+                </div>
+                <span class="dens-txt"><b>Suave</b><small>Padrão</small></span>
+                <span class="radio"></span>
+              </div>
+
+              <div class="dens-opt">
+                <div class="mini">
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#D4E3FF"></span>
+                    <span class="mini-c" style="background:#E8EF9C"></span>
+                    <span class="mini-c" style="background:#D4E3FF"></span>
+                    <span class="mini-c" style="background:#E8EF9C"></span>
+                    <span class="mini-c"></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#97F1FB"></span>
+                    <span class="mini-c"></span>
+                    <span class="mini-c" style="background:#97F1FB"></span>
+                    <span class="mini-c" style="background:#E0E0FF"></span>
+                    <span class="mini-c" style="background:#E0E0FF"></span>
+                  </div>
+                  <div class="mini-row">
+                    <span class="mini-c" style="background:#FFDF9E"></span>
+                    <span class="mini-c" style="background:#FFDF9E"></span>
+                    <span class="mini-c" style="background:#FFDF9E"></span>
+                    <span class="mini-c" style="background:#FFDF9E"></span>
+                    <span class="mini-c" style="background:#FFDF9E"></span>
+                  </div>
+                </div>
+                <span class="dens-txt"><b>Sólido</b><small>Cor cheia na célula</small></span>
+                <span class="radio"></span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tema claro</span>
+          <b>Aparência</b>
+          <span>A escolha é feita por miniatura da própria grade, não por lista de texto — você vê o resultado antes de aplicar. Vale pro app e pro widget ao mesmo tempo.</span>
+        </div>
+      </div>
+
+      <!-- WIDGET -->
+      <div class="deck">
+        <div class="phone">
+          <div class="home">
+            <div class="home-clock">9:41</div>
+            <div class="home-date">Quarta, 12 de agosto</div>
+            <div class="wdg">
+              <div class="wdg-head"><b>QUARTA</b><small>2026.1</small></div>
+              <div class="wdg-rows">
+                <div class="wrow" style="--cl:#2B5EA7;--bl:#EAF1FF">
+                  <span class="t">08:00</span>
+                  <span class="wbody"><span class="bar"></span>
+                    <span class="txt"><b>Cálculo II</b><small>Bloco C, 204</small></span></span>
+                </div>
+                <div class="wrow now" style="--cl:#006A70;--bl:#CFF8FF">
+                  <span class="t">10:00</span>
+                  <span class="wbody"><span class="bar"></span>
+                    <span class="txt"><b>Física I</b><small>Bloco A, 110</small></span></span>
+                </div>
+                <div class="wrow" style="--cl:#7C5800;--bl:#FFEFD5">
+                  <span class="t">12:00</span>
+                  <span class="wbody"><span class="bar"></span>
+                    <span class="txt"><b>Almoço</b><small>Pausa</small></span></span>
+                </div>
+                <div class="wrow" style="--cl:#446B33;--bl:#E1FFC7">
+                  <span class="t">16:00</span>
+                  <span class="wbody"><span class="bar"></span>
+                    <span class="txt"><b>Livre</b><small>—</small></span></span>
+                </div>
+                <div class="wrow" style="--cl:#4E55B8;--bl:#F1EFFF">
+                  <span class="t">18:00</span>
+                  <span class="wbody"><span class="bar"></span>
+                    <span class="txt"><b>P.O.O</b><small>Lab 2</small></span></span>
+                </div>
+              </div>
+            </div>
+            <div class="dock">
+              <div class="app-ico"></div><div class="app-ico"></div>
+              <div class="app-ico"></div><div class="app-ico"></div>
+            </div>
+          </div>
+        </div>
+        <div class="deck-cap">
+          <span class="theme-tag">tela inicial</span>
+          <b>Widget — só o dia de hoje</b>
+          <span>O chrome do widget — fundo, cabeçalho, horários — sai das cores neutras do sistema. As linhas dos itens seguem a densidade escolhida no app, com fundo, texto e filete já resolvidos em hex no snapshot.</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="note">
+    <b>O que esse wireframe não é</b>
+    <ul>
+      <li>Os tons são <b>aproximações à mão</b> dos tons 20/40/80/95 em HCT. No app, quem gera é o <code>material_color_utilities</code> a partir das sementes hue + chroma — os valores finais vão diferir um pouco.</li>
+      <li>Todas as telas estão na densidade <b>Suave</b>, o padrão. As outras duas, Discreto e Sólido, estão na <a href="https://claude.ai/code/artifact/b85b9130-20d1-4bab-8d3a-da08b82bdf2c" style="color:var(--accent)">página de densidade de cor</a>.</li>
+      <li>A cor de acento do app (nav ativa, alvo de arraste) aqui está fixa. No aparelho ela vem do <b>Material You</b>, puxada do seu wallpaper.</li>
+      <li>Tipografia, ícones, espaçamentos e cantos são indicativos. Isso aqui responde <b>estrutura e cor</b>, não visual final.</li>
+      <li>A grade semanal está em 292px de largura. Seu Poco tem mais folga, então as siglas vão respirar melhor do que aparece aqui.</li>
+    </ul>
+  </div>
+
+</div>

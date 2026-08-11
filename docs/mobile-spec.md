@@ -59,20 +59,35 @@ Chroma ~50 nas cromáticas, pra todas parecerem da mesma família em vez de um s
 
 Os gaps de hue variam de 25° a 40° em vez de 30° cravado: verde ocupa uma faixa enorme do espectro e amarelo-laranja é apertado, então espaçar uniformemente daria três verdes quase iguais e nenhum laranja decente. `oliva` (110) e `salvia` (135) são o par mais arriscado — validar na tela de prévia e afastar se preciso.
 
-### Aplicação da cor: barra de acento
+### Aplicação da cor: três densidades, à escolha do usuário
 
-Preenchimento de célula foi **descartado**. Numa grade 5×6 são até 30 blocos coloridos simultâneos — vira colcha de retalhos e contradiz o princípio minimalista.
+Quanta cor cada item carrega é **preferência do usuário**, não decisão fechada da spec. Três opções, todas usando a mesma chave de cor do item — muda só quais tons da rampa entram em jogo.
 
-A célula ocupada é **fundo neutro + texto neutro + filete colorido de 3dp na lateral**. A cor ocupa ~5% dos pixels da célula: identifica de relance sem dominar a tela. Como a área é minúscula, o filete usa chroma cheio.
+| nome no app | chave | fundo da célula | texto | filete |
+|---|---|---|---|---|
+| **Discreto** | `discreto` | `surfaceContainer` | `onSurface` | tom 40 / 80 · 3dp |
+| **Suave** *(padrão)* | `suave` | tom 95 / 20 | `onSurface` | tom 40 / 80 · 4dp |
+| **Sólido** | `solido` | tom 90 / 30 | tom 10 / 90 | — |
 
-| | filete | fundo da célula | texto |
-|---|---|---|---|
-| tema claro | tom 40 | `surfaceContainer` | `onSurface` |
-| tema escuro | tom 80 | `surfaceContainer` | `onSurface` |
+Formato "claro / escuro" nos tons. Em todos os casos o contraste é garantido pelo sistema: são os mesmos pares que o M3 usa pra container e acento, então nenhuma combinação escolhível é ilegível.
 
-Tons 40/80 são os mesmos que o M3 usa pra cor de acento sobre superfície neutra, então o contraste vem garantido pelo sistema — o usuário nunca escolhe uma combinação ilegível, porque não escolhe combinação nenhuma, só a chave.
+**Nomes plainos na interface.** "Filete", "lavagem" e "container" são vocabulário de implementação e não aparecem pro usuário.
 
-**A cor é reforço, nunca a única informação.** A sigla está sempre visível na célula e no widget. Isso importa porque `tomate` e `esmeralda` são praticamente o mesmo tom pra quem tem deuteranopia (~8% dos homens): com a sigla ali, a cor é codificação redundante, não o único jeito de distinguir uma disciplina da outra.
+**Escolha por miniatura.** A tela de aparência mostra as três como grades semanais em miniatura, não como lista de rádio com texto. O ponto de ser opção é ver o resultado antes de aplicar.
+
+**Preferência global**, uma chave no `shared_preferences` — é ajuste de exibição, não dado do horário, então não pertence à `Tabela`.
+
+Uma opção de 8dp de filete chegou a ser desenhada e foi **descartada**: numa célula de 55dp, 8dp são ~15% da largura, comendo espaço da sigla sem entregar a presença que o preenchimento suave entrega.
+
+**A cor é reforço, nunca a única informação.** A sigla está sempre visível na célula e no widget, em qualquer densidade. Isso importa porque `tomate` e `esmeralda` são praticamente o mesmo tom pra quem tem deuteranopia (~8% dos homens): com a sigla ali, a cor é codificação redundante, não o único jeito de distinguir uma disciplina da outra.
+
+### Destaque de hoje e do horário atual
+
+A grade trata segunda igual a sexta, mas o uso real é abrir o app no meio da quarta. Resolvido **em neutro**, pra funcionar nas três densidades sem competir com a cor dos itens:
+
+- coluna do dia atual sobre superfície levemente elevada (`surfaceContainerHigh`);
+- rótulo do dia atual em peso maior;
+- fio de `outline` marcando a faixa de horário corrente.
 
 ### Sigla obrigatória
 Todo item tem **nome completo** e **sigla curta**. A célula da grade semanal tem ~55dp e o widget é ainda mais apertado — ali entra a sigla; o nome completo aparece no editor do dia, no detalhe e na biblioteca.
@@ -130,21 +145,26 @@ Uma chave `today_schedule_json` no `SharedPreferences` nativo (via `home_widget`
       "sigla": "CÁLC II",
       "tipo": "Aula",
       "local": "Bloco C, sala 204",
-      "accentLight": "#8C4A5E",
-      "accentDark": "#FFB1C6"
+      "bgLight": "#FFECF0",   "bgDark": "#6A002F",
+      "fgLight": "#1A1C1E",   "fgDark": "#E3E2E5",
+      "barLight": "#AB365C",  "barDark": "#FFB1C8",
+      "barWidthDp": 4
     }
   ]
 }
 ```
 
-Cores já resolvidas em hex, porque `RemoteViews` não tem como consultar a paleta do Flutter em runtime. Como a cor virou só o filete, cada slot carrega **um** acento por tema em vez de par fundo/texto — o fundo e o texto do widget saem das cores neutras do sistema.
+Cores já resolvidas em hex, porque `RemoteViews` não tem como consultar a paleta do Flutter em runtime.
+
+O widget **segue a densidade escolhida no app** — se a grade está em Sólido e o widget continua em Discreto, parece defeito. Por isso o snapshot carrega fundo, texto e filete já resolvidos por slot, com `barWidthDp: 0` significando "sem filete". O widget segue burro: pinta o que recebe, sem conhecer densidade nem paleta.
 
 ## Telas
 
-1. **Visão semana** (tela inicial) — a grade 5×6 completa em fundo neutro, cada célula ocupada com seu filete de acento, só leitura. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Toque num dia abre o editor daquele dia. Seletor de tabela ativa no topo.
+1. **Visão semana** (tela inicial) — a grade 5×6 completa em chrome neutro, cada célula ocupada renderizada na densidade escolhida, só leitura. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Hoje aparece destacado. Toque num dia abre o editor daquele dia. Seletor de tabela ativa no topo.
 2. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens fixa embaixo. Arrasta o item da paleta pra linha do horário. Navegação entre dias por swipe ou setas.
 3. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, professor, notas.
 4. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade.
+5. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura. Preferência global, aplicada na hora e propagada pro widget.
 
 ### Interação de arrastar
 - `Draggable` / `DragTarget` do Flutter. Long-press pra pegar, com feedback háptico.
@@ -157,7 +177,8 @@ Cores já resolvidas em hex, porque `RemoteViews` não tem como consultar a pale
 
 - Mostra **só o dia de hoje** da tabela ativa.
 - Fim de semana / dia sem nada: estado vazio explícito, não widget em branco.
-- Cantos arredondados via `system_app_widget_background_radius`; fundo e texto usando as cores **neutras** do sistema (`@android:color/system_neutral1_*` no Android 12+), com o filete colorido de cada linha como único ponto de chroma. Assim ele convive com os outros widgets da tela inicial em vez de gritar.
+- Cantos arredondados via `system_app_widget_background_radius`; chrome do widget (fundo, cabeçalho, horários) nas cores **neutras** do sistema (`@android:color/system_neutral1_*` no Android 12+). O chroma fica restrito às linhas dos itens, na densidade escolhida no app.
+- **Marca o horário corrente**, do mesmo jeito neutro que a visão semana.
 - Redimensionável, com `targetCellWidth`/`targetCellHeight` (Android 12+): em tamanho pequeno mostra os próximos 2–3 horários, em tamanho grande o dia inteiro.
 - Toque no widget abre o app na visão semana.
 
@@ -177,14 +198,17 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 ## Roadmap
 
 1. ~~Scaffold do app Flutter~~ ✅ feito — `mobile/`, org `com.jota`, só Android.
-2. Tema M3 + cores dinâmicas + paleta curada de cores de item.
+2. Tema M3 + cores dinâmicas + paleta curada + as três densidades como função pura `(chave, densidade, tema) → (fundo, texto, filete)`.
 3. Modelo (`Item`, `Tabela`) + persistência + provider.
 4. Biblioteca de itens (CRUD) e lista de tabelas.
-5. Visão semana (só leitura).
+5. Visão semana (só leitura), com destaque de hoje e do horário corrente.
 6. Editor do dia com arrastar.
-7. Widget nativo Android (XML, `AppWidgetProvider` Kotlin, manifest) + snapshot.
-8. Estratégia de refresh (foreground + tick natural do SO).
-9. Polimento: estados vazios, ícone, preview do widget.
+7. Tela de aparência (escolha da densidade por miniatura).
+8. Widget nativo Android (XML, `AppWidgetProvider` Kotlin, manifest) + snapshot na densidade escolhida.
+9. Estratégia de refresh (foreground + tick natural do SO).
+10. Polimento: estados vazios, ícone, preview do widget.
+
+A função de resolução da fase 2 é o ponto de reuso do projeto: a grade, o editor, as miniaturas da tela de aparência e o snapshot do widget consomem todos ela. Errar ali propaga pra tudo; acertar ali resolve tudo de uma vez.
 
 ## Pontos em aberto
 

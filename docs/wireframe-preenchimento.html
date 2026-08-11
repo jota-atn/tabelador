@@ -1,0 +1,378 @@
+<title>Tabelador — densidade de cor</title>
+
+<style>
+  :root {
+    --ground:      #F1F2F4;
+    --surface:     #FFFFFF;
+    --ink:         #14171B;
+    --ink-soft:    #4A5058;
+    --muted:       #767C85;
+    --rule:        #DCDFE3;
+    --accent:      #3C5F92;
+    --accent-soft: #E2E9F4;
+    --bezel:       #C9CCD1;
+
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #101215; --surface: #191C20; --ink: #E4E7EA; --ink-soft: #B0B6BE;
+      --muted: #848B94; --rule: #2B3037; --accent: #8FB2E4; --accent-soft: #1D2A3C;
+      --bezel: #33383F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101215; --surface: #191C20; --ink: #E4E7EA; --ink-soft: #B0B6BE;
+    --muted: #848B94; --rule: #2B3037; --accent: #8FB2E4; --accent-soft: #1D2A3C;
+    --bezel: #33383F;
+  }
+  :root[data-theme="light"] {
+    --ground: #F1F2F4; --surface: #FFFFFF; --ink: #14171B; --ink-soft: #4A5058;
+    --muted: #767C85; --rule: #DCDFE3; --accent: #3C5F92; --accent-soft: #E2E9F4;
+    --bezel: #C9CCD1;
+  }
+
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1080px; margin: 0 auto; padding: 56px 24px 80px;
+    display: flex; flex-direction: column; gap: 56px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  h1 {
+    font-size: clamp(28px, 4.6vw, 40px); line-height: 1.1; letter-spacing: -.025em;
+    font-weight: 660; margin: 0; text-wrap: balance;
+  }
+  .masthead { display: flex; flex-direction: column; gap: 16px; }
+  .lede { font-size: 17px; line-height: 1.55; color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+  /* escala de peso */
+  .scale {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-top: 1px solid var(--rule); padding-top: 18px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .scale .track {
+    flex: 1; min-width: 160px; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--rule), var(--accent));
+  }
+
+  /* variante */
+  .variant { display: flex; flex-direction: column; gap: 20px; }
+  .v-head { display: flex; flex-direction: column; gap: 8px; }
+  .v-num {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    color: var(--accent);
+  }
+  h2 { font-size: 22px; letter-spacing: -.016em; font-weight: 640; margin: 0; }
+  .v-head p { margin: 0; color: var(--ink-soft); max-width: 70ch; font-size: 14.5px; }
+  .v-spec {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    display: flex; flex-wrap: wrap; gap: 6px 14px;
+  }
+
+  .pair { display: flex; flex-wrap: wrap; gap: 22px; }
+  .frame { display: flex; flex-direction: column; gap: 9px; }
+  .frame-lbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .shell {
+    width: 308px; border-radius: 18px; padding: 6px;
+    background: var(--bezel);
+    box-shadow: 0 1px 2px rgba(0,0,0,.13), 0 8px 22px -14px rgba(0,0,0,.4);
+  }
+
+  /* ---- superfície do app ---- */
+  .dev {
+    --surf: #FCFCFD; --surf-c: #EFF0F3; --on-surf: #1A1C1E;
+    --on-surf-var: #44474B; --outline-var: #C8CACD;
+    border-radius: 13px; background: var(--surf); color: var(--on-surf);
+    overflow: hidden; padding: 12px 10px 14px;
+  }
+  .dev.is-dark {
+    --surf: #121417; --surf-c: #1E2124; --on-surf: #E3E2E5;
+    --on-surf-var: #C3C6CA; --outline-var: #43474C;
+  }
+
+  .bar-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px 11px;
+  }
+  .bar-top b { font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
+  .bar-top span { font-family: var(--mono); font-size: 9.5px; color: var(--on-surf-var); }
+
+  .grid-head, .grid-row { display: grid; grid-template-columns: 38px repeat(5, 1fr); gap: 3px; }
+  .grid-head div {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .07em;
+    color: var(--on-surf-var); text-align: center; padding-bottom: 5px;
+  }
+  .grid-row { border-top: 1px solid var(--outline-var); padding: 3px 0; }
+  .hr-label {
+    font-family: var(--mono); font-size: 9px; color: var(--on-surf-var);
+    display: flex; align-items: center; font-variant-numeric: tabular-nums;
+  }
+  .cell {
+    border-radius: 5px; display: flex; align-items: center; gap: 4px;
+    min-height: 34px; overflow: hidden;
+  }
+  .cell .bar { align-self: stretch; flex: none; }
+  .cell .sig {
+    font-size: 8.5px; font-weight: 560; letter-spacing: .015em;
+    padding-right: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cell.empty { background: transparent; }
+
+  /* linha do editor do dia */
+  .slots { display: flex; flex-direction: column; }
+  .slot { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: 1px solid var(--outline-var); }
+  .slot:first-child { border-top: 0; }
+  .slot .t {
+    font-family: var(--mono); font-size: 9px; color: var(--on-surf-var);
+    width: 32px; flex: none; font-variant-numeric: tabular-nums;
+  }
+  .slot .body { flex: 1; display: flex; align-items: center; gap: 8px; border-radius: 6px; overflow: hidden; min-height: 38px; }
+  .slot .body .bar { align-self: stretch; flex: none; }
+  .slot .txt { display: flex; flex-direction: column; gap: 1px; padding: 4px 8px 4px 0; min-width: 0; }
+  .slot .txt b { font-size: 11px; font-weight: 580; letter-spacing: -.005em; }
+  .slot .txt small { font-size: 9px; opacity: .72; }
+
+  /* avaliação */
+  .verdict {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 4px; overflow: hidden;
+  }
+  .vc { background: var(--surface); padding: 14px 15px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .vc-lbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .vc p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+
+  .note {
+    border-top: 1px solid var(--rule); padding-top: 22px;
+    display: flex; flex-direction: column; gap: 12px;
+    font-size: 14px; color: var(--ink-soft); max-width: 74ch;
+  }
+  .note b { color: var(--ink); font-weight: 620; }
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 5px; border-radius: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Tabelador · densidade de cor</div>
+    <h1>Três densidades, escolhidas por quem usa</h1>
+    <p class="lede">
+      Quanta cor cada item carrega virou preferência do usuário, não decisão fechada da spec.
+      A mesma semana e os mesmos oito itens nas três opções, nos dois temas — porque é no escuro
+      que preenchimento costuma cobrar caro.
+    </p>
+    <div class="scale">
+      <span>discreto</span>
+      <span class="track"></span>
+      <span>sólido</span>
+    </div>
+  </header>
+
+  <section class="variant">
+    <div class="v-head">
+      <div class="v-num">Discreto</div>
+      <h2>Cor só na aresta</h2>
+      <p>Célula em superfície neutra, cor num fio de 3dp na lateral. A grade fica silenciosa e o olho vai direto na sigla.</p>
+      <div class="v-spec"><span>fundo: surfaceContainer</span><span>filete: tom 40 / 80 · 3dp</span><span>texto: onSurface</span></div>
+    </div>
+    <div class="pair" data-variant="filete"></div>
+  </section>
+
+  <section class="variant">
+    <div class="v-head">
+      <div class="v-num">Suave <span style="color:var(--muted)">· padrão</span></div>
+      <h2>Célula preenchida, tela ainda calma</h2>
+      <p>A célula inteira ganha a cor, mas no tom mais claro da rampa, com o filete por cima dando a aresta saturada que a lavagem sozinha não tem. O item tem corpo e o chrome neutro continua dominando a tela.</p>
+      <div class="v-spec"><span>fundo: tom 95 / 20</span><span>filete: tom 40 / 80 · 4dp</span><span>texto: onSurface</span></div>
+    </div>
+    <div class="pair" data-variant="lavagem"></div>
+  </section>
+
+  <section class="variant">
+    <div class="v-head">
+      <div class="v-num">Sólido</div>
+      <h2>Container cheio, sem meio-termo</h2>
+      <p>Fundo colorido e texto na cor de contraste do próprio tom. Dá pra ler a semana inteira sem ler uma palavra — ao custo de a tela ficar colorida de ponta a ponta.</p>
+      <div class="v-spec"><span>fundo: tom 90 / 30</span><span>texto: tom 10 / 90</span><span>sem filete</span></div>
+    </div>
+    <div class="pair" data-variant="cheio"></div>
+  </section>
+
+  <section class="variant">
+    <div class="v-head">
+      <div class="v-num">No editor do dia</div>
+      <h2>A mesma escolha, onde a célula é grande</h2>
+      <p>A grade semanal é o caso difícil: 30 células de 55dp competindo. No editor do dia são seis linhas largas, e a mesma densidade se comporta de outro jeito — Sólido, que na grade pesa, aqui lê como cartão.</p>
+    </div>
+    <div class="pair" data-slots="1"></div>
+  </section>
+
+  <div class="verdict">
+    <div class="vc">
+      <div class="vc-lbl">quem escolhe Discreto</div>
+      <p>Quer a semana como texto organizado, com a cor ajudando de canto de olho. Paga tendo que ler a sigla pra confirmar a matéria.</p>
+    </div>
+    <div class="vc">
+      <div class="vc-lbl">quem escolhe Suave</div>
+      <p>Quer o item como bloco, sem a tela virar mosaico. É o padrão porque atende os dois extremos razoavelmente bem.</p>
+    </div>
+    <div class="vc">
+      <div class="vc-lbl">quem escolhe Sólido</div>
+      <p>Decorou as cores e quer ler a semana de relance, sem palavra nenhuma. Aceita que a tela fique colorida em troca disso.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>O que ler nessas grades</b>
+    <p style="margin:0">
+      Duas linhas são as mais reveladoras: <b>12:00</b>, onde ALMOÇO ocupa os cinco dias e mostra como cada
+      densidade aguenta repetição, e <b>18:00</b>, quase toda vazia, onde dá pra ver se o preenchimento faz o
+      espaço vazio parecer buraco.
+    </p>
+    <p style="margin:0">
+      Uma quarta opção com filete de 8dp foi desenhada e <b>descartada</b>: numa célula de 55dp, 8dp são ~15%
+      da largura, comendo espaço da sigla sem entregar a presença que o Suave entrega.
+    </p>
+    <p style="margin:0">
+      Os tons são aproximações à mão dos tons 10/20/30/40/80/90/95 em HCT. No app quem gera é o
+      <code>material_color_utilities</code> a partir das sementes, e as três densidades saem de uma única
+      função <code>(chave, densidade, tema)</code> — a mesma que alimenta a grade, o editor, as miniaturas da
+      tela de aparência e o snapshot do widget.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  const C = {
+    oceano:    { t40:'#2B5EA7', t80:'#A6C8FF', t90:'#D4E3FF', t30:'#0B4585', t95:'#EAF1FF', t20:'#002F62', t10:'#001B3D' },
+    oliva:     { t40:'#626900', t80:'#CBD35C', t90:'#E8EF9C', t30:'#494F00', t95:'#F5FCC7', t20:'#313600', t10:'#1B1E00' },
+    turquesa:  { t40:'#006A70', t80:'#56D9E4', t90:'#97F1FB', t30:'#005055', t95:'#CFF8FF', t20:'#00363A', t10:'#001F22' },
+    ametista:  { t40:'#7C42AB', t80:'#E2B6FF', t90:'#F2DAFF', t30:'#632992', t95:'#FBECFF', t20:'#4A0D78', t10:'#2E004F' },
+    ambar:     { t40:'#7C5800', t80:'#EAC24C', t90:'#FFDF9E', t30:'#5D4200', t95:'#FFEFD5', t20:'#402D00', t10:'#261900' },
+    framboesa: { t40:'#AB365C', t80:'#FFB1C8', t90:'#FFD9E2', t30:'#8B1D45', t95:'#FFECF0', t20:'#6A002F', t10:'#3F0018' },
+    tomate:    { t40:'#A83A32', t80:'#FFB3A4', t90:'#FFDAD3', t30:'#86261F', t95:'#FFEDE9', t20:'#67130E', t10:'#410002' },
+    indigo:    { t40:'#4E55B8', t80:'#BEC2FF', t90:'#E0E0FF', t30:'#353D9E', t95:'#F1EFFF', t20:'#1B2585', t10:'#000769' },
+    salvia:    { t40:'#446B33', t80:'#AAD68F', t90:'#C5F2A9', t30:'#2D5220', t95:'#E1FFC7', t20:'#183A0D', t10:'#072100' }
+  };
+
+  const SEMANA = [
+    ['08:00', ['CÁLC','oceano'], ['EDA','oliva'],   ['CÁLC','oceano'], ['EDA','oliva'],      null],
+    ['10:00', ['FÍS I','turquesa'], null,           ['FÍS I','turquesa'], ['BD','ametista'], ['BD','ametista']],
+    ['12:00', ['ALM','ambar'], ['ALM','ambar'],     ['ALM','ambar'],   ['ALM','ambar'],      ['ALM','ambar']],
+    ['14:00', ['EDA','oliva'], ['IHC','framboesa'], null,              ['IHC','framboesa'],  ['MONIT','tomate']],
+    ['16:00', ['MONIT','tomate'], ['P.O.O','indigo'], ['LIVRE','salvia'], null,              ['LIVRE','salvia']],
+    ['18:00', null, null, ['P.O.O','indigo'], ['CÁLC','oceano'], null]
+  ];
+
+  const DIA = [
+    ['08:00', 'Cálculo II',  'Aula · Bloco C, 204', 'oceano'],
+    ['10:00', 'Física I',    'Aula · Bloco A, 110', 'turquesa'],
+    ['12:00', 'Almoço',      'Pausa',               'ambar'],
+    ['14:00', 'P.O.O',       'Aula · Lab 2',        'indigo'],
+    ['16:00', 'Livre',       '—',                   'salvia'],
+    ['18:00', 'Monitoria',   'Monitoria · Lab 3',   'tomate']
+  ];
+
+  const NEUTRO = {
+    light: { surfC: '#EFF0F3', onSurf: '#1A1C1E' },
+    dark:  { surfC: '#1E2124', onSurf: '#E3E2E5' }
+  };
+
+  // devolve {bg, barW, barColor, fg} para uma variante + tema
+  function style(variant, key, dark) {
+    const c = C[key];
+    const n = dark ? NEUTRO.dark : NEUTRO.light;
+    switch (variant) {
+      case 'filete':
+        return { bg: n.surfC, barW: 3, barColor: dark ? c.t80 : c.t40, fg: n.onSurf };
+      case 'lavagem':
+        return { bg: dark ? c.t20 : c.t95, barW: 4, barColor: dark ? c.t80 : c.t40, fg: n.onSurf };
+      case 'cheio':
+        return { bg: dark ? c.t30 : c.t90, barW: 0, barColor: 'transparent', fg: dark ? c.t90 : c.t10 };
+    }
+  }
+
+  function cell(item, variant, dark) {
+    if (!item) return '<div class="cell empty"></div>';
+    const [sig, key] = item;
+    const s = style(variant, key, dark);
+    const bar = s.barW ? `<span class="bar" style="width:${s.barW}px;background:${s.barColor}"></span>` : '';
+    const pad = s.barW ? '' : 'padding-left:6px;';
+    return `<div class="cell" style="background:${s.bg};${pad}">${bar}<span class="sig" style="color:${s.fg}">${sig}</span></div>`;
+  }
+
+  function grid(variant, dark) {
+    let h = '<div class="grid-head"><div></div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div></div>';
+    for (const row of SEMANA) {
+      h += '<div class="grid-row"><div class="hr-label">' + row[0] + '</div>';
+      for (let i = 1; i <= 5; i++) h += cell(row[i], variant, dark);
+      h += '</div>';
+    }
+    return h;
+  }
+
+  function slots(variant, dark) {
+    let h = '<div class="slots">';
+    for (const [t, nome, sub, key] of DIA) {
+      const s = style(variant, key, dark);
+      const bar = s.barW ? `<span class="bar" style="width:${s.barW}px;background:${s.barColor}"></span>` : '';
+      const pad = s.barW ? '' : 'padding-left:8px;';
+      h += `<div class="slot"><span class="t">${t}</span>`
+         + `<div class="body" style="background:${s.bg};${pad}">${bar}`
+         + `<span class="txt" style="color:${s.fg}"><b>${nome}</b><small>${sub}</small></span></div></div>`;
+    }
+    return h + '</div>';
+  }
+
+  function shell(inner, dark, titulo) {
+    return '<div class="frame">'
+      + `<div class="frame-lbl">tema ${dark ? 'escuro' : 'claro'}</div>`
+      + '<div class="shell"><div class="dev' + (dark ? ' is-dark' : '') + '">'
+      + `<div class="bar-top"><b>${titulo}</b><span>2026.1</span></div>`
+      + inner
+      + '</div></div></div>';
+  }
+
+  for (const el of document.querySelectorAll('.pair[data-variant]')) {
+    const v = el.dataset.variant;
+    el.innerHTML = shell(grid(v, false), false, 'Semana') + shell(grid(v, true), true, 'Semana');
+  }
+
+  for (const el of document.querySelectorAll('.pair[data-slots]')) {
+    let h = '';
+    for (const v of ['filete', 'lavagem', 'cheio']) {
+      const nome = { filete: 'Discreto', lavagem: 'Suave', cheio: 'Sólido' }[v];
+      h += '<div class="frame">'
+        + `<div class="frame-lbl">${nome}</div>`
+        + '<div class="shell"><div class="dev"><div class="bar-top"><b>Quarta</b><span>claro</span></div>'
+        + slots(v, false) + '</div></div>'
+        + '<div class="shell"><div class="dev is-dark"><div class="bar-top"><b>Quarta</b><span>escuro</span></div>'
+        + slots(v, true) + '</div></div>'
+        + '</div>';
+    }
+    el.innerHTML = h;
+  }
+</script>
