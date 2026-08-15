@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- minWidth/minHeight pequenos de propósito: no tamanho default (recém
+     adicionado, antes de qualquer redimensionamento) o widget já mostra só
+     2-3 horários, como pede o spec. Redimensionar pra maior mostra mais
+     linhas: ver o cálculo de LocalSize em TodayScheduleWidget.kt. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:minResizeWidth="120dp"
+    android:minResizeHeight="80dp"
+    android:maxResizeWidth="360dp"
+    android:maxResizeHeight="480dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/today_schedule_widget_loading"
+    android:previewLayout="@layout/today_schedule_widget_loading"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

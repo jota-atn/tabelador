@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../model/item.dart';
 import '../../model/tabela.dart';
 import '../../theme/color_density.dart';
+import '../../util/horario_atual.dart' as horario_atual;
 import 'item_swatch.dart';
 
 /// Abreviações dos dias na largura de uma coluna de grade.
@@ -37,23 +38,11 @@ class GradeSemana extends StatelessWidget {
   /// Segunda a sexta são 1..5 em DateTime.weekday. No fim de semana nenhuma
   /// coluna é destacada — não faz sentido apontar "hoje" para um dia que a
   /// grade não tem.
-  static int indiceDeHoje([DateTime? agora]) {
-    final dia = (agora ?? DateTime.now()).weekday;
-    return dia <= 5 ? dia - 1 : -1;
-  }
+  static int indiceDeHoje([DateTime? agora]) => horario_atual.indiceDeHoje(agora);
 
   /// Em qual faixa de horário estamos agora, ou -1 fora do expediente da
   /// tabela.
-  int _slotCorrente(DateTime agora) {
-    if (indiceDeHoje(agora) < 0) return -1;
-    final minutos = agora.hour * 60 + agora.minute;
-    for (var i = 0; i < tabela.qtdHorarios; i++) {
-      final comeco = (tabela.horaInicial + i * tabela.intervalo) * 60;
-      final fim = comeco + tabela.intervalo * 60;
-      if (minutos >= comeco && minutos < fim) return i;
-    }
-    return -1;
-  }
+  int _slotCorrente(DateTime agora) => horario_atual.slotCorrente(tabela, agora);
 
   @override
   Widget build(BuildContext context) {

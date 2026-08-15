@@ -21,6 +21,10 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
+    // Necessário pra compilar o widget nativo: usa Jetpack Glance (Compose
+    // pro AppWidget), que o pacote `home_widget` já traz como dependência
+    // transitiva.
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20" apply false
 }
 
 include(":app")
