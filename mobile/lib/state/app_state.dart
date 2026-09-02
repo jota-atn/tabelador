@@ -35,6 +35,25 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  Tabela? tabelaPorId(String? id) {
+    if (id == null) return null;
+    for (final t in _tabelas) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// O que a bandeja de arrastar e o seletor por toque de [tabelaId] oferecem:
+  /// os itens compartilhados (sem [Item.tabelaId]) mais os exclusivos dessa
+  /// tabela, tirando os arquivados. Exclusivo de outra tabela nunca aparece
+  /// aqui — é esse isolamento que resolve o item de um semestre vazando pra
+  /// paleta de outro.
+  List<Item> itensParaTabela(String tabelaId) => List.unmodifiable(
+        _itens.where(
+          (i) => !i.arquivado && (i.tabelaId == null || i.tabelaId == tabelaId),
+        ),
+      );
+
   /// Os tipos já usados, pro autocomplete do campo `tipo`. É o que substitui um
   /// enum fechado de categorias.
   List<String> get tiposConhecidos {
@@ -104,6 +123,58 @@ class AppState extends ChangeNotifier {
     await _store.salvarTabelas(_tabelas);
   }
 
+  Future<void> definirArquivado(String itemId, bool arquivado) async {
+    _itens = [
+      for (final i in _itens)
+        i.id == itemId ? i.copyWith(arquivado: arquivado) : i,
+    ];
+    notifyListeners();
+    await _store.salvarItens(_itens);
+  }
+
+  /// Arquiva vários itens de uma vez — usado pela revisão em lote de
+  /// [itensExclusivosDe], que já filtrou quais o usuário confirmou.
+  Future<void> arquivarItens(Iterable<String> itemIds) async {
+    final ids = itemIds.toSet();
+    if (ids.isEmpty) return;
+    _itens = [
+      for (final i in _itens) ids.contains(i.id) ? i.copyWith(arquivado: true) : i,
+    ];
+    notifyListeners();
+    await _store.salvarItens(_itens);
+  }
+
+  /// Itens (ainda não arquivados) que só aparecem nas células de [tabelaId].
+  ///
+  /// É só um ponto de partida pra revisão em lote — item genérico e
+  /// recorrente (Almoço, Academia) pode só coincidir de hoje ser exclusivo
+  /// por ainda existir uma tabela só, sem deixar de fazer sentido em
+  /// tabelas futuras. Quem decide de fato é o usuário, marcando/desmarcando
+  /// na revisão antes de confirmar.
+  List<Item> itensExclusivosDe(String tabelaId) {
+    Tabela? tabela;
+    for (final t in _tabelas) {
+      if (t.id == tabelaId) tabela = t;
+    }
+    if (tabela == null) return const [];
+
+    final usadosAqui = <String>{
+      for (final dia in kDias)
+        for (final id in tabela.celulas[dia] ?? const []) ?id,
+    };
+
+    final resultado = <Item>[];
+    for (final id in usadosAqui) {
+      final usaEmOutra = _tabelas.any(
+        (t) => t.id != tabelaId && t.usosDe(id) > 0,
+      );
+      if (usaEmOutra) continue;
+      final item = itemPorId(id);
+      if (item != null && !item.arquivado) resultado.add(item);
+    }
+    return resultado;
+  }
+
   // -------------------------------------------------------------- tabelas
 
   Future<void> adicionarTabela(Tabela tabela) async {
@@ -124,10 +195,21 @@ class AppState extends ChangeNotifier {
     await _store.salvarTabelas(_tabelas);
   }
 
+  /// Quantos itens só existem por causa de [tabelaId] (ver [Item.tabelaId]) —
+  /// usado pra avisar antes de apagar a tabela, já que eles somem junto.
+  int itensExclusivosContagem(String tabelaId) =>
+      _itens.where((i) => i.tabelaId == tabelaId).length;
+
   Future<void> removerTabela(String tabelaId) async {
     _tabelas = [
       for (final t in _tabelas)
         if (t.id != tabelaId) t,
+    ];
+    // Item exclusivo de uma tabela não sobrevive a ela — ao contrário do
+    // compartilhado, não tem pra onde apontar fora dali.
+    _itens = [
+      for (final i in _itens)
+        if (i.tabelaId != tabelaId) i,
     ];
     if (_tabelaAtivaId == tabelaId) {
       _tabelaAtivaId = _tabelas.isEmpty ? null : _tabelas.first.id;
@@ -135,6 +217,7 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     await _store.salvarTabelas(_tabelas);
+    await _store.salvarItens(_itens);
   }
 
   Future<void> definirTabelaAtiva(String? id) async {
