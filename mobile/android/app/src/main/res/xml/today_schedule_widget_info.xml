@@ -14,6 +14,6 @@
     android:maxResizeHeight="480dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/today_schedule_widget_loading"
-    android:previewLayout="@layout/today_schedule_widget_loading"
+    android:previewLayout="@layout/today_schedule_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
