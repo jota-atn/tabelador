@@ -8,19 +8,24 @@ import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../theme/color_density.dart';
+import 'item_editor.dart';
+import 'widgets/celula_picker.dart';
 import 'widgets/item_swatch.dart';
 
 /// O que está sendo arrastado.
 ///
-/// [origem] é o slot de onde saiu, ou null se veio da bandeja. Precisa dessa
+/// [origem] é o slot de onde saiu, ou null se veio da paleta. Precisa dessa
 /// distinção pra saber se o slot de origem deve ser esvaziado ao soltar.
 typedef _Carga = ({String itemId, int? origem});
 
-/// Editor de um dia: os horários como linhas largas, com a bandeja de itens
-/// fixa embaixo.
+/// Editor de um dia: os horários como linhas largas, com a paleta de itens
+/// logo abaixo — tudo numa lista só, crescendo pra baixo.
 ///
 /// A grade semanal tem células de ~55dp, alvo pequeno demais pro dedo. Aqui
-/// cada alvo é a linha inteira.
+/// cada alvo é a linha inteira. Preencher um horário tem dois caminhos que
+/// convivem: arrastar um item da paleta, ou tocar nele pra "armar" (o chip
+/// ganha um contorno) e depois tocar no horário — mais confiável que
+/// arrastar em telas pequenas ou com o dedo maior.
 class DiaEditor extends StatefulWidget {
   const DiaEditor({super.key, required this.diaInicial});
 
@@ -33,8 +38,17 @@ class DiaEditor extends StatefulWidget {
 class _DiaEditorState extends State<DiaEditor> {
   late int _dia = kDias.indexOf(widget.diaInicial).clamp(0, kDias.length - 1);
 
+  /// Item "armado" pra tocar num horário e encaixar, sem precisar arrastar.
+  /// Fica armado entre horários e entre dias — útil pra encaixar o mesmo
+  /// item várias vezes seguidas.
+  String? _itemArmado;
+
   void _irPara(int delta) {
     setState(() => _dia = (_dia + delta) % kDias.length);
+  }
+
+  void _armar(String itemId) {
+    setState(() => _itemArmado = _itemArmado == itemId ? null : itemId);
   }
 
   Future<void> _definir(Tabela tabela, int slot, String? itemId) {
@@ -54,30 +68,24 @@ class _DiaEditorState extends State<DiaEditor> {
     await _definir(tabela, destino, carga.itemId);
   }
 
-  /// Caminho alternativo ao arrastar. Existe pra acessibilidade e pra dedo
-  /// grande: arrastar é o gesto principal, mas nunca o único.
-  Future<void> _escolherPorToque(Tabela tabela, int slot) async {
-    final state = context.read<AppState>();
-    final ocupado = tabela.celula(kDias[_dia], slot) != null;
-
-    final escolha = await showModalBottomSheet<String?>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => _SeletorDeItem(
-        itens: state.itens,
-        densidade: state.densidade,
-        permitirLimpar: ocupado,
-      ),
-    );
-
-    if (escolha == null || !mounted) return;
-    await _definir(tabela, slot, escolha.isEmpty ? null : escolha);
+  /// Tocar num horário: com item armado, encaixa ele na hora — sem armado,
+  /// abre a lista completa (também é como se limpa um horário preenchido).
+  Future<void> _tocarSlot(Tabela tabela, int slot) async {
+    final armado = _itemArmado;
+    if (armado != null) {
+      unawaited(HapticFeedback.selectionClick());
+      await _definir(tabela, slot, armado);
+      return;
+    }
+    await _escolherPorToque(tabela, slot);
   }
+
+  Future<void> _escolherPorToque(Tabela tabela, int slot) =>
+      abrirSeletorDeCelula(context, tabela: tabela, dia: kDias[_dia], slot: slot);
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final scheme = Theme.of(context).colorScheme;
     final tabela = state.tabelaAtiva;
 
     if (tabela == null) {
@@ -86,6 +94,9 @@ class _DiaEditorState extends State<DiaEditor> {
         body: const Center(child: Text('Nenhuma tabela ativa')),
       );
     }
+
+    final itens = state.itensParaTabela(tabela.id);
+    final armado = _itemArmado != null ? state.itemPorId(_itemArmado) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,6 +128,8 @@ class _DiaEditorState extends State<DiaEditor> {
       ),
       body: Column(
         children: [
+          if (armado != null)
+            _BannerArmado(item: armado, aoCancelar: () => _armar(armado.id)),
           Expanded(
             child: GestureDetector(
               // Swipe horizontal troca de dia, como o carrossel que a grade
@@ -126,32 +139,91 @@ class _DiaEditorState extends State<DiaEditor> {
                 if (v < -200) _irPara(1);
                 if (v > 200) _irPara(-1);
               },
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-                itemCount: tabela.qtdHorarios,
-                itemBuilder: (context, slot) => _LinhaSlot(
-                  rotulo: tabela.horarios[slot],
-                  item: state.itemPorId(tabela.celula(kDias[_dia], slot)),
-                  densidade: state.densidade,
-                  slot: slot,
-                  aoSoltar: (carga) => _aoSoltar(tabela, slot, carga),
-                  aoTocar: () => _escolherPorToque(tabela, slot),
-                  aoLimpar: () => _definir(tabela, slot, null),
-                ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
+                children: [
+                  for (var slot = 0; slot < tabela.qtdHorarios; slot++)
+                    _LinhaSlot(
+                      rotulo: tabela.horarios[slot],
+                      item: state.itemPorId(tabela.celula(kDias[_dia], slot)),
+                      densidade: state.densidade,
+                      slot: slot,
+                      itemArmado: armado != null,
+                      aoSoltar: (carga) => _aoSoltar(tabela, slot, carga),
+                      aoTocar: () => _tocarSlot(tabela, slot),
+                      aoLimpar: () => limparComDesfazer(
+                        context,
+                        state,
+                        tabela.id,
+                        kDias[_dia],
+                        slot,
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  _Paleta(
+                    itens: itens,
+                    densidade: state.densidade,
+                    tabelaId: tabela.id,
+                    itemArmadoId: _itemArmado,
+                    aoArmar: _armar,
+                  ),
+                  if (itens.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
+                      child: Text(
+                        'Toque em "item" ali em cima pra cadastrar o primeiro.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-          _Bandeja(itens: state.itens, densidade: state.densidade),
-          if (state.itens.isEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ],
+      ),
+    );
+  }
+}
+
+/// Barra fixa no topo enquanto um item está armado — sem ela, tocar num chip
+/// e nada acontecer na hora pareceria tão quebrado quanto o arrastar que não
+/// pegou.
+class _BannerArmado extends StatelessWidget {
+  const _BannerArmado({required this.item, required this.aoCancelar});
+
+  final Item item;
+  final VoidCallback aoCancelar;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
               child: Text(
-                'Cadastre itens na aba Itens pra poder montar o horário.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                'Toque num horário pra colocar "${item.sigla}"',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSecondaryContainer,
+                ),
               ),
             ),
-        ],
+            IconButton(
+              onPressed: aoCancelar,
+              icon: Icon(Icons.close, size: 18, color: scheme.onSecondaryContainer),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Cancelar seleção',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -163,6 +235,7 @@ class _LinhaSlot extends StatelessWidget {
     required this.item,
     required this.densidade,
     required this.slot,
+    required this.itemArmado,
     required this.aoSoltar,
     required this.aoTocar,
     required this.aoLimpar,
@@ -172,6 +245,7 @@ class _LinhaSlot extends StatelessWidget {
   final Item? item;
   final ColorDensity densidade;
   final int slot;
+  final bool itemArmado;
   final void Function(_Carga) aoSoltar;
   final VoidCallback aoTocar;
   final VoidCallback aoLimpar;
@@ -205,6 +279,7 @@ class _LinhaSlot extends StatelessWidget {
                   densidade: densidade,
                   slot: slot,
                   destacado: ativo,
+                  itemArmado: itemArmado,
                   aoTocar: aoTocar,
                   aoLimpar: aoLimpar,
                 );
@@ -223,6 +298,7 @@ class _Corpo extends StatelessWidget {
     required this.densidade,
     required this.slot,
     required this.destacado,
+    required this.itemArmado,
     required this.aoTocar,
     required this.aoLimpar,
   });
@@ -231,6 +307,7 @@ class _Corpo extends StatelessWidget {
   final ColorDensity densidade;
   final int slot;
   final bool destacado;
+  final bool itemArmado;
   final VoidCallback aoTocar;
   final VoidCallback aoLimpar;
 
@@ -240,6 +317,10 @@ class _Corpo extends StatelessWidget {
     final i = item;
 
     if (i == null) {
+      final corBorda = destacado
+          ? scheme.primary
+          : (itemArmado ? scheme.primary.withValues(alpha: 0.4) : scheme.outlineVariant);
+
       return GestureDetector(
         onTap: aoTocar,
         child: Container(
@@ -247,21 +328,25 @@ class _Corpo extends StatelessWidget {
           decoration: BoxDecoration(
             color: destacado ? scheme.secondaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: destacado ? scheme.primary : scheme.outlineVariant,
-              style: BorderStyle.solid,
-            ),
+            border: Border.all(color: corBorda),
           ),
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            destacado ? 'solte aqui' : 'vazio',
-            style: TextStyle(
-              fontSize: 11,
-              color: destacado
-                  ? scheme.onSecondaryContainer
-                  : scheme.onSurfaceVariant,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!destacado) ...[
+                Icon(Icons.add, size: 13, color: corBorda),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                destacado ? 'solte aqui' : (itemArmado ? 'toque pra colocar' : 'vazio'),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: destacado ? scheme.onSecondaryContainer : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -291,10 +376,11 @@ class _Corpo extends StatelessWidget {
       ),
       child: LongPressDraggable<_Carga>(
         data: (itemId: i.id, origem: slot),
+        delay: const Duration(milliseconds: 300),
         feedback: Material(
           color: Colors.transparent,
-          child: Opacity(
-            opacity: 0.92,
+          child: Transform.scale(
+            scale: 1.05,
             child: SizedBox(
               width: 200,
               height: 54,
@@ -363,115 +449,157 @@ class _Preenchido extends StatelessWidget {
   }
 }
 
-/// A bandeja de itens no rodapé, de onde se arrasta.
-class _Bandeja extends StatelessWidget {
-  const _Bandeja({required this.itens, required this.densidade});
-
-  final List<Item> itens;
-  final ColorDensity densidade;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    if (itens.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'ARRASTE PRA UM HORÁRIO',
-            style: TextStyle(
-              fontSize: 9,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 34,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: itens.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
-                final item = itens[i];
-                final chip = ItemSwatch(
-                  cor: item.cor,
-                  densidade: densidade,
-                  texto: item.sigla,
-                  largura: 78,
-                  altura: 34,
-                  raio: 17,
-                );
-
-                // Long-press, não arrasto direto: a bandeja rola na
-                // horizontal, e um Draggable comum roubaria o gesto de
-                // rolagem — não daria pra percorrer a lista de itens.
-                return LongPressDraggable<_Carga>(
-                  data: (itemId: item.id, origem: null),
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: Transform.rotate(angle: -0.04, child: chip),
-                  ),
-                  childWhenDragging: Opacity(opacity: 0.3, child: chip),
-                  onDragStarted: HapticFeedback.selectionClick,
-                  child: chip,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Lista de itens pra escolher por toque, com opção de limpar o slot.
-///
-/// Devolve o id escolhido, string vazia pra limpar, ou null se cancelou.
-class _SeletorDeItem extends StatelessWidget {
-  const _SeletorDeItem({
+/// A paleta de itens: flui e cresce pra baixo em vez de rolar de lado, com o
+/// atalho de criar item sempre por último.
+class _Paleta extends StatelessWidget {
+  const _Paleta({
     required this.itens,
     required this.densidade,
-    required this.permitirLimpar,
+    required this.tabelaId,
+    required this.itemArmadoId,
+    required this.aoArmar,
   });
 
   final List<Item> itens;
   final ColorDensity densidade;
-  final bool permitirLimpar;
+  final String tabelaId;
+  final String? itemArmadoId;
+  final ValueChanged<String> aoArmar;
+
+  Future<void> _criarItem(BuildContext context) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ItemEditor(tabelaId: tabelaId)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          if (permitirLimpar)
-            ListTile(
-              leading: const Icon(Icons.close),
-              title: const Text('Deixar vazio'),
-              onTap: () => Navigator.of(context).pop(''),
-            ),
-          for (final item in itens)
-            ListTile(
-              leading: ItemSwatch(
-                cor: item.cor,
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ITENS — TOQUE PRA ARMAR OU ARRASTE',
+          style: TextStyle(
+            fontSize: 9,
+            letterSpacing: 1,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final item in itens)
+              _ChipItem(
+                item: item,
                 densidade: densidade,
-                largura: 10,
-                altura: 34,
+                armado: item.id == itemArmadoId,
+                onTap: () => aoArmar(item.id),
               ),
-              title: Text(item.nome),
-              subtitle: item.tipo.isEmpty ? null : Text(item.tipo),
-              onTap: () => Navigator.of(context).pop(item.id),
+            _BotaoNovoItem(onTap: () => _criarItem(context)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ChipItem extends StatelessWidget {
+  const _ChipItem({
+    required this.item,
+    required this.densidade,
+    required this.armado,
+    required this.onTap,
+  });
+
+  final Item item;
+  final ColorDensity densidade;
+  final bool armado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final chip = ItemSwatch(
+      cor: item.cor,
+      densidade: densidade,
+      texto: item.sigla,
+      largura: 78,
+      altura: 34,
+      raio: 17,
+    );
+
+    // Contorno sempre reservado (transparente quando não armado) pra armar
+    // não mudar o tamanho do chip nem empurrar os vizinhos no Wrap.
+    final comAro = Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: armado ? scheme.primary : Colors.transparent,
+          width: 2,
+        ),
+      ),
+      child: chip,
+    );
+
+    // Toque arma (encaixa no próximo toque num horário); long-press arrasta.
+    // Os dois caminhos convivem — nenhum invalida o outro.
+    return LongPressDraggable<_Carga>(
+      data: (itemId: item.id, origem: null),
+      delay: const Duration(milliseconds: 300),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(
+          scale: 1.08,
+          child: Transform.rotate(angle: -0.04, child: chip),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.3, child: comAro),
+      onDragStarted: HapticFeedback.selectionClick,
+      child: GestureDetector(onTap: onTap, child: comAro),
+    );
+  }
+}
+
+/// Atalho de criar item sem sair do editor do dia — nasce exclusivo desta
+/// tabela (ver [Item.tabelaId]), pro caso comum de algo que só existe neste
+/// semestre.
+class _BotaoNovoItem extends StatelessWidget {
+  const _BotaoNovoItem({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(17),
+      child: Container(
+        // +4 pra bater com o aro reservado (2 de cada lado) dos chips ao lado.
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, size: 14, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(
+              'item',
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
