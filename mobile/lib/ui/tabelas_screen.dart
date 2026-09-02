@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../model/tabela.dart';
 import '../state/app_state.dart';
+import 'tabela_editor_screen.dart';
 
 /// Lista de tabelas: criar, renomear, duplicar, configurar, apagar e escolher
 /// qual está ativa.
@@ -46,6 +47,18 @@ Future<void> _abrirConfig(BuildContext context, {Tabela? original}) {
     context: context,
     isScrollControlled: true,
     builder: (_) => _ConfigTabela(original: original),
+  );
+}
+
+/// Ativa [tabela] e empurra a tela de edição dela — a mesma grade + editor
+/// de dia que a aba Semana usa, só que amarrada a esta tabela específica em
+/// vez de "a que estiver ativa".
+void _abrirTabela(BuildContext context, Tabela tabela) {
+  context.read<AppState>().definirTabelaAtiva(tabela.id);
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => TabelaEditorScreen(tabelaId: tabela.id),
+    ),
   );
 }
 
@@ -101,17 +114,31 @@ class _CartaoTabela extends StatelessWidget {
 
   Future<void> _apagar(BuildContext context) async {
     final state = context.read<AppState>();
+    final itensExclusivos = state.itensExclusivosContagem(tabela.id);
+
+    final partes = <String>[];
+    if (_preenchidas > 0) {
+      partes.add('Os $_preenchidas horários preenchidos vão junto.');
+    }
+    if (itensExclusivos > 0) {
+      partes.add(
+        itensExclusivos == 1
+            ? '1 item que só existe nesta tabela também será apagado.'
+            : '$itensExclusivos itens que só existem nesta tabela '
+                'também serão apagados.',
+      );
+    }
+    if (partes.isEmpty) {
+      partes.add('A tabela está vazia.');
+    } else if (_preenchidas > 0) {
+      partes.add('Os demais itens continuam cadastrados.');
+    }
 
     final confirmou = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Apagar ${tabela.nome}?'),
-        content: Text(
-          _preenchidas == 0
-              ? 'A tabela está vazia.'
-              : 'Os $_preenchidas horários preenchidos vão junto. '
-                  'Os itens continuam cadastrados.',
-        ),
+        content: Text(partes.join(' ')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -126,6 +153,77 @@ class _CartaoTabela extends StatelessWidget {
     );
 
     if (confirmou ?? false) await state.removerTabela(tabela.id);
+  }
+
+  Future<void> _arquivarExclusivos(BuildContext context) async {
+    final state = context.read<AppState>();
+    final candidatos = state.itensExclusivosDe(tabela.id);
+
+    if (candidatos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nenhum item aparece só nesta tabela.')),
+      );
+      return;
+    }
+
+    final marcados = {for (final i in candidatos) i.id: true};
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          final scheme = Theme.of(dialogContext).colorScheme;
+          return AlertDialog(
+            title: Text('Arquivar itens de ${tabela.nome}?'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Só aparecem nesta tabela. Desmarque os que você quer '
+                      'manter na paleta pra reaproveitar depois.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    for (final item in candidatos)
+                      CheckboxListTile(
+                        value: marcados[item.id],
+                        onChanged: (v) => setDialogState(
+                          () => marcados[item.id] = v ?? false,
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(item.nome),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Arquivar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if ((confirmou ?? false) && context.mounted) {
+      final ids = marcados.entries.where((e) => e.value).map((e) => e.key);
+      await state.arquivarItens(ids);
+    }
   }
 
   @override
@@ -144,7 +242,7 @@ class _CartaoTabela extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.read<AppState>().definirTabelaAtiva(tabela.id),
+        onTap: () => _abrirTabela(context, tabela),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
           child: Row(
@@ -199,6 +297,7 @@ class _CartaoTabela extends StatelessWidget {
                   'renomear' => _renomear(context),
                   'configurar' => _abrirConfig(context, original: tabela),
                   'duplicar' => _duplicar(context),
+                  'arquivar_exclusivos' => _arquivarExclusivos(context),
                   'apagar' => _apagar(context),
                   _ => null,
                 },
@@ -206,6 +305,10 @@ class _CartaoTabela extends StatelessWidget {
                   PopupMenuItem(value: 'renomear', child: Text('Renomear')),
                   PopupMenuItem(value: 'configurar', child: Text('Horários')),
                   PopupMenuItem(value: 'duplicar', child: Text('Duplicar')),
+                  PopupMenuItem(
+                    value: 'arquivar_exclusivos',
+                    child: Text('Arquivar itens exclusivos'),
+                  ),
                   PopupMenuItem(value: 'apagar', child: Text('Apagar')),
                 ],
               ),
@@ -290,29 +393,41 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
     if (nome.isEmpty) return;
 
     final state = context.read<AppState>();
+    final navigator = Navigator.of(context);
     final original = widget.original;
 
     if (original == null) {
-      await state.adicionarTabela(
-        Tabela.nova(
-          nome: nome,
-          horaInicial: _horaInicial,
-          intervalo: _intervalo,
-          qtdHorarios: _qtdHorarios,
+      final nova = Tabela.nova(
+        nome: nome,
+        horaInicial: _horaInicial,
+        intervalo: _intervalo,
+        qtdHorarios: _qtdHorarios,
+      );
+      await state.adicionarTabela(nova);
+      // Tabela recém-criada vira a ativa mesmo já havendo outra — é a que
+      // acabou de virar o foco. `adicionarTabela` só ativa sozinha quando é
+      // a primeira de todas.
+      await state.definirTabelaAtiva(nova.id);
+      navigator.pop();
+      // Cria e já entra: é pra montar o horário dela que a pessoa acabou de
+      // criar a tabela, não pra olhar de novo a lista.
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => TabelaEditorScreen(tabelaId: nova.id),
         ),
       );
-    } else {
-      await state.atualizarTabela(
-        original.copyWith(
-          nome: nome,
-          horaInicial: _horaInicial,
-          intervalo: _intervalo,
-          qtdHorarios: _qtdHorarios,
-        ),
-      );
+      return;
     }
 
-    if (mounted) Navigator.of(context).pop();
+    await state.atualizarTabela(
+      original.copyWith(
+        nome: nome,
+        horaInicial: _horaInicial,
+        intervalo: _intervalo,
+        qtdHorarios: _qtdHorarios,
+      ),
+    );
+    navigator.pop();
   }
 
   @override
@@ -482,6 +597,12 @@ class _Vazio extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(
+              Icons.table_rows_outlined,
+              size: 32,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
             Text(
               'Nenhuma tabela ainda',
               style: TextStyle(
