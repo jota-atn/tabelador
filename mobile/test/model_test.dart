@@ -15,7 +15,6 @@ void main() {
         tipo: 'Aula',
         cor: ItemColor.oceano,
         local: 'Bloco C, 204',
-        professor: 'Marinho',
         notas: 'prova dia 12',
       );
 
@@ -27,7 +26,6 @@ void main() {
       final json = item.toJson();
 
       expect(json.containsKey('local'), isFalse);
-      expect(json.containsKey('professor'), isFalse);
       expect(json.containsKey('notas'), isFalse);
     });
 
