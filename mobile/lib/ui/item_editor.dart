@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../model/item.dart';
+import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../theme/item_palette.dart';
 import 'widgets/item_swatch.dart';
 
 /// Cadastro e edição de um Item.
 ///
-/// [original] nulo significa item novo.
+/// [original] nulo significa item novo. [tabelaId] pré-seleciona o vínculo no
+/// seletor abaixo (ver [Item.tabelaId]) — quem abre o editor a partir do
+/// "criar item só pra esta tabela" no editor do dia passa isso adiante, mas o
+/// campo continua editável: dá pra vincular (ou desvincular) de qualquer
+/// tabela existente na hora de cadastrar, sem precisar estar dentro dela.
 class ItemEditor extends StatefulWidget {
-  const ItemEditor({super.key, this.original});
+  const ItemEditor({super.key, this.original, this.tabelaId});
 
   final Item? original;
+  final String? tabelaId;
 
   @override
   State<ItemEditor> createState() => _ItemEditorState();
@@ -25,10 +31,10 @@ class _ItemEditorState extends State<ItemEditor> {
   late final TextEditingController _sigla;
   late final TextEditingController _tipo;
   late final TextEditingController _local;
-  late final TextEditingController _professor;
   late final TextEditingController _notas;
 
   late ItemColor _cor;
+  late String? _tabelaId;
 
   /// Enquanto o usuário não digitar sigla à mão, ela acompanha o nome. Assim o
   /// campo obrigatório se preenche sozinho no caso comum, sem impedir override.
@@ -42,15 +48,15 @@ class _ItemEditorState extends State<ItemEditor> {
     _sigla = TextEditingController(text: o?.sigla ?? '');
     _tipo = TextEditingController(text: o?.tipo ?? '');
     _local = TextEditingController(text: o?.local ?? '');
-    _professor = TextEditingController(text: o?.professor ?? '');
     _notas = TextEditingController(text: o?.notas ?? '');
     _cor = o?.cor ?? ItemColor.oceano;
+    _tabelaId = o?.tabelaId ?? widget.tabelaId;
     _siglaAutomatica = o == null;
   }
 
   @override
   void dispose() {
-    for (final c in [_nome, _sigla, _tipo, _local, _professor, _notas]) {
+    for (final c in [_nome, _sigla, _tipo, _local, _notas]) {
       c.dispose();
     }
     super.dispose();
@@ -95,11 +101,15 @@ class _ItemEditorState extends State<ItemEditor> {
           tipo: _tipo.text.trim(),
           cor: _cor,
           local: opcional(_local),
-          professor: opcional(_professor),
           notas: opcional(_notas),
+          tabelaId: _tabelaId,
         ),
       );
     } else {
+      // Reconstrói (não copyWith: local/notas precisam poder virar null de
+      // novo se o campo for esvaziado, e copyWith trata null como "não
+      // mudei"). Por isso arquivado, que o form não edita, é copiado
+      // explícito — "esquecer" ele reseta pro default.
       await state.atualizarItem(
         Item(
           id: original.id,
@@ -108,8 +118,9 @@ class _ItemEditorState extends State<ItemEditor> {
           tipo: _tipo.text.trim(),
           cor: _cor,
           local: opcional(_local),
-          professor: opcional(_professor),
           notas: opcional(_notas),
+          arquivado: original.arquivado,
+          tabelaId: _tabelaId,
         ),
       );
     }
@@ -140,7 +151,7 @@ class _ItemEditorState extends State<ItemEditor> {
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Nome',
-                hintText: 'Cálculo Diferencial e Integral II',
+                hintText: 'Cálculo II, Academia, Reunião semanal...',
               ),
               validator: _naoVazio,
               onChanged: _aoDigitarNome,
@@ -162,6 +173,12 @@ class _ItemEditorState extends State<ItemEditor> {
               controller: _tipo,
               conhecidos: state.tiposConhecidos,
             ),
+            const SizedBox(height: 16),
+            _SeletorDeVinculo(
+              tabelas: state.tabelas,
+              selecionada: _tabelaId,
+              aoEscolher: (id) => setState(() => _tabelaId = id),
+            ),
             const SizedBox(height: 24),
             _SeletorDeCor(
               selecionada: _cor,
@@ -174,21 +191,18 @@ class _ItemEditorState extends State<ItemEditor> {
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Local',
-                hintText: 'Bloco C, sala 204',
+                hintText: 'Sala 204, Academia do bairro...',
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _professor,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Professor'),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _notas,
               textCapitalization: TextCapitalization.sentences,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Notas'),
+              decoration: const InputDecoration(
+                labelText: 'Notas',
+                hintText: 'Com quem, o que levar, o que lembrar...',
+              ),
             ),
           ],
         ),
@@ -217,7 +231,7 @@ class _CampoTipo extends StatelessWidget {
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(
             labelText: 'Tipo',
-            hintText: 'Aula, Monitoria, Pausa...',
+            hintText: 'Aula, Treino, Pausa...',
           ),
         ),
         if (conhecidos.isNotEmpty) ...[
@@ -235,6 +249,51 @@ class _CampoTipo extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Escolhe se o item é compartilhado (aparece em qualquer tabela) ou
+/// exclusivo de uma tabela específica (ver [Item.tabelaId]) — sem precisar
+/// estar dentro do editor daquela tabela pra decidir isso.
+class _SeletorDeVinculo extends StatelessWidget {
+  const _SeletorDeVinculo({
+    required this.tabelas,
+    required this.selecionada,
+    required this.aoEscolher,
+  });
+
+  final List<Tabela> tabelas;
+  final String? selecionada;
+  final ValueChanged<String?> aoEscolher;
+
+  @override
+  Widget build(BuildContext context) {
+    // Sem tabela nenhuma cadastrada ainda, não tem o que oferecer além de
+    // compartilhado — o próprio default.
+    if (tabelas.isEmpty) return const SizedBox.shrink();
+
+    // Defensivo: se o vínculo apontar pra uma tabela que sumiu (não deveria
+    // acontecer, `removerTabela` apaga o item junto), cai em compartilhado
+    // em vez de estourar o Dropdown por valor sem item correspondente.
+    final valor =
+        selecionada != null && tabelas.any((t) => t.id == selecionada)
+            ? selecionada
+            : null;
+
+    return DropdownButtonFormField<String?>(
+      initialValue: valor,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'Vínculo'),
+      items: [
+        const DropdownMenuItem(
+          value: null,
+          child: Text('Compartilhado (qualquer tabela)'),
+        ),
+        for (final tabela in tabelas)
+          DropdownMenuItem(value: tabela.id, child: Text('Só em ${tabela.nome}')),
+      ],
+      onChanged: aoEscolher,
     );
   }
 }

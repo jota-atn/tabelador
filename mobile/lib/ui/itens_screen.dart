@@ -6,7 +6,7 @@ import '../state/app_state.dart';
 import 'item_editor.dart';
 import 'widgets/item_swatch.dart';
 
-/// A biblioteca de itens: disciplinas, monitorias, pausas.
+/// A biblioteca de itens: disciplinas, treinos, compromissos, o que for.
 ///
 /// Compartilhada entre tabelas — "Cálculo II" cadastrado uma vez serve pra
 /// qualquer semestre.
@@ -51,10 +51,63 @@ class ItensScreen extends StatelessWidget {
     if (confirmou ?? false) await state.removerItem(item.id);
   }
 
+  Future<void> _alternarArquivado(BuildContext context, Item item) {
+    return context.read<AppState>().definirArquivado(item.id, !item.arquivado);
+  }
+
+  Widget _tile(BuildContext context, AppState state, Item item) {
+    final usos = state.usosDoItem(item.id);
+
+    final tile = ListTile(
+      leading: ItemSwatch(
+        cor: item.cor,
+        densidade: state.densidade,
+        largura: 10,
+        altura: 38,
+      ),
+      title: Text(item.nome),
+      subtitle: Text(
+        [
+          if (item.tipo.isNotEmpty) item.tipo,
+          if (item.tabelaId != null)
+            'só em ${state.tabelaPorId(item.tabelaId)?.nome ?? "tabela apagada"}',
+          if (item.local != null) item.local!,
+          if (usos > 0) '$usos ${usos == 1 ? 'horário' : 'horários'}',
+        ].join(' · '),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _SiglaTag(sigla: item.sigla),
+          PopupMenuButton<String>(
+            onSelected: (opcao) => switch (opcao) {
+              'arquivar' => _alternarArquivado(context, item),
+              'apagar' => _confirmarExclusao(context, item),
+              _ => null,
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'arquivar',
+                child: Text(item.arquivado ? 'Desarquivar' : 'Arquivar'),
+              ),
+              const PopupMenuItem(value: 'apagar', child: Text('Apagar')),
+            ],
+          ),
+        ],
+      ),
+      onTap: () => _abrirEditor(context, item: item),
+    );
+
+    // Arquivado esmaece pra ficar claro, num olhar, que ele não entra na
+    // paleta de arrastar — sem precisar de um rótulo escrito em toda linha.
+    return item.arquivado ? Opacity(opacity: 0.55, child: tile) : tile;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final itens = state.itens;
+    final ativos = state.itens.where((i) => !i.arquivado).toList();
+    final arquivados = state.itens.where((i) => i.arquivado).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Itens')),
@@ -66,44 +119,28 @@ class ItensScreen extends StatelessWidget {
         tooltip: 'Novo item',
         child: const Icon(Icons.add),
       ),
-      body: itens.isEmpty
+      body: state.itens.isEmpty
           ? const _Vazio()
-          : ListView.builder(
+          : ListView(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 88),
-              itemCount: itens.length,
-              itemBuilder: (context, i) {
-                final item = itens[i];
-                final usos = state.usosDoItem(item.id);
-
-                return ListTile(
-                  leading: ItemSwatch(
-                    cor: item.cor,
-                    densidade: state.densidade,
-                    largura: 10,
-                    altura: 38,
-                  ),
-                  title: Text(item.nome),
-                  subtitle: Text(
-                    [
-                      if (item.tipo.isNotEmpty) item.tipo,
-                      if (item.local != null) item.local!,
-                      if (usos > 0) '$usos ${usos == 1 ? 'horário' : 'horários'}',
-                    ].join(' · '),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _SiglaTag(sigla: item.sigla),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Apagar',
-                        onPressed: () => _confirmarExclusao(context, item),
+              children: [
+                for (final item in ativos) _tile(context, state, item),
+                if (arquivados.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Text(
+                      'ARQUIVADOS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    ],
+                    ),
                   ),
-                  onTap: () => _abrirEditor(context, item: item),
-                );
-              },
+                  for (final item in arquivados) _tile(context, state, item),
+                ],
+              ],
             ),
     );
   }
@@ -143,6 +180,8 @@ class _Vazio extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(Icons.label_outline, size: 32, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 12),
             Text(
               'Nenhum item ainda',
               style: TextStyle(
@@ -153,8 +192,8 @@ class _Vazio extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Cadastre suas disciplinas e atividades aqui. '
-              'Depois é só arrastar pra dentro da tabela.',
+              'Cadastre suas disciplinas, treinos e compromissos aqui. '
+              'Depois é só encaixar num horário.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
             ),
