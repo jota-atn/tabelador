@@ -1,6 +1,6 @@
 # Especificação: Tabelador Mobile (Android + Widget)
 
-> Status: **app funcionando, sem o widget** — fases 1 a 7 de 10 implementadas em `mobile/`. Dá pra cadastrar itens, criar tabelas, montar o horário arrastando e ver a semana. Falta o widget de tela inicial (fases 8–10), que é o motivo original do port.
+> Status: **app com widget funcionando** — fases 1 a 9 de 10 implementadas em `mobile/`, mais o essencial da fase 10 (ícone e preview do widget). Falta só polir estados vazios adicionais, se algum aparecer no uso real.
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
@@ -210,13 +210,12 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 5. ~~Visão semana (só leitura), com destaque de hoje e do horário corrente~~ ✅
 6. ~~Editor do dia com arrastar~~ ✅
 7. ~~Tela de aparência (escolha da densidade por miniatura)~~ ✅
-8. Widget nativo Android (XML, `AppWidgetProvider` Kotlin, manifest) + snapshot na densidade escolhida.
-9. Estratégia de refresh (foreground + tick natural do SO).
-10. Polimento: estados vazios, ícone, preview do widget.
+8. ~~Widget nativo Android (Glance, manifest) + snapshot na densidade escolhida~~ ✅
+9. ~~Estratégia de refresh (foreground em toda mutação + no resume do app, tick natural do SO via `updatePeriodMillis`)~~ ✅
+10. Polimento — feito: ícone do app (`assets/icon/`, ver `flutter_launcher_icons` no `pubspec.yaml`) e preview real do widget no seletor (`today_schedule_widget_preview.xml`). Em aberto: estados vazios adicionais que aparecerem no uso real (hoje só existe o de "sem aulas no dia").
 
-O app fecha o ciclo de uso a partir da fase 7: cadastrar item, criar tabela,
-montar o horário e ver a semana. Falta o widget, que é o motivo original do
-port.
+O app fecha o ciclo de uso: cadastrar item, criar tabela, montar o horário,
+ver a semana e acompanhar o dia pelo widget na tela inicial.
 
 A função de resolução da fase 2 é o ponto de reuso do projeto: a grade, o editor, as miniaturas da tela de aparência e o snapshot do widget consomem todos ela. Errar ali propaga pra tudo; acertar ali resolve tudo de uma vez.
 
