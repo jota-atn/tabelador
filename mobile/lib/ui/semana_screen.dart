@@ -5,7 +5,8 @@ import '../model/tabela.dart';
 import '../state/app_state.dart';
 import 'aparencia_screen.dart';
 import 'dia_editor.dart';
-import 'widgets/grade_semana.dart';
+import 'widgets/celula_picker.dart';
+import 'widgets/semana_corpo.dart';
 
 /// A tela inicial: a semana inteira da tabela ativa, só leitura.
 class SemanaScreen extends StatelessWidget {
@@ -17,6 +18,17 @@ class SemanaScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => DiaEditor(diaInicial: dia)),
     );
+  }
+
+  /// Troca pra próxima/anterior tabela na lista — o mesmo swipe horizontal
+  /// que o editor do dia usa pra trocar de dia, aqui trocando de tabela.
+  void _trocarTabela(BuildContext context, AppState state, int delta) {
+    final tabelas = state.tabelas;
+    if (tabelas.length < 2) return;
+    final indice = tabelas.indexWhere((t) => t.id == state.tabelaAtivaId);
+    if (indice == -1) return;
+    final novoIndice = (indice + delta + tabelas.length) % tabelas.length;
+    state.definirTabelaAtiva(tabelas[novoIndice].id);
   }
 
   @override
@@ -51,27 +63,23 @@ class SemanaScreen extends StatelessWidget {
       ),
       body: tabela == null
           ? const _SemTabela()
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  GradeSemana(
-                    tabela: tabela,
-                    densidade: state.densidade,
-                    itemPorId: state.itemPorId,
-                    aoTocarDia: (dia) => _abrirDia(context, dia),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Toque num dia pra montar o horário',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+          : GestureDetector(
+              onHorizontalDragEnd: (d) {
+                final v = d.primaryVelocity ?? 0;
+                if (v < -200) _trocarTabela(context, state, 1);
+                if (v > 200) _trocarTabela(context, state, -1);
+              },
+              child: SemanaCorpo(
+                tabela: tabela,
+                densidade: state.densidade,
+                itemPorId: state.itemPorId,
+                aoTocarDia: (dia) => _abrirDia(context, dia),
+                aoEditarCelula: (dia, slot) => abrirSeletorDeCelula(
+                  context,
+                  tabela: tabela,
+                  dia: dia,
+                  slot: slot,
+                ),
               ),
             ),
     );
