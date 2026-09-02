@@ -73,6 +73,49 @@ void main() {
       expect(find.text('QUINTA'), findsOneWidget);
     });
 
+    testWidgets('toque longo numa célula edita só ela, com desfazer',
+        (tester) async {
+      var tabela = Tabela.nova(nome: '2026.1');
+      tabela = tabela.comCelula('QUARTA', 0, _calc.id);
+      semear(itens: [_calc], tabelas: [tabela], ativa: tabela.id);
+
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('CALC'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Deixar vazio'));
+      await tester.pumpAndSettle();
+
+      expect((await lerDoDisco()).tabelas.single.celula('QUARTA', 0), isNull);
+      expect(find.text('"CALC" removido'), findsOneWidget);
+
+      await tester.tap(find.text('Desfazer'));
+      await tester.pumpAndSettle();
+
+      expect(
+        (await lerDoDisco()).tabelas.single.celula('QUARTA', 0),
+        _calc.id,
+      );
+    });
+
+    testWidgets('arrastar a grade troca de tabela', (tester) async {
+      final a = Tabela.nova(nome: 'Primeira');
+      final b = Tabela.nova(nome: 'Segunda');
+      semear(tabelas: [a, b], ativa: a.id);
+
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Primeira'), findsOneWidget);
+
+      await tester.fling(find.byType(GradeSemana), const Offset(-400, 0), 1000);
+      await tester.pumpAndSettle();
+
+      expect((await lerDoDisco()).tabelaAtiva?.nome, 'Segunda');
+    });
+
     testWidgets('destaca hoje só em dia útil', (tester) async {
       // Segunda a sexta viram índices 0..4; sábado e domingo, -1.
       expect(GradeSemana.indiceDeHoje(DateTime(2026, 8, 10)), 0); // segunda
@@ -147,6 +190,8 @@ void main() {
 
       final salvo = await lerDoDisco();
       expect(salvo.tabelas.single.celula('SEGUNDA', 0), isNull);
+      // Deslizar também oferece desfazer, não só o toque longo na grade.
+      expect(find.text('Desfazer'), findsOneWidget);
     });
 
     testWidgets('limpar pelo seletor deixa o slot vazio', (tester) async {
