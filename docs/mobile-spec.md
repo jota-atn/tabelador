@@ -1,6 +1,6 @@
 # Especificação: Tabelador Mobile (Android + Widget)
 
-> Status: **roadmap original completo** (fases 1–10) e um bloco de polimento pós-roadmap já implementado também: itens arquiváveis e vinculáveis a uma única tabela, tela dedicada por tabela, editor do dia repaginado (paleta em lista, toque pra armar, desfazer), grade da semana com swipe entre tabelas/toque longo/linha do agora, e navegação/formulários responsivos pra tela larga. Ver "Depois do roadmap original" pro detalhe de cada um.
+> Status: **roadmap original completo** (fases 1–10) e um bloco de polimento pós-roadmap já implementado também: itens arquiváveis e vinculáveis a uma única tabela, tela dedicada por tabela, editor do dia repaginado (paleta em lista, toque pra armar, desfazer), grade da semana com swipe entre tabelas/toque longo/linha do agora, navegação/formulários responsivos pra tela larga, e exportar/importar backup. Ver "Depois do roadmap original" pro detalhe de cada um.
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
@@ -174,7 +174,14 @@ O widget **segue a densidade escolhida no app** — se a grade está em Sólido 
 3. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens logo abaixo, numa lista só que cresce pra baixo (não mais bandeja horizontal com scroll). Preencher um horário tem dois caminhos que convivem: arrastar o item da paleta, ou tocar nele pra "armar" (contorno visível) e depois tocar no horário — mais confiável que arrastar em tela pequena ou dedo grande, e fica armado entre horários/dias pra encaixar o mesmo item várias vezes seguidas. Limpar um horário (arrastando pra fora, ou "Deixar vazio") mostra um snackbar com "Desfazer". Um atalho na própria paleta cria item exclusivo desta tabela sem sair da tela. Navegação entre dias por swipe ou setas.
 4. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, notas, e o vínculo com uma tabela (compartilhado ou exclusivo de uma). Menu por item com Arquivar/Desarquivar além de Apagar; arquivados ficam numa seção recolhida no fim da lista.
 5. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade. Tocar num card ativa e já abre a tela dedicada dela (item 2). Menu por tabela ganha "Arquivar itens exclusivos": revisão em lote dos itens que só aparecem ali, pré-marcados mas editável (item recorrente tipo Almoço pode ser desmarcado) antes de confirmar. Apagar uma tabela avisa também quantos itens exclusivos dela somem junto.
-6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura. Preferência global, aplicada na hora e propagada pro widget.
+6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura, mais exportar/importar backup (ver "Backup" abaixo). Preferência de densidade é global, aplicada na hora e propagada pro widget.
+
+### Backup
+Motivo: tudo mora em `SharedPreferences`, e reinstalar o app (inclusive por cima de uma atualização, dependendo de como foi instalada) apaga esses dados sem aviso — não tinha caminho de recuperação.
+
+- **Exportar**: junta itens, tabelas, tabela ativa e densidade num JSON (mesmo formato de `Item.toJson`/`Tabela.toJson`, então é o mesmo parser que já existe) e abre o diálogo nativo "salvar como" (`FilePicker.saveFile`, baseado em SAF) — o usuário escolhe onde salvar. Sem isso, precisaria de permissão de armazenamento; quem grava o arquivo de fato é o sistema, o app só entrega os bytes.
+- **Importar**: abre o seletor de arquivo (`FilePicker.pickFile`, filtro `.json`), decodifica e pede confirmação antes de **substituir tudo** — não mescla com o que já existe. Formato inválido (JSON quebrado, ou sem as chaves esperadas) mostra aviso em vez de estourar; segue a mesma regra tolerante do carregamento normal pra tabela ativa que não bate com nenhuma tabela do arquivo (cai na primeira).
+- **Dependência**: só `file_picker` — cobre os dois sentidos (`pickFile` e `saveFile`), sem precisar de `share_plus` nem `path_provider`. `share_plus` chegou a ser adicionado e removido na mesma sessão: a versão que resolve junto com `file_picker` recente (≥13.0.0) já migrou pro modelo de Kotlin embutido do Flutter, e o `home_widget` ainda aplica Kotlin Gradle Plugin do jeito clássico — misturar os dois quebra o build (`Unresolved reference` em classes do próprio `share_plus`, não erro de configuração nossa). Ver "Pontos em aberto".
 
 ### Interação de arrastar
 - `Draggable` / `DragTarget` do Flutter. Long-press pra pegar (300ms), com feedback háptico e um leve aumento de escala no item durante o arrasto.
@@ -207,6 +214,7 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 - **Persistência**: `shared_preferences` + JSON.
 - **Widget nativo**: pacote `home_widget` (ponte Flutter → `AppWidgetProvider` Android).
 - **Tema**: `dynamic_color`.
+- **Backup**: `file_picker` (salvar/abrir arquivo via SAF).
 
 ## Roadmap
 
@@ -257,6 +265,10 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
   entre as colunas dos dias.
 - **Responsivo**: barra lateral em tela larga, formulários com largura
   máxima. Ver "Navegação e layout responsivo" acima.
+- **Backup**: exportar/importar tudo como um arquivo JSON, pela tela
+  Aparência. Motivado direto por perda de dado real — reinstalar o app apaga
+  o que está em `SharedPreferences`, sem aviso e sem recuperação. Ver
+  "Backup" acima.
 
 ## Pontos em aberto
 
