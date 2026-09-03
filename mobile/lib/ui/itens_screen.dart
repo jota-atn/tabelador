@@ -180,7 +180,7 @@ class _Vazio extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.label_outline, size: 32, color: scheme.onSurfaceVariant),
+            Icon(Icons.category_outlined, size: 32, color: scheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               'Nenhum item ainda',
