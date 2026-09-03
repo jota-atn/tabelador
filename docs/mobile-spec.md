@@ -1,6 +1,6 @@
 # Especificação: Tabelador Mobile (Android + Widget)
 
-> Status: **app com widget funcionando** — fases 1 a 9 de 10 implementadas em `mobile/`, mais o essencial da fase 10 (ícone e preview do widget). Falta só polir estados vazios adicionais, se algum aparecer no uso real.
+> Status: **roadmap original completo** (fases 1–10) e um bloco de polimento pós-roadmap já implementado também: itens arquiváveis e vinculáveis a uma única tabela, tela dedicada por tabela, editor do dia repaginado (paleta em lista, toque pra armar, desfazer), grade da semana com swipe entre tabelas/toque longo/linha do agora, e navegação/formulários responsivos pra tela larga. Ver "Depois do roadmap original" pro detalhe de cada um.
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
@@ -25,12 +25,12 @@ Diferença de postura em relação ao script: no Python, cada célula é uma str
 - **Chrome neutro**: app bar, fundos, cards, navegação e botões usam só a rampa neutra do M3 (`surface`, `surfaceContainer`, `onSurface`, `onSurfaceVariant`). Sem app bar colorida, sem superfície tingida.
 - **Material You restrito a acentos interativos** — seleção, FAB, aba ativa, indicador de arraste. A cor dinâmica do sistema não pinta superfícies grandes.
 - **Hierarquia por tipografia e espaço**, não por cor: dois pesos, três tamanhos. Onde daria vontade de destacar com cor, destaca-se com peso ou respiro.
-- **Poucas linhas**: o `fancy_grid` do script é 100% borda; aqui, espaçamento resolve a separação e fios de `outlineVariant` aparecem só onde a leitura exige.
+- **Poucas linhas**: o `fancy_grid` do script é 100% borda; aqui, espaçamento resolve a separação e fios de `outlineVariant` aparecem só onde a leitura exige — hoje é só o fio entre as colunas dos dias na grade, pra separar cores parecidas coladas sem virar borda em tudo.
 - **Estados vazios sem enfeite**: slot livre é espaço em branco com um rótulo discreto, não um card cinza cheio de ícone.
 
 ### Dados
 - **Múltiplas tabelas nomeadas** (ex: "2026.1", "2026.2"), uma marcada como **ativa**.
-- **Biblioteca de itens compartilhada** entre tabelas — "Cálculo II" cadastrado uma vez serve pra qualquer semestre.
+- **Biblioteca de itens compartilhada** entre tabelas — "Cálculo II" cadastrado uma vez serve pra qualquer semestre. Um item pode opcionalmente ser **vinculado a uma única tabela** (`tabelaId`) pro caso já sabido, na hora de cadastrar, de algo que não vai reaproveitar — some da paleta de qualquer outra tabela e é apagado junto se a tabela dele for apagada. Também pode ser **arquivado** sem apagar: some da paleta de arrastar mas continua resolvendo nome/cor em qualquer tabela antiga que ainda o referencia. Ver "Depois do roadmap original".
 - **Grade**: dias fixos Segunda a Sexta; hora inicial, intervalo e quantidade de horários configuráveis **por tabela** (igual ao script).
 - **Cor mora na entidade**, não em regra de texto. ALMOÇO e LIVRE viram itens cadastrados como qualquer outro — o `dict cores` hardcoded do Python deixa de existir.
 
@@ -110,8 +110,11 @@ class Item {
                        // com autocomplete dos tipos já usados (não é enum fechado)
   String corKey;       // chave da paleta curada: "tomato", "sage", ...
   String? local;       // "Bloco C, sala 204" (opcional)
-  String? professor;   // opcional
-  String? notas;       // opcional
+  String? notas;       // opcional — "professor" não existe mais como campo
+                       // dedicado (empurrava o app pro vocabulário de aula);
+                       // quem quiser anotar isso usa notas, que é livre
+  bool arquivado;      // some da paleta de arrastar, mantém histórico
+  String? tabelaId;    // null = compartilhado; senão, exclusivo dessa tabela
 }
 
 class Tabela {
@@ -166,18 +169,22 @@ O widget **segue a densidade escolhida no app** — se a grade está em Sólido 
 
 ## Telas
 
-1. **Visão semana** (tela inicial) — a grade 5×6 completa em chrome neutro, cada célula ocupada renderizada na densidade escolhida, só leitura. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Hoje aparece destacado. Toque num dia abre o editor daquele dia. Seletor de tabela ativa no topo.
-2. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens fixa embaixo. Arrasta o item da paleta pra linha do horário. Navegação entre dias por swipe ou setas.
-3. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, professor, notas.
-4. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade.
-5. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura. Preferência global, aplicada na hora e propagada pro widget.
+1. **Visão semana** (tela inicial) — a grade 5×6 completa em chrome neutro, cada célula ocupada renderizada na densidade escolhida, só leitura no sentido de não arrastar. É a cara do projeto: o `tablefmt='fancy_grid'` do script virando UI. Hoje aparece destacado, e uma linha fina marca a hora atual (proporcional ao expediente da tabela, só em dia útil). Toque num dia abre o editor daquele dia; toque longo numa célula edita só ela, sem entrar no dia inteiro. Com duas ou mais tabelas, arrastar a grade na horizontal troca qual está ativa (mesmo swipe que o editor do dia usa entre dias) — além do seletor no topo.
+2. **Tela dedicada de uma tabela** — aberta a partir de um card em Tabelas (ou ao criar uma nova). Mesma grade e mesmo editor de dia da visão semana, mas amarrada à tabela que você tocou, com título fixo em vez de seletor — resolve o card em Tabelas só "ativar" e não levar a lugar nenhum.
+3. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens logo abaixo, numa lista só que cresce pra baixo (não mais bandeja horizontal com scroll). Preencher um horário tem dois caminhos que convivem: arrastar o item da paleta, ou tocar nele pra "armar" (contorno visível) e depois tocar no horário — mais confiável que arrastar em tela pequena ou dedo grande, e fica armado entre horários/dias pra encaixar o mesmo item várias vezes seguidas. Limpar um horário (arrastando pra fora, ou "Deixar vazio") mostra um snackbar com "Desfazer". Um atalho na própria paleta cria item exclusivo desta tabela sem sair da tela. Navegação entre dias por swipe ou setas.
+4. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, notas, e o vínculo com uma tabela (compartilhado ou exclusivo de uma). Menu por item com Arquivar/Desarquivar além de Apagar; arquivados ficam numa seção recolhida no fim da lista.
+5. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade. Tocar num card ativa e já abre a tela dedicada dela (item 2). Menu por tabela ganha "Arquivar itens exclusivos": revisão em lote dos itens que só aparecem ali, pré-marcados mas editável (item recorrente tipo Almoço pode ser desmarcado) antes de confirmar. Apagar uma tabela avisa também quantos itens exclusivos dela somem junto.
+6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura. Preferência global, aplicada na hora e propagada pro widget.
 
 ### Interação de arrastar
-- `Draggable` / `DragTarget` do Flutter. Long-press pra pegar, com feedback háptico.
+- `Draggable` / `DragTarget` do Flutter. Long-press pra pegar (300ms), com feedback háptico e um leve aumento de escala no item durante o arrasto.
 - Slot ocupado destaca no hover e substitui o conteúdo ao soltar.
-- **Tap-to-assign como caminho alternativo**: tocar num slot vazio abre um bottom sheet com a lista de itens. Arrastar é o gesto principal, mas nunca o único — acessibilidade e dedo grande agradecem.
-- Esvaziar um slot: arrastar pra fora, ou swipe na linha.
+- **Dois caminhos alternativos, não só um**: tocar num slot vazio/preenchido abre um bottom sheet com a lista de itens (também serve pra limpar); tocar num item da paleta o "arma" pra encaixar num toque de horário, sem abrir sheet nenhuma. Arrastar é o gesto mais direto, mas nunca o único — acessibilidade, dedo grande e telas onde o long-press for menos confiável agradecem.
+- Esvaziar um slot: arrastar pra fora, swipe na linha, ou "Deixar vazio" no seletor — os três mostram "Desfazer" depois. Mover (arrastar de um slot ocupado pra outro) não mostra desfazer: a origem não foi apagada, só mudou de lugar.
 - Arrastar de um slot pra outro **move** o item dentro do dia.
+
+### Navegação e layout responsivo
+A partir de 600dp de largura (a fronteira compacta/média do Material 3, onde um celular deitado cai naturalmente) a barra de navegação debaixo vira barra lateral (`NavigationRail`) — mesmos destinos, só a posição muda. Formulários (cadastro de item, configurar tabela, Aparência) ganham largura máxima de 560dp e centralizam, em vez de esticar campo de texto até a borda numa tela larga. Grade da semana e editor do dia ficam de fora desse limite de propósito: se beneficiam do espaço extra em vez de sofrer com ele.
 
 ## Widget de tela inicial
 
@@ -212,15 +219,48 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 7. ~~Tela de aparência (escolha da densidade por miniatura)~~ ✅
 8. ~~Widget nativo Android (Glance, manifest) + snapshot na densidade escolhida~~ ✅
 9. ~~Estratégia de refresh (foreground em toda mutação + no resume do app, tick natural do SO via `updatePeriodMillis`)~~ ✅
-10. Polimento — feito: ícone do app (`assets/icon/`, ver `flutter_launcher_icons` no `pubspec.yaml`) e preview real do widget no seletor (`today_schedule_widget_preview.xml`). Em aberto: estados vazios adicionais que aparecerem no uso real (hoje só existe o de "sem aulas no dia").
+10. ~~Polimento: ícone do app (`assets/icon/`, ver `flutter_launcher_icons` no `pubspec.yaml`), preview real do widget no seletor (`today_schedule_widget_preview.xml`), estados vazios~~ ✅
 
 O app fecha o ciclo de uso: cadastrar item, criar tabela, montar o horário,
 ver a semana e acompanhar o dia pelo widget na tela inicial.
 
 A função de resolução da fase 2 é o ponto de reuso do projeto: a grade, o editor, as miniaturas da tela de aparência e o snapshot do widget consomem todos ela. Errar ali propaga pra tudo; acertar ali resolve tudo de uma vez.
 
+## Depois do roadmap original
+
+Uso real do app trouxe fricção que o roadmap de 10 fases não previa. Registro
+do que foi implementado em cima dele, fora da numeração — não são fases
+planejadas de antemão, são ajustes que só apareceram usando de verdade.
+
+- **Navegação Tabelas → grade**: tocar num card em Tabelas só ativava a
+  tabela, sem levar a lugar nenhum — quem tocava ficava sem saber que "ativar"
+  e "montar o horário" eram coisas diferentes em abas separadas. Resolvido com
+  a tela dedicada de uma tabela (Telas, item 2): tocar (ou criar) já leva pra
+  lá. A aba Semana continua existindo como atalho pra "a tabela ativa, seja
+  lá qual for".
+- **Item exclusivo de uma tabela e arquivamento**: a biblioteca compartilhada
+  acumula item de semestre antigo. Duas soluções que se complementam: `tabelaId`
+  evita a poluição desde a criação (pro caso já sabido de algo que não vai
+  reaproveitar); `arquivado` resolve depois, por decisão manual ou revisão em
+  lote a partir de uma tabela (candidatos = usado só ali, mas a decisão final
+  é sempre do usuário — Almoço/Academia usados só numa tabela hoje não deixam
+  de fazer sentido numa tabela futura só por isso).
+- **Campo `professor` removido do Item**: deixava o app implicitamente
+  focado em aula. Quem quiser anotar isso usa `notas`, que é texto livre.
+- **Editor do dia repaginado**: a bandeja horizontal com scroll virou uma
+  paleta em lista que cresce pra baixo; "toque pra armar" apareceu como
+  segundo caminho pra preencher um horário, tão direto quanto arrastar mas
+  sem depender de acertar o tempo de segurar; limpar um horário ganhou
+  desfazer.
+- **Grade da semana com mais interação**: swipe pra trocar de tabela, toque
+  longo numa célula pra editar só ela, linha do horário atual, fio discreto
+  entre as colunas dos dias.
+- **Responsivo**: barra lateral em tela larga, formulários com largura
+  máxima. Ver "Navegação e layout responsivo" acima.
+
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
-- **Itens compartilhados entre tabelas** pode incomodar se a biblioteca crescer com disciplinas de semestres antigos. Solução prevista se doer: marcar item como arquivado, escondendo-o da paleta sem apagar.
 - **Sábado**: a grade é Seg–Sex, herdado do script. Nada impede tornar os dias configuráveis depois, mas não está no escopo.
+- **Duplicar tabela com item exclusivo**: `duplicarTabela` copia a grade inteira, célula por célula. Se uma célula copiada referenciava um item exclusivo da tabela ORIGINAL, a célula da cópia continua mostrando ele certinho (resolve por id, sem filtro), mas ele não aparece na paleta da cópia pra reusar em outro horário dela — o item continua vinculado só à original. Não chegou a incomodar no uso real; se incomodar, a saída é re-vincular (ou clonar) os itens exclusivos junto com a duplicação.
+- **Plugin `home_widget` e Kotlin Gradle Plugin**: o build avisa que uma versão futura do Flutter vai parar de compilar plugins que aplicam KGP do jeito antigo (aviso, não erro, desde a Fase 8). Não é urgente, mas vale acompanhar o changelog do pacote antes de um upgrade grande de Flutter.
