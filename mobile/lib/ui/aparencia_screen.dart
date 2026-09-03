@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../theme/color_density.dart';
 import '../theme/item_palette.dart';
 import 'widgets/item_swatch.dart';
+import 'widgets/largura_maxima.dart';
 
 /// Escolha da densidade de cor.
 ///
@@ -20,7 +21,8 @@ class AparenciaScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Aparência')),
-      body: ListView(
+      body: LarguraMaxima(
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Text(
@@ -48,6 +50,7 @@ class AparenciaScreen extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
         ],
+      ),
       ),
     );
   }

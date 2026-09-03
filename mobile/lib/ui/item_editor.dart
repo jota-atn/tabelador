@@ -6,6 +6,7 @@ import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../theme/item_palette.dart';
 import 'widgets/item_swatch.dart';
+import 'widgets/largura_maxima.dart';
 
 /// Cadastro e edição de um Item.
 ///
@@ -142,9 +143,10 @@ class _ItemEditorState extends State<ItemEditor> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-          children: [
+        child: LarguraMaxima(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+            children: [
             TextFormField(
               controller: _nome,
               autofocus: novo,
@@ -205,6 +207,7 @@ class _ItemEditorState extends State<ItemEditor> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

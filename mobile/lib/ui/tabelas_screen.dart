@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import 'tabela_editor_screen.dart';
+import 'widgets/largura_maxima.dart';
 
 /// Lista de tabelas: criar, renomear, duplicar, configurar, apagar e escolher
 /// qual está ativa.
@@ -435,7 +436,8 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
     final scheme = Theme.of(context).colorScheme;
     final novo = widget.original == null;
 
-    return Padding(
+    return LarguraMaxima(
+      child: Padding(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -534,6 +536,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
             ],
           ),
         ],
+      ),
       ),
     );
   }
