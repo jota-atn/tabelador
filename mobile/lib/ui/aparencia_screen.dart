@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,12 +11,91 @@ import '../theme/item_palette.dart';
 import 'widgets/item_swatch.dart';
 import 'widgets/largura_maxima.dart';
 
-/// Escolha da densidade de cor.
+/// Escolha da densidade de cor, mais exportar/importar backup.
 ///
-/// A escolha é feita por miniatura da própria grade, não por lista de texto:
-/// o ponto de ser opção é ver o resultado antes de aplicar.
+/// A escolha de densidade é feita por miniatura da própria grade, não por
+/// lista de texto: o ponto de ser opção é ver o resultado antes de aplicar.
 class AparenciaScreen extends StatelessWidget {
   const AparenciaScreen({super.key});
+
+  /// Junta tudo num JSON e abre o "salvar como" nativo (SAF) — o usuário
+  /// escolhe onde salvar (Drive, Arquivos, qualquer pasta). Evita pedir
+  /// permissão de armazenamento: quem escreve o arquivo de fato é o sistema,
+  /// o app só entrega os bytes.
+  Future<void> _exportar(BuildContext context) async {
+    final state = context.read<AppState>();
+    final json = const JsonEncoder.withIndent('  ').convert(state.paraBackup());
+
+    final agora = DateTime.now();
+    String dois(int n) => n.toString().padLeft(2, '0');
+    final nome =
+        'tabelador-backup-${agora.year}${dois(agora.month)}${dois(agora.day)}.json';
+
+    final uri = await FilePicker.saveFile(
+      fileName: nome,
+      bytes: Uint8List.fromList(utf8.encode(json)),
+      mimeType: 'application/json',
+    );
+
+    if (!context.mounted) return;
+    _avisar(context, uri == null ? 'Exportação cancelada.' : 'Backup salvo.');
+  }
+
+  void _avisar(BuildContext context, String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  Future<void> _importar(BuildContext context) async {
+    final arquivo = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (arquivo == null || !context.mounted) return;
+
+    final Map<String, dynamic> dados;
+    try {
+      final bytes = await arquivo.readAsBytes();
+      dados = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    } catch (_) {
+      if (!context.mounted) return;
+      _avisar(context, 'Esse arquivo não é um backup válido.');
+      return;
+    }
+
+    if (!context.mounted) return;
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Importar backup?'),
+        content: const Text(
+          'Isso substitui todos os itens, tabelas e preferências atuais '
+          'pelo conteúdo do arquivo. Não tem como desfazer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Importar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true || !context.mounted) return;
+
+    try {
+      await context.read<AppState>().restaurarBackup(dados);
+    } catch (_) {
+      if (!context.mounted) return;
+      _avisar(context, 'Esse arquivo não é um backup válido.');
+      return;
+    }
+
+    if (!context.mounted) return;
+    _avisar(context, 'Backup importado.');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,8 +132,97 @@ class AparenciaScreen extends StatelessWidget {
             'a sigla continua visível em qualquer densidade.',
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
+          const SizedBox(height: 28),
+          Text(
+            'BACKUP',
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _AcaoBackup(
+            icone: Icons.upload_outlined,
+            titulo: 'Exportar backup',
+            descricao:
+                'Salva itens, tabelas e preferências num arquivo, pra guardar '
+                'ou levar pra outro aparelho.',
+            aoTocar: () => _exportar(context),
+          ),
+          const SizedBox(height: 8),
+          _AcaoBackup(
+            icone: Icons.download_outlined,
+            titulo: 'Importar backup',
+            descricao: 'Substitui tudo que está no app pelo conteúdo do arquivo.',
+            aoTocar: () => _importar(context),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reinstalar o app (por cima de uma atualização, por exemplo) '
+            'apaga os dados — exportar antes é a única forma de recuperar.',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
+      ),
+    );
+  }
+}
+
+class _AcaoBackup extends StatelessWidget {
+  const _AcaoBackup({
+    required this.icone,
+    required this.titulo,
+    required this.descricao,
+    required this.aoTocar,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String descricao;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: aoTocar,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Icon(icone, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    descricao,
+                    style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }

@@ -39,6 +39,7 @@ dependencies:
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
   home_widget: ^0.9.3
+  file_picker: ^12.2.0
 
 dev_dependencies:
   flutter_test:
