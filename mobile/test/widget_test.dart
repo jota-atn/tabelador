@@ -48,4 +48,34 @@ void main() {
 
     expect(brilhoAtual(), isNot(antes));
   });
+
+  group('navegação adaptativa', () {
+    testWidgets('tela larga usa barra lateral em vez da barra debaixo',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+
+      // A barra lateral navega igual à de baixo.
+      await tester.tap(find.text('Itens'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nenhum item ainda'), findsOneWidget);
+    });
+
+    testWidgets('tela estreita continua com a barra debaixo', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+  });
 }
