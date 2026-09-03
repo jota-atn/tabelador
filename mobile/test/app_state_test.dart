@@ -160,6 +160,67 @@ void main() {
     expect(state.tiposConhecidos, ['Aula', 'Monitoria']);
   });
 
+  test('backup: exportar e importar recupera tudo', () async {
+    final origem = await novoEstado();
+    final item = Item.novo(
+      nome: 'Cálculo II',
+      sigla: 'CÁLC II',
+      tipo: 'Aula',
+      cor: ItemColor.oceano,
+    );
+    await origem.adicionarItem(item);
+    final tabela = Tabela.nova(nome: '2026.1');
+    await origem.adicionarTabela(tabela);
+    await origem.definirCelula(tabela.id, 'QUARTA', 1, item.id);
+    await origem.definirDensidade(ColorDensity.solido);
+
+    final backup = origem.paraBackup();
+
+    // Destino começa vazio, com dado próprio que o import deve substituir.
+    final destino = await novoEstado();
+    await destino.adicionarItem(Item.novo(nome: 'lixo', sigla: 'LIXO'));
+    await destino.restaurarBackup(backup);
+
+    expect(destino.itens.single.sigla, 'CÁLC II');
+    expect(destino.itens.single.cor, ItemColor.oceano);
+    expect(destino.tabelas.single.celula('QUARTA', 1), item.id);
+    expect(destino.tabelaAtiva?.nome, '2026.1');
+    expect(destino.densidade, ColorDensity.solido);
+
+    // E persiste de verdade, não só em memória.
+    final recarregado = await novoEstado();
+    expect(recarregado.itens.single.sigla, 'CÁLC II');
+  });
+
+  test('backup: formato inválido lança em vez de corromper o estado',
+      () async {
+    final state = await novoEstado();
+    await state.adicionarItem(Item.novo(nome: 'x', sigla: 'x'));
+
+    await expectLater(
+      () => state.restaurarBackup({'nada a ver': true}),
+      throwsA(anything),
+    );
+
+    // Estado anterior intacto.
+    expect(state.itens.single.nome, 'x');
+  });
+
+  test('backup: tabela ativa que não existe no arquivo cai na primeira',
+      () async {
+    final state = await novoEstado();
+    final t = Tabela.nova(nome: 'Única');
+
+    await state.restaurarBackup({
+      'itens': [],
+      'tabelas': [t.toJson()],
+      'tabelaAtivaId': 'id-que-nao-existe',
+      'densidade': 'suave',
+    });
+
+    expect(state.tabelaAtiva?.id, t.id);
+  });
+
   test('notifica ouvintes quando algo muda', () async {
     final state = await novoEstado();
     var avisos = 0;

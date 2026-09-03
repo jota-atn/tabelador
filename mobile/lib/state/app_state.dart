@@ -269,4 +269,51 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await _store.salvarDensidade(densidade);
   }
+
+  // ------------------------------------------------------------- backup
+
+  /// Tudo que o app guarda, num mapa pronto pra virar JSON. Mesmo formato
+  /// que [restaurarBackup] espera de volta.
+  Map<String, dynamic> paraBackup() => {
+        'versao': 1,
+        'itens': [for (final i in _itens) i.toJson()],
+        'tabelas': [for (final t in _tabelas) t.toJson()],
+        'tabelaAtivaId': _tabelaAtivaId,
+        'densidade': _densidade.key,
+      };
+
+  /// Substitui TUDO (itens, tabelas, tabela ativa, densidade) pelo conteúdo
+  /// de [dados] — não mescla com o que já existe. Lança se o formato não
+  /// bater; quem chama decide como avisar o usuário, já que só a UI sabe
+  /// como isso deveria aparecer numa tela.
+  Future<void> restaurarBackup(Map<String, dynamic> dados) async {
+    final itensBrutos = dados['itens'];
+    final tabelasBrutas = dados['tabelas'];
+    if (itensBrutos is! List || tabelasBrutas is! List) {
+      throw const FormatException('Backup não tem o formato esperado.');
+    }
+
+    final itens = [
+      for (final e in itensBrutos) Item.fromJson(e as Map<String, dynamic>),
+    ];
+    final tabelas = [
+      for (final e in tabelasBrutas) Tabela.fromJson(e as Map<String, dynamic>),
+    ];
+    final tabelaAtivaIdBruto = dados['tabelaAtivaId'] as String?;
+
+    _itens = itens;
+    _tabelas = tabelas;
+    // Mesma regra tolerante do carregamento normal: id ativo que não bate
+    // com nenhuma tabela do backup cai na primeira, ou em nada.
+    _tabelaAtivaId = _tabelas.any((t) => t.id == tabelaAtivaIdBruto)
+        ? tabelaAtivaIdBruto
+        : (_tabelas.isEmpty ? null : _tabelas.first.id);
+    _densidade = ColorDensity.fromKey(dados['densidade'] as String?);
+
+    notifyListeners();
+    await _store.salvarItens(_itens);
+    await _store.salvarTabelas(_tabelas);
+    await _store.salvarTabelaAtiva(_tabelaAtivaId);
+    await _store.salvarDensidade(_densidade);
+  }
 }
