@@ -2,7 +2,12 @@
 <!-- minWidth/minHeight pequenos de propósito: no tamanho default (recém
      adicionado, antes de qualquer redimensionamento) o widget já mostra só
      2-3 horários, como pede o spec. Redimensionar pra maior mostra mais
-     linhas: ver o cálculo de LocalSize em TodayScheduleWidget.kt. -->
+     linhas: ver o cálculo de LocalSize em TodayScheduleWidget.kt.
+
+     previewLayout e previewImage juntos, de propósito: previewLayout é o
+     jeito moderno (Android 12+), mas várias skins de launcher (HyperOS
+     incluída) não inflam ele e só sabem mostrar previewImage — sem essa
+     linha, a prévia no seletor de widgets simplesmente não aparece nelas. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
     android:minHeight="110dp"
@@ -15,5 +20,6 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/today_schedule_widget_loading"
     android:previewLayout="@layout/today_schedule_widget_preview"
+    android:previewImage="@drawable/today_schedule_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
