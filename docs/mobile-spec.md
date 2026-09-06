@@ -31,7 +31,7 @@ Diferença de postura em relação ao script: no Python, cada célula é uma str
 ### Dados
 - **Múltiplas tabelas nomeadas** (ex: "2026.1", "2026.2"), uma marcada como **ativa**.
 - **Biblioteca de itens compartilhada** entre tabelas — "Cálculo II" cadastrado uma vez serve pra qualquer semestre. Um item pode opcionalmente ser **vinculado a uma única tabela** (`tabelaId`) pro caso já sabido, na hora de cadastrar, de algo que não vai reaproveitar — some da paleta de qualquer outra tabela e é apagado junto se a tabela dele for apagada. Também pode ser **arquivado** sem apagar: some da paleta de arrastar mas continua resolvendo nome/cor em qualquer tabela antiga que ainda o referencia. Ver "Depois do roadmap original".
-- **Grade**: dias fixos Segunda a Sexta; hora inicial, intervalo e quantidade de horários configuráveis **por tabela** (igual ao script).
+- **Grade**: dias configuráveis por tabela — qualquer subconjunto de domingo a sábado (`Tabela.dias`), segunda-sexta só como padrão de tabela nova; hora inicial, intervalo e quantidade de horários também configuráveis **por tabela** (igual ao script). Ver "Depois do roadmap original".
 - **Cor mora na entidade**, não em regra de texto. ALMOÇO e LIVRE viram itens cadastrados como qualquer outro — o `dict cores` hardcoded do Python deixa de existir.
 
 ### Cores: paleta curada, não seletor livre
@@ -173,7 +173,7 @@ O widget **segue a densidade escolhida no app** — se a grade está em Sólido 
 2. **Tela dedicada de uma tabela** — aberta a partir de um card em Tabelas (ou ao criar uma nova). Mesma grade e mesmo editor de dia da visão semana, mas amarrada à tabela que você tocou, com título fixo em vez de seletor — resolve o card em Tabelas só "ativar" e não levar a lugar nenhum.
 3. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens logo abaixo, numa lista só que cresce pra baixo (não mais bandeja horizontal com scroll). Preencher um horário tem dois caminhos que convivem: arrastar o item da paleta, ou tocar nele pra "armar" (contorno visível) e depois tocar no horário — mais confiável que arrastar em tela pequena ou dedo grande, e fica armado entre horários/dias pra encaixar o mesmo item várias vezes seguidas. Limpar um horário (arrastando pra fora, ou "Deixar vazio") mostra um snackbar com "Desfazer". Um atalho na própria paleta cria item exclusivo desta tabela sem sair da tela. Navegação entre dias por swipe ou setas.
 4. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, notas, e o vínculo com uma tabela (compartilhado ou exclusivo de uma). Menu por item com Arquivar/Desarquivar além de Apagar; arquivados ficam numa seção recolhida no fim da lista.
-5. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade. Tocar num card ativa e já abre a tela dedicada dela (item 2). Menu por tabela ganha "Arquivar itens exclusivos": revisão em lote dos itens que só aparecem ali, pré-marcados mas editável (item recorrente tipo Almoço pode ser desmarcado) antes de confirmar. Apagar uma tabela avisa também quantos itens exclusivos dela somem junto.
+5. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade **e dias** (sete chips, domingo a sábado, pelo menos um sempre marcado). Tocar num card ativa e já abre a tela dedicada dela (item 2). Menu por tabela ganha "Arquivar itens exclusivos": revisão em lote dos itens que só aparecem ali, pré-marcados mas editável (item recorrente tipo Almoço pode ser desmarcado) antes de confirmar. Apagar uma tabela avisa também quantos itens exclusivos dela somem junto; encolher horários ou tirar um dia com célula preenchida soma no mesmo aviso.
 6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura, mais exportar/importar backup (ver "Backup" abaixo). Preferência de densidade é global, aplicada na hora e propagada pro widget.
 
 ### Backup
@@ -281,10 +281,15 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
 - **Placeholders neutros**: exemplos de nome ("2026.1") e de item ("Cálculo
   II") remetiam só a semestre acadêmico; trocados por exemplos que misturam
   contexto (academia, trabalho, rotina).
+- **Dias configuráveis por tabela**: `kDias` global (segunda-sexta fixo)
+  virou `Tabela.dias`, um subconjunto qualquer de `kTodosDias` escolhido na
+  configuração da tabela. Resolve os dois pedidos que motivaram — destravar
+  sábado/domingo, e tabela com só alguns dias da semana (ex: terça/quinta pra
+  academia) — com a mesma solução, já que o segundo caso cobre o primeiro.
+  Ver "Dados" e "Telas" acima.
 
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
-- **Sábado**: a grade é Seg–Sex, herdado do script. Nada impede tornar os dias configuráveis depois, mas não está no escopo.
 - **Duplicar tabela com item exclusivo**: `duplicarTabela` copia a grade inteira, célula por célula. Se uma célula copiada referenciava um item exclusivo da tabela ORIGINAL, a célula da cópia continua mostrando ele certinho (resolve por id, sem filtro), mas ele não aparece na paleta da cópia pra reusar em outro horário dela — o item continua vinculado só à original. Não chegou a incomodar no uso real; se incomodar, a saída é re-vincular (ou clonar) os itens exclusivos junto com a duplicação.
 - **Plugin `home_widget` e Kotlin Gradle Plugin**: o build avisa que uma versão futura do Flutter vai parar de compilar plugins que aplicam KGP do jeito antigo (aviso, não erro, desde a Fase 8). Não é urgente, mas vale acompanhar o changelog do pacote antes de um upgrade grande de Flutter.
