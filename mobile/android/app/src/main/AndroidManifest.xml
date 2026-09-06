@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Aviso de horário se aproximando (Android 13+ exige pedir em runtime
+         também, isso só declara que o app pode ter a permissão). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="tabelador"
         android:name="${applicationName}"

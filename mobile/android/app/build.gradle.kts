@@ -13,6 +13,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Exigido pelo flutter_local_notifications (java.time via desugaring).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -53,4 +55,5 @@ dependencies {
     // Já vem transitivo do `home_widget`, mas declarado aqui pra fixar a
     // versão usada pelo widget nativo (Jetpack Glance).
     implementation("androidx.glance:glance-appwidget:1.1.1")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

@@ -13,18 +13,24 @@ class DadosSalvos {
     required this.tabelas,
     required this.tabelaAtivaId,
     required this.densidade,
+    required this.notificacoesAtivas,
+    required this.antecedenciaMinutos,
   });
 
   final List<Item> itens;
   final List<Tabela> tabelas;
   final String? tabelaAtivaId;
   final ColorDensity densidade;
+  final bool notificacoesAtivas;
+  final int antecedenciaMinutos;
 
   static const DadosSalvos vazio = DadosSalvos(
     itens: [],
     tabelas: [],
     tabelaAtivaId: null,
     densidade: ColorDensity.fallback,
+    notificacoesAtivas: false,
+    antecedenciaMinutos: 15,
   );
 }
 
@@ -38,6 +44,8 @@ class TabeladorStore {
   static const _kTabelas = 'tables_json';
   static const _kAtiva = 'active_table_id';
   static const _kDensidade = 'color_density';
+  static const _kNotificacoesAtivas = 'notifications_enabled';
+  static const _kAntecedenciaMinutos = 'notifications_lead_minutes';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -47,6 +55,8 @@ class TabeladorStore {
       tabelas: _decodificarLista(prefs.getString(_kTabelas), Tabela.fromJson),
       tabelaAtivaId: prefs.getString(_kAtiva),
       densidade: ColorDensity.fromKey(prefs.getString(_kDensidade)),
+      notificacoesAtivas: prefs.getBool(_kNotificacoesAtivas) ?? false,
+      antecedenciaMinutos: prefs.getInt(_kAntecedenciaMinutos) ?? 15,
     );
   }
 
@@ -78,6 +88,16 @@ class TabeladorStore {
   Future<void> salvarDensidade(ColorDensity densidade) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kDensidade, densidade.key);
+  }
+
+  Future<void> salvarNotificacoesAtivas(bool ativas) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kNotificacoesAtivas, ativas);
+  }
+
+  Future<void> salvarAntecedenciaMinutos(int minutos) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kAntecedenciaMinutos, minutos);
   }
 
   /// JSON corrompido devolve lista vazia em vez de estourar.

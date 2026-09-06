@@ -33,6 +33,37 @@ void main() {
     expect(state.densidade, ColorDensity.solido);
   });
 
+  testWidgets('ativar notificações mostra e permite mudar a antecedência',
+      (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Aparência'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Com quanto tempo de antecedência'), findsNothing);
+
+    await tester.tap(find.text('Avisar antes de cada horário'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Com quanto tempo de antecedência'), findsOneWidget);
+    expect(find.text('15 min'), findsOneWidget);
+
+    final salvo = AppState();
+    await salvo.carregar();
+    expect(salvo.notificacoesAtivas, isTrue);
+    expect(salvo.antecedenciaMinutos, 15);
+
+    await tester.tap(find.text('15 min'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30 min').last);
+    await tester.pumpAndSettle();
+
+    final recarregado = AppState();
+    await recarregado.carregar();
+    expect(recarregado.antecedenciaMinutos, 30);
+  });
+
   testWidgets('o botão de tema inverte o brilho', (tester) async {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();

@@ -64,6 +64,23 @@ void main() {
     expect(recarregado.densidade, ColorDensity.solido);
   });
 
+  test('notificações desligadas e 15 min de antecedência por padrão',
+      () async {
+    final state = await novoEstado();
+    expect(state.notificacoesAtivas, isFalse);
+    expect(state.antecedenciaMinutos, 15);
+  });
+
+  test('preferência de notificação sobrevive a fechar e reabrir', () async {
+    final state = await novoEstado();
+    await state.definirNotificacoesAtivas(true);
+    await state.definirAntecedenciaMinutos(45);
+
+    final recarregado = await novoEstado();
+    expect(recarregado.notificacoesAtivas, isTrue);
+    expect(recarregado.antecedenciaMinutos, 45);
+  });
+
   test('apagar um item limpa as células que apontavam pra ele', () async {
     final state = await novoEstado();
 
@@ -173,6 +190,8 @@ void main() {
     await origem.adicionarTabela(tabela);
     await origem.definirCelula(tabela.id, 'QUARTA', 1, item.id);
     await origem.definirDensidade(ColorDensity.solido);
+    await origem.definirNotificacoesAtivas(true);
+    await origem.definirAntecedenciaMinutos(30);
 
     final backup = origem.paraBackup();
 
@@ -186,6 +205,8 @@ void main() {
     expect(destino.tabelas.single.celula('QUARTA', 1), item.id);
     expect(destino.tabelaAtiva?.nome, '2026.1');
     expect(destino.densidade, ColorDensity.solido);
+    expect(destino.notificacoesAtivas, isTrue);
+    expect(destino.antecedenciaMinutos, 30);
 
     // E persiste de verdade, não só em memória.
     final recarregado = await novoEstado();

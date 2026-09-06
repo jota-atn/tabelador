@@ -18,11 +18,15 @@ class AppState extends ChangeNotifier {
   List<Tabela> _tabelas = [];
   String? _tabelaAtivaId;
   ColorDensity _densidade = ColorDensity.fallback;
+  bool _notificacoesAtivas = false;
+  int _antecedenciaMinutos = 15;
   bool _carregado = false;
 
   List<Item> get itens => List.unmodifiable(_itens);
   List<Tabela> get tabelas => List.unmodifiable(_tabelas);
   ColorDensity get densidade => _densidade;
+  bool get notificacoesAtivas => _notificacoesAtivas;
+  int get antecedenciaMinutos => _antecedenciaMinutos;
   bool get carregado => _carregado;
 
   String? get tabelaAtivaId => _tabelaAtivaId;
@@ -77,6 +81,8 @@ class AppState extends ChangeNotifier {
     _itens = [...dados.itens];
     _tabelas = [...dados.tabelas];
     _densidade = dados.densidade;
+    _notificacoesAtivas = dados.notificacoesAtivas;
+    _antecedenciaMinutos = dados.antecedenciaMinutos;
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -270,6 +276,20 @@ class AppState extends ChangeNotifier {
     await _store.salvarDensidade(densidade);
   }
 
+  Future<void> definirNotificacoesAtivas(bool ativas) async {
+    if (_notificacoesAtivas == ativas) return;
+    _notificacoesAtivas = ativas;
+    notifyListeners();
+    await _store.salvarNotificacoesAtivas(ativas);
+  }
+
+  Future<void> definirAntecedenciaMinutos(int minutos) async {
+    if (_antecedenciaMinutos == minutos) return;
+    _antecedenciaMinutos = minutos;
+    notifyListeners();
+    await _store.salvarAntecedenciaMinutos(minutos);
+  }
+
   // ------------------------------------------------------------- backup
 
   /// Tudo que o app guarda, num mapa pronto pra virar JSON. Mesmo formato
@@ -280,6 +300,8 @@ class AppState extends ChangeNotifier {
         'tabelas': [for (final t in _tabelas) t.toJson()],
         'tabelaAtivaId': _tabelaAtivaId,
         'densidade': _densidade.key,
+        'notificacoesAtivas': _notificacoesAtivas,
+        'antecedenciaMinutos': _antecedenciaMinutos,
       };
 
   /// Substitui TUDO (itens, tabelas, tabela ativa, densidade) pelo conteúdo
@@ -309,11 +331,15 @@ class AppState extends ChangeNotifier {
         ? tabelaAtivaIdBruto
         : (_tabelas.isEmpty ? null : _tabelas.first.id);
     _densidade = ColorDensity.fromKey(dados['densidade'] as String?);
+    _notificacoesAtivas = dados['notificacoesAtivas'] as bool? ?? false;
+    _antecedenciaMinutos = dados['antecedenciaMinutos'] as int? ?? 15;
 
     notifyListeners();
     await _store.salvarItens(_itens);
     await _store.salvarTabelas(_tabelas);
     await _store.salvarTabelaAtiva(_tabelaAtivaId);
     await _store.salvarDensidade(_densidade);
+    await _store.salvarNotificacoesAtivas(_notificacoesAtivas);
+    await _store.salvarAntecedenciaMinutos(_antecedenciaMinutos);
   }
 }

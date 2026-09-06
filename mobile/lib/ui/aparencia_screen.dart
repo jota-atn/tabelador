@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
@@ -11,12 +12,44 @@ import '../theme/item_palette.dart';
 import 'widgets/item_swatch.dart';
 import 'widgets/largura_maxima.dart';
 
-/// Escolha da densidade de cor, mais exportar/importar backup.
+/// Minutos de antecedência oferecidos no seletor — presets, não campo livre,
+/// que não tem por que digitar um número exato aqui.
+const List<int> kOpcoesAntecedencia = [5, 10, 15, 20, 30, 45, 60];
+
+/// Escolha da densidade de cor, notificações e exportar/importar backup.
 ///
 /// A escolha de densidade é feita por miniatura da própria grade, não por
 /// lista de texto: o ponto de ser opção é ver o resultado antes de aplicar.
 class AparenciaScreen extends StatelessWidget {
   const AparenciaScreen({super.key});
+
+  /// Pede a permissão de notificação (Android 13+) só quando o usuário liga
+  /// o interruptor — não no início do app, sem contexto do porquê.
+  Future<void> _alternarNotificacoes(BuildContext context, bool ativar) async {
+    final state = context.read<AppState>();
+
+    if (!ativar) {
+      await state.definirNotificacoesAtivas(false);
+      return;
+    }
+
+    final plugin = context.read<FlutterLocalNotificationsPlugin?>();
+    final concedida = await plugin
+        ?.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    if (concedida == false) {
+      if (!context.mounted) return;
+      _avisar(
+        context,
+        'Sem permissão de notificação, o Android não deixa avisar.',
+      );
+      return;
+    }
+
+    await state.definirNotificacoesAtivas(true);
+  }
 
   /// Junta tudo num JSON e abre o "salvar como" nativo (SAF) — o usuário
   /// escolhe onde salvar (Drive, Arquivos, qualquer pasta). Evita pedir
@@ -132,6 +165,49 @@ class AparenciaScreen extends StatelessWidget {
             'a sigla continua visível em qualquer densidade.',
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
+          const SizedBox(height: 28),
+          Text(
+            'NOTIFICAÇÕES',
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Avisar antes de cada horário'),
+            subtitle: Text(
+              'Da tabela ativa, com item preenchido.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            value: state.notificacoesAtivas,
+            onChanged: (ativar) => _alternarNotificacoes(context, ativar),
+          ),
+          if (state.notificacoesAtivas) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Com quanto tempo de antecedência'),
+                ),
+                DropdownButton<int>(
+                  value: state.antecedenciaMinutos,
+                  items: [
+                    for (final minutos in kOpcoesAntecedencia)
+                      DropdownMenuItem(value: minutos, child: Text('$minutos min')),
+                  ],
+                  onChanged: (minutos) {
+                    if (minutos != null) {
+                      state.definirAntecedenciaMinutos(minutos);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 28),
           Text(
             'BACKUP',
