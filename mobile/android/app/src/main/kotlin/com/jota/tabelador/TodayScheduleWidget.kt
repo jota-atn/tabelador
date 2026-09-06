@@ -37,6 +37,10 @@ import java.util.Calendar
 
 private const val MAX_ROWS = 12
 private const val ROW_HEIGHT_DP = 34
+// Linha ganha uma terceira faixa (tipo/local) quando há altura reservada
+// pra ela — só faz sentido oferecer esse espaço se a largura também sobra.
+private const val ROW_HEIGHT_DETALHADO_DP = 46
+private const val LARGURA_MINIMA_DETALHE_DP = 220
 private const val HEADER_HEIGHT_DP = 26
 private const val WIDGET_CORNER_RADIUS_DP = 16
 
@@ -62,8 +66,15 @@ class TodayScheduleWidget : GlanceAppWidget() {
         // Quantas linhas cabem na altura disponível: pequeno mostra 2-3,
         // grande mostra o dia inteiro — sem layouts XML duplicados por
         // tamanho, só uma conta em cima do espaço que o Glance informa.
+        // A largura entra também: alargar o widget (2x2 -> 3x2, por exemplo)
+        // só esticava espaço vazio antes — agora libera uma segunda linha de
+        // detalhe (tipo/local) por slot, que já vinha no snapshot mas nunca
+        // era mostrada.
         val alturaDp = LocalSize.current.height.value.toInt()
-        val linhasVisiveis = ((alturaDp - HEADER_HEIGHT_DP) / ROW_HEIGHT_DP)
+        val larguraDp = LocalSize.current.width.value.toInt()
+        val mostrarDetalhe = larguraDp >= LARGURA_MINIMA_DETALHE_DP
+        val alturaLinha = if (mostrarDetalhe) ROW_HEIGHT_DETALHADO_DP else ROW_HEIGHT_DP
+        val linhasVisiveis = ((alturaDp - HEADER_HEIGHT_DP) / alturaLinha)
             .coerceAtLeast(1)
             .coerceAtMost(MAX_ROWS)
             .coerceAtMost(if (snapshot.slots.isEmpty()) 1 else snapshot.slots.size)
@@ -100,7 +111,7 @@ class TodayScheduleWidget : GlanceAppWidget() {
             } else {
                 val agora = Calendar.getInstance()
                 for (slot in snapshot.slots.take(linhasVisiveis)) {
-                    SlotRow(context, slot, estaNoSlotAgora(slot.time, agora))
+                    SlotRow(context, slot, estaNoSlotAgora(slot.time, agora), mostrarDetalhe, alturaLinha)
                 }
             }
         }
@@ -113,11 +124,17 @@ class TodayScheduleWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun SlotRow(context: Context, slot: ScheduleSlot, agora: Boolean) {
+    private fun SlotRow(
+        context: Context,
+        slot: ScheduleSlot,
+        agora: Boolean,
+        mostrarDetalhe: Boolean,
+        alturaLinha: Int,
+    ) {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .height(ROW_HEIGHT_DP.dp)
+                .height(alturaLinha.dp)
                 .background(corTema(slot.bgLight, slot.bgDark)),
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
@@ -147,9 +164,23 @@ class TodayScheduleWidget : GlanceAppWidget() {
                         color = corTema(slot.fgLight, slot.fgDark),
                     ),
                 )
+                val detalhe = if (mostrarDetalhe) detalheDoSlot(slot) else null
+                if (detalhe != null) {
+                    Text(
+                        text = detalhe,
+                        style = TextStyle(fontSize = 9.sp, color = corTema(slot.fgLight, slot.fgDark)),
+                    )
+                }
             }
         }
     }
+}
+
+/// "Aula · Bloco C, sala 204" — mesma junção que o editor do dia usa no
+/// Flutter (tipo e local, o que houver). Null se não tiver nenhum dos dois.
+private fun detalheDoSlot(slot: ScheduleSlot): String? {
+    val partes = listOfNotNull(slot.tipo.takeIf { it.isNotBlank() }, slot.local)
+    return if (partes.isEmpty()) null else partes.joinToString(" · ")
 }
 
 private fun corTema(hexClaro: String, hexEscuro: String): ColorProvider =
