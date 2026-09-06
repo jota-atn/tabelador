@@ -1,6 +1,6 @@
 # Especificação: Tabelador Mobile (Android + Widget)
 
-> Status: **roadmap original completo** (fases 1–10) e um bloco de polimento pós-roadmap já implementado também: itens arquiváveis e vinculáveis a uma única tabela, tela dedicada por tabela, editor do dia repaginado (paleta em lista, toque pra armar, desfazer), grade da semana com swipe entre tabelas/toque longo/linha do agora, navegação/formulários responsivos pra tela larga, e exportar/importar backup. Ver "Depois do roadmap original" pro detalhe de cada um.
+> Status: **roadmap original completo** (fases 1–10) e um bloco de polimento pós-roadmap já implementado também: itens arquiváveis e vinculáveis a uma única tabela, tela dedicada por tabela, editor do dia repaginado (paleta em lista, toque pra armar, desfazer), grade da semana com swipe entre tabelas/toque longo/linha do agora, navegação/formulários responsivos pra tela larga, exportar/importar backup, dias configuráveis por tabela, e notificação de horário se aproximando. Ver "Depois do roadmap original" pro detalhe de cada um.
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
@@ -174,7 +174,14 @@ O widget **segue a densidade escolhida no app** — se a grade está em Sólido 
 3. **Editor do dia** — os horários daquele dia como linhas largas (alvo de toque confortável), paleta de itens logo abaixo, numa lista só que cresce pra baixo (não mais bandeja horizontal com scroll). Preencher um horário tem dois caminhos que convivem: arrastar o item da paleta, ou tocar nele pra "armar" (contorno visível) e depois tocar no horário — mais confiável que arrastar em tela pequena ou dedo grande, e fica armado entre horários/dias pra encaixar o mesmo item várias vezes seguidas. Limpar um horário (arrastando pra fora, ou "Deixar vazio") mostra um snackbar com "Desfazer". Um atalho na própria paleta cria item exclusivo desta tabela sem sair da tela. Navegação entre dias por swipe ou setas.
 4. **Biblioteca de itens** — CRUD dos itens: nome, sigla, tipo, cor, local, notas, e o vínculo com uma tabela (compartilhado ou exclusivo de uma). Menu por item com Arquivar/Desarquivar além de Apagar; arquivados ficam numa seção recolhida no fim da lista.
 5. **Lista de tabelas** — criar, renomear, duplicar, apagar, marcar como ativa; configurar hora inicial/intervalo/quantidade **e dias** (sete chips, domingo a sábado, pelo menos um sempre marcado). Tocar num card ativa e já abre a tela dedicada dela (item 2). Menu por tabela ganha "Arquivar itens exclusivos": revisão em lote dos itens que só aparecem ali, pré-marcados mas editável (item recorrente tipo Almoço pode ser desmarcado) antes de confirmar. Apagar uma tabela avisa também quantos itens exclusivos dela somem junto; encolher horários ou tirar um dia com célula preenchida soma no mesmo aviso.
-6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura, mais exportar/importar backup (ver "Backup" abaixo). Preferência de densidade é global, aplicada na hora e propagada pro widget.
+6. **Aparência** — escolha da densidade de cor, apresentada como três grades semanais em miniatura; notificações (ver "Notificações" abaixo); exportar/importar backup (ver "Backup" abaixo). Preferência de densidade é global, aplicada na hora e propagada pro widget.
+
+### Notificações
+Interruptor "Avisar antes de cada horário" mais um seletor de antecedência (presets de 5 a 60 min, padrão 15) — os dois em Aparência, junto das outras preferências globais. Ligar pede a permissão de notificação do Android 13+ **na hora**, não no início do app sem contexto do porquê; negada, o interruptor não liga e avisa por quê.
+
+Um agendamento recorrente semanal por célula preenchida da **tabela ativa**, no horário do slot menos a antecedência — `NotificationScheduler` (`lib/notifications/`) segue o mesmo desenho do `HomeWidgetSync`: ouve um listener só do `AppState` (dispara em toda mutação, então trocar de tabela ativa ou editar a sigla de um item também conta) e recalcula uma assinatura do que deveria estar agendado, só mexendo no plugin nativo (cancelar tudo, reagendar tudo) se ela mudou de verdade.
+
+**Decisões**: alarme inexato (`AndroidScheduleMode.inexactAllowWhileIdle`), não exato — evita pedir a permissão de "Alarmes e lembretes" (`SCHEDULE_EXACT_ALARM`), mesma lógica que já descartou alarme exato pro refresh do widget. Pode atrasar alguns minutos em segundo plano; aceitável pra um aviso de "está chegando", não pra um compromisso ao segundo. Sem `RECEIVE_BOOT_COMPLETED`: reiniciar o aparelho derruba os agendamentos (comportamento padrão do AlarmManager), e abrir o app de novo reagenda — o resume do app já sincroniza o widget, o mesmo hook agora sincroniza notificação também.
 
 ### Backup
 Motivo: tudo mora em `SharedPreferences`, e reinstalar o app (inclusive por cima de uma atualização, dependendo de como foi instalada) apaga esses dados sem aviso — não tinha caminho de recuperação.
@@ -216,6 +223,7 @@ Agendamento exato via `android_alarm_manager_plus` foi descartado: exige `SCHEDU
 - **Widget nativo**: pacote `home_widget` (ponte Flutter → `AppWidgetProvider` Android).
 - **Tema**: `dynamic_color`.
 - **Backup**: `file_picker` (salvar/abrir arquivo via SAF).
+- **Notificações**: `flutter_local_notifications` + `timezone` + `flutter_timezone` (fuso do aparelho).
 
 ## Roadmap
 
@@ -287,6 +295,9 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
   sábado/domingo, e tabela com só alguns dias da semana (ex: terça/quinta pra
   academia) — com a mesma solução, já que o segundo caso cobre o primeiro.
   Ver "Dados" e "Telas" acima.
+- **Notificações de horário se aproximando**: interruptor + antecedência
+  configurável em Aparência, alarme inexato (sem pedir permissão de alarme
+  exato), sem persistir a reboot de propósito. Ver "Notificações" acima.
 
 ## Pontos em aberto
 
