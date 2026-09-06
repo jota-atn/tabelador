@@ -185,7 +185,7 @@ Motivo: tudo mora em `SharedPreferences`, e reinstalar o app (inclusive por cima
 
 ### Interação de arrastar
 - `Draggable` / `DragTarget` do Flutter. Long-press pra pegar (300ms), com feedback háptico e um leve aumento de escala no item durante o arrasto.
-- Slot ocupado destaca no hover e substitui o conteúdo ao soltar.
+- Slot ocupado destaca no hover. Soltar ali **troca os dois** — o que estava no destino vai pra origem, em vez de sumir sob o item que chegou. Só quando a origem é outro slot: soltar algo vindo da paleta num slot ocupado apenas substitui (não tem origem pra devolver o antigo).
 - **Dois caminhos alternativos, não só um**: tocar num slot vazio/preenchido abre um bottom sheet com a lista de itens (também serve pra limpar); tocar num item da paleta o "arma" pra encaixar num toque de horário, sem abrir sheet nenhuma. Arrastar é o gesto mais direto, mas nunca o único — acessibilidade, dedo grande e telas onde o long-press for menos confiável agradecem.
 - Esvaziar um slot: arrastar pra fora, swipe na linha, ou "Deixar vazio" no seletor — os três mostram "Desfazer" depois. Mover (arrastar de um slot ocupado pra outro) não mostra desfazer: a origem não foi apagada, só mudou de lugar.
 - Arrastar de um slot pra outro **move** o item dentro do dia.
@@ -199,8 +199,9 @@ A partir de 600dp de largura (a fronteira compacta/média do Material 3, onde um
 - Fim de semana / dia sem nada: estado vazio explícito, não widget em branco.
 - Cantos arredondados via `system_app_widget_background_radius`; chrome do widget (fundo, cabeçalho, horários) nas cores **neutras** do sistema (`@android:color/system_neutral1_*` no Android 12+). O chroma fica restrito às linhas dos itens, na densidade escolhida no app.
 - **Marca o horário corrente**, do mesmo jeito neutro que a visão semana.
-- Redimensionável, com `targetCellWidth`/`targetCellHeight` (Android 12+): em tamanho pequeno mostra os próximos 2–3 horários, em tamanho grande o dia inteiro.
+- Redimensionável, com `targetCellWidth`/`targetCellHeight` (Android 12+): em tamanho pequeno mostra os próximos 2–3 horários, em tamanho grande o dia inteiro. A altura decide quantas linhas cabem; a **largura** decide se cada linha ganha uma terceira faixa com tipo/local (≥220dp) — alargar o widget sem crescer a altura deixou de só esticar espaço vazio.
 - Toque no widget abre o app na visão semana.
+- **Prévia no seletor de widgets**: `previewLayout` (Android 12+) e `previewImage` (universal) juntos — várias skins de launcher (HyperOS incluída) não inflam `previewLayout` e caem no ícone do app sem aviso se essa segunda linha não existir.
 
 ### Refresh
 O Android não garante refresh exato de widget em background — `updatePeriodMillis` tem mínimo de 30 min e é tratado como sugestão (pode atrasar mais em Doze mode). **Decisão**: aceitar esse atraso natural (ninguém olha o widget às 00:00:01) e complementar com refresh forçado sempre que o app abre ou uma tabela é salva/ativada.
@@ -269,6 +270,17 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
   Aparência. Motivado direto por perda de dado real — reinstalar o app apaga
   o que está em `SharedPreferences`, sem aviso e sem recuperação. Ver
   "Backup" acima.
+- **Troca ao arrastar pra slot ocupado**: antes sobrescrevia e o item que
+  estava lá sumia da tabela; agora troca de lugar com o que chegou. Só se
+  aplica a slot-pra-slot, ver "Interação de arrastar" acima.
+- **Prévia do widget e responsividade à largura**: a prévia no seletor não
+  aparecia em launchers que não suportam `previewLayout` (HyperOS incluído);
+  e alargar o widget não fazia nada além de esticar espaço vazio, porque
+  tipo/local do item já vinham no snapshot mas nunca eram desenhados. Ver
+  "Widget de tela inicial" acima.
+- **Placeholders neutros**: exemplos de nome ("2026.1") e de item ("Cálculo
+  II") remetiam só a semestre acadêmico; trocados por exemplos que misturam
+  contexto (academia, trabalho, rotina).
 
 ## Pontos em aberto
 
