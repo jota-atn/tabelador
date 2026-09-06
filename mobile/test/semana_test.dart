@@ -52,9 +52,9 @@ void main() {
 
       expect(find.text('2026.1'), findsOneWidget);
       expect(find.text('CALC'), findsOneWidget);
-      // Os cinco dias e as seis faixas de horário.
-      for (final dia in kDiasCurtos) {
-        expect(find.text(dia), findsOneWidget);
+      // Os cinco dias (padrão) e as seis faixas de horário.
+      for (final dia in kDiasPadrao) {
+        expect(find.text(kDiaAbreviado[dia]!), findsOneWidget);
       }
       expect(find.text('8:00'), findsOneWidget);
       expect(find.text('18:00'), findsOneWidget);
@@ -116,12 +116,21 @@ void main() {
       expect((await lerDoDisco()).tabelaAtiva?.nome, 'Segunda');
     });
 
-    testWidgets('destaca hoje só em dia útil', (tester) async {
-      // Segunda a sexta viram índices 0..4; sábado e domingo, -1.
-      expect(GradeSemana.indiceDeHoje(DateTime(2026, 8, 10)), 0); // segunda
-      expect(GradeSemana.indiceDeHoje(DateTime(2026, 8, 14)), 4); // sexta
-      expect(GradeSemana.indiceDeHoje(DateTime(2026, 8, 15)), -1); // sábado
-      expect(GradeSemana.indiceDeHoje(DateTime(2026, 8, 16)), -1); // domingo
+    testWidgets('destaca hoje só quando é um dos dias da tabela',
+        (tester) async {
+      // Segunda a sexta viram índices 0..4 na tabela padrão; sábado e
+      // domingo, que não estão nela, -1.
+      expect(GradeSemana.indiceDeHoje(kDiasPadrao, DateTime(2026, 8, 10)), 0);
+      expect(GradeSemana.indiceDeHoje(kDiasPadrao, DateTime(2026, 8, 14)), 4);
+      expect(GradeSemana.indiceDeHoje(kDiasPadrao, DateTime(2026, 8, 15)), -1);
+      expect(GradeSemana.indiceDeHoje(kDiasPadrao, DateTime(2026, 8, 16)), -1);
+
+      // Tabela com dias fora do padrão: sábado passa a ter índice, e um dia
+      // útil que não está nela (segunda) fica de fora.
+      const dias = ['TERÇA', 'QUINTA', 'SÁBADO'];
+      expect(GradeSemana.indiceDeHoje(dias, DateTime(2026, 8, 15)), 2); // sáb
+      expect(GradeSemana.indiceDeHoje(dias, DateTime(2026, 8, 16)), -1); // dom
+      expect(GradeSemana.indiceDeHoje(dias, DateTime(2026, 8, 10)), -1); // seg
     });
   });
 

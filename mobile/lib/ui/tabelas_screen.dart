@@ -362,6 +362,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
   late int _horaInicial;
   late int _intervalo;
   late int _qtdHorarios;
+  late Set<String> _dias;
 
   @override
   void initState() {
@@ -371,6 +372,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
     _horaInicial = o?.horaInicial ?? 8;
     _intervalo = o?.intervalo ?? 2;
     _qtdHorarios = o?.qtdHorarios ?? 6;
+    _dias = (o?.dias ?? kDiasPadrao).toSet();
   }
 
   @override
@@ -379,10 +381,14 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
     super.dispose();
   }
 
-  /// Quantas células o usuário perde se confirmar. Zero quando a tabela cresce
-  /// ou é nova.
+  List<String> get _diasSelecionados => ordenarDias(_dias);
+
+  /// Quantas células o usuário perde se confirmar — soma o que se perde
+  /// encolhendo a quantidade de horários com o que se perde tirando um dia
+  /// que tinha célula preenchida. Zero quando a tabela só cresce, ou é nova.
   int get _perdidas =>
-      widget.original?.celulasPerdidasAo(_qtdHorarios) ?? 0;
+      (widget.original?.celulasPerdidasAo(_qtdHorarios) ?? 0) +
+      (widget.original?.celulasPerdidasAoMudarDias(_diasSelecionados) ?? 0);
 
   List<String> get _previaHorarios => [
         for (var i = 0; i < _qtdHorarios; i++)
@@ -403,6 +409,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         horaInicial: _horaInicial,
         intervalo: _intervalo,
         qtdHorarios: _qtdHorarios,
+        dias: _diasSelecionados,
       );
       await state.adicionarTabela(nova);
       // Tabela recém-criada vira a ativa mesmo já havendo outra — é a que
@@ -426,6 +433,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         horaInicial: _horaInicial,
         intervalo: _intervalo,
         qtdHorarios: _qtdHorarios,
+        dias: _diasSelecionados,
       ),
     );
     navigator.pop();
@@ -444,7 +452,11 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         top: 20,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
-      child: Column(
+      // Rolável: dias configuráveis somaram uma seção a mais, e o conteúdo
+      // já não cabe sempre inteiro na altura disponível (tela menor, ou
+      // teclado aberto).
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -461,6 +473,32 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
               labelText: 'Nome',
               hintText: 'Trabalho, Academia, Rotina de setembro...',
             ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Dias',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final dia in kTodosDias)
+                FilterChip(
+                  label: Text(kDiaAbreviado[dia]!),
+                  selected: _dias.contains(dia),
+                  onSelected: (marcado) => setState(() {
+                    if (marcado) {
+                      _dias.add(dia);
+                    } else if (_dias.length > 1) {
+                      // Nunca deixa zerar — uma tabela sem nenhum dia não
+                      // tem coluna nenhuma pra mostrar.
+                      _dias.remove(dia);
+                    }
+                  }),
+                ),
+            ],
           ),
           const SizedBox(height: 20),
           _Stepper(
@@ -536,6 +574,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
             ],
           ),
         ],
+      ),
       ),
       ),
     );

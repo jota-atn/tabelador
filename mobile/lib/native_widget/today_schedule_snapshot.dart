@@ -7,20 +7,6 @@ import '../model/tabela.dart';
 import '../theme/color_density.dart';
 import '../util/horario_atual.dart';
 
-/// Nome completo do dia pelo `DateTime.weekday` (1=segunda .. 7=domingo).
-///
-/// Cobre o fim de semana também, ao contrário de [kDias]: o widget precisa de
-/// um rótulo mesmo nos dias em que a grade não tem coluna.
-const List<String> kNomesDiasCompletos = [
-  'SEGUNDA',
-  'TERÇA',
-  'QUARTA',
-  'QUINTA',
-  'SEXTA',
-  'SÁBADO',
-  'DOMINGO',
-];
-
 /// Monta o JSON enviado ao widget nativo (`today_schedule_json`) a partir da
 /// tabela ativa, densidade e os dois esquemas de cor (claro/escuro).
 ///
@@ -37,12 +23,12 @@ String construirSnapshotJson({
   DateTime? agora,
 }) {
   final momento = agora ?? DateTime.now();
-  final dayLabel = kNomesDiasCompletos[momento.weekday - 1];
-  final hoje = indiceDeHoje(momento);
+  final dayLabel = nomeDoDia(momento);
+  final hoje = tabelaAtiva == null ? -1 : indiceDeHoje(tabelaAtiva.dias, momento);
 
   final slots = <Map<String, dynamic>>[];
   if (tabelaAtiva != null && hoje >= 0) {
-    final dia = kDias[hoje];
+    final dia = tabelaAtiva.dias[hoje];
     for (var slot = 0; slot < tabelaAtiva.qtdHorarios; slot++) {
       final item = itemPorId(tabelaAtiva.celula(dia, slot));
       if (item == null) continue;

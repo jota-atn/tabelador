@@ -66,11 +66,51 @@ void main() {
 
     test('a grade nasce completa, com todos os dias e slots', () {
       final t = Tabela.nova(nome: 'x', qtdHorarios: 4);
-      expect(t.celulas.keys.toSet(), kDias.toSet());
-      for (final dia in kDias) {
+      expect(t.celulas.keys.toSet(), kDiasPadrao.toSet());
+      for (final dia in kDiasPadrao) {
         expect(t.celulas[dia]!.length, 4);
         expect(t.celulas[dia]!.every((c) => c == null), isTrue);
       }
+    });
+
+    test('dias custom: só as colunas escolhidas, em ordem de calendário',
+        () {
+      final t = Tabela.nova(
+        nome: 'Academia',
+        dias: ['SÁBADO', 'TERÇA', 'QUINTA'], // fora de ordem de propósito
+      );
+
+      expect(t.dias, ['TERÇA', 'QUINTA', 'SÁBADO']);
+      expect(t.celulas.keys.toSet(), {'TERÇA', 'QUINTA', 'SÁBADO'});
+      // Dia fora da lista não vira coluna nem aceita célula.
+      expect(t.celula('SEGUNDA', 0), isNull);
+      expect(t.comCelula('SEGUNDA', 0, 'x').celula('SEGUNDA', 0), isNull);
+    });
+
+    test('sem dias= explícito, cai no padrão segunda-sexta', () {
+      final t = Tabela.nova(nome: 'x');
+      expect(t.dias, kDiasPadrao);
+    });
+
+    test('dias sobrevivem ao JSON; ausente no JSON cai no padrão', () {
+      final comDias = Tabela.nova(nome: 'x', dias: ['SÁBADO', 'DOMINGO']);
+      final volta = Tabela.fromJson(jsonDecode(jsonEncode(comDias.toJson())));
+      expect(volta.dias, ['SÁBADO', 'DOMINGO']);
+
+      final semChaveDias = Tabela.fromJson({'id': 'y', 'nome': 'Velha'});
+      expect(semChaveDias.dias, kDiasPadrao);
+    });
+
+    test('celulasPerdidasAoMudarDias conta só o que sai da lista', () {
+      var t = Tabela.nova(nome: 'x'); // segunda-sexta
+      t = t.comCelula('SEGUNDA', 0, 'a');
+      t = t.comCelula('SEGUNDA', 1, 'b');
+      t = t.comCelula('SEXTA', 0, 'c');
+
+      // Tirando segunda e sexta: os três somem.
+      expect(t.celulasPerdidasAoMudarDias(['TERÇA', 'QUARTA', 'QUINTA']), 3);
+      // Mantendo os dois: nada some.
+      expect(t.celulasPerdidasAoMudarDias(kDiasPadrao), 0);
     });
 
     test('comCelula não altera a tabela original', () {
@@ -152,7 +192,7 @@ void main() {
         'celulas': {'SEGUNDA': ['a', 'b']},
       });
 
-      expect(t.celulas.keys.toSet(), kDias.toSet());
+      expect(t.celulas.keys.toSet(), kDiasPadrao.toSet());
       expect(t.celulas['SEGUNDA']!.length, 4);
       expect(t.celula('SEGUNDA', 1), 'b');
       expect(t.celula('SEGUNDA', 3), isNull);

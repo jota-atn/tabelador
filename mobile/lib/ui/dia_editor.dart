@@ -36,56 +36,65 @@ class DiaEditor extends StatefulWidget {
 }
 
 class _DiaEditorState extends State<DiaEditor> {
-  late int _dia = kDias.indexOf(widget.diaInicial).clamp(0, kDias.length - 1);
+  late int _dia;
 
   /// Item "armado" pra tocar num horário e encaixar, sem precisar arrastar.
   /// Fica armado entre horários e entre dias — útil pra encaixar o mesmo
   /// item várias vezes seguidas.
   String? _itemArmado;
 
-  void _irPara(int delta) {
-    setState(() => _dia = (_dia + delta) % kDias.length);
+  @override
+  void initState() {
+    super.initState();
+    // Sem `tabela` disponível ainda (só chega via AppState em build), lê uma
+    // vez aqui — dias de uma tabela raramente mudam com a tela já aberta, e
+    // o clamp em build() cobre se mudar mesmo assim.
+    final dias = context.read<AppState>().tabelaAtiva?.dias ?? kDiasPadrao;
+    final indice = dias.indexOf(widget.diaInicial);
+    _dia = indice == -1 ? 0 : indice;
+  }
+
+  void _irPara(List<String> dias, int delta) {
+    setState(() => _dia = (_dia + delta) % dias.length);
   }
 
   void _armar(String itemId) {
     setState(() => _itemArmado = _itemArmado == itemId ? null : itemId);
   }
 
-  Future<void> _definir(Tabela tabela, int slot, String? itemId) {
-    return context
-        .read<AppState>()
-        .definirCelula(tabela.id, kDias[_dia], slot, itemId);
+  Future<void> _definir(Tabela tabela, String dia, int slot, String? itemId) {
+    return context.read<AppState>().definirCelula(tabela.id, dia, slot, itemId);
   }
 
   /// Soltar num slot: grava o destino e, se veio de outro slot do mesmo dia
   /// (não da paleta), resolve a origem. Destino vazio: origem só esvazia —
   /// mover, não copiar. Destino ocupado: o que estava lá vai pra origem —
   /// **troca**, em vez de sumir sob o item que chegou.
-  Future<void> _aoSoltar(Tabela tabela, int destino, _Carga carga) async {
+  Future<void> _aoSoltar(Tabela tabela, String dia, int destino, _Carga carga) async {
     // Sem await: vibração é feedback, não deve atrasar a gravação.
     unawaited(HapticFeedback.selectionClick());
     final origem = carga.origem;
     if (origem != null && origem != destino) {
-      final itemNoDestino = tabela.celula(kDias[_dia], destino);
-      await _definir(tabela, origem, itemNoDestino);
+      final itemNoDestino = tabela.celula(dia, destino);
+      await _definir(tabela, dia, origem, itemNoDestino);
     }
-    await _definir(tabela, destino, carga.itemId);
+    await _definir(tabela, dia, destino, carga.itemId);
   }
 
   /// Tocar num horário: com item armado, encaixa ele na hora — sem armado,
   /// abre a lista completa (também é como se limpa um horário preenchido).
-  Future<void> _tocarSlot(Tabela tabela, int slot) async {
+  Future<void> _tocarSlot(Tabela tabela, String dia, int slot) async {
     final armado = _itemArmado;
     if (armado != null) {
       unawaited(HapticFeedback.selectionClick());
-      await _definir(tabela, slot, armado);
+      await _definir(tabela, dia, slot, armado);
       return;
     }
-    await _escolherPorToque(tabela, slot);
+    await _escolherPorToque(tabela, dia, slot);
   }
 
-  Future<void> _escolherPorToque(Tabela tabela, int slot) =>
-      abrirSeletorDeCelula(context, tabela: tabela, dia: kDias[_dia], slot: slot);
+  Future<void> _escolherPorToque(Tabela tabela, String dia, int slot) =>
+      abrirSeletorDeCelula(context, tabela: tabela, dia: dia, slot: slot);
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +108,8 @@ class _DiaEditorState extends State<DiaEditor> {
       );
     }
 
+    final dias = tabela.dias;
+    final dia = dias[_dia.clamp(0, dias.length - 1)];
     final itens = state.itensParaTabela(tabela.id);
     final armado = _itemArmado != null ? state.itemPorId(_itemArmado) : null;
 
@@ -107,13 +118,13 @@ class _DiaEditorState extends State<DiaEditor> {
         title: Row(
           children: [
             IconButton(
-              onPressed: () => _irPara(-1),
+              onPressed: () => _irPara(dias, -1),
               icon: const Icon(Icons.chevron_left),
               tooltip: 'Dia anterior',
             ),
             Expanded(
               child: Text(
-                kDias[_dia],
+                dia,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
@@ -123,7 +134,7 @@ class _DiaEditorState extends State<DiaEditor> {
               ),
             ),
             IconButton(
-              onPressed: () => _irPara(1),
+              onPressed: () => _irPara(dias, 1),
               icon: const Icon(Icons.chevron_right),
               tooltip: 'Próximo dia',
             ),
@@ -140,8 +151,8 @@ class _DiaEditorState extends State<DiaEditor> {
               // semanal sugere.
               onHorizontalDragEnd: (d) {
                 final v = d.primaryVelocity ?? 0;
-                if (v < -200) _irPara(1);
-                if (v > 200) _irPara(-1);
+                if (v < -200) _irPara(dias, 1);
+                if (v > 200) _irPara(dias, -1);
               },
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
@@ -149,17 +160,17 @@ class _DiaEditorState extends State<DiaEditor> {
                   for (var slot = 0; slot < tabela.qtdHorarios; slot++)
                     _LinhaSlot(
                       rotulo: tabela.horarios[slot],
-                      item: state.itemPorId(tabela.celula(kDias[_dia], slot)),
+                      item: state.itemPorId(tabela.celula(dia, slot)),
                       densidade: state.densidade,
                       slot: slot,
                       itemArmado: armado != null,
-                      aoSoltar: (carga) => _aoSoltar(tabela, slot, carga),
-                      aoTocar: () => _tocarSlot(tabela, slot),
+                      aoSoltar: (carga) => _aoSoltar(tabela, dia, slot, carga),
+                      aoTocar: () => _tocarSlot(tabela, dia, slot),
                       aoLimpar: () => limparComDesfazer(
                         context,
                         state,
                         tabela.id,
-                        kDias[_dia],
+                        dia,
                         slot,
                       ),
                     ),

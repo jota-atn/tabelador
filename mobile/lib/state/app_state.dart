@@ -159,7 +159,7 @@ class AppState extends ChangeNotifier {
     if (tabela == null) return const [];
 
     final usadosAqui = <String>{
-      for (final dia in kDias)
+      for (final dia in tabela.dias)
         for (final id in tabela.celulas[dia] ?? const []) ?id,
     };
 

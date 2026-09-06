@@ -212,6 +212,63 @@ void main() {
       expect(salvo.tabelaAtiva?.nome, '2026.1');
     });
 
+    testWidgets('criar tabela com dias escolhidos', (tester) async {
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      await abrirAba(tester, 'Tabelas');
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nome'),
+        'Academia',
+      );
+
+      // Desmarca segunda e sexta, marca sábado: sobra terça/quarta/quinta/sáb.
+      await tester.tap(find.widgetWithText(FilterChip, 'SEG'));
+      await tester.tap(find.widgetWithText(FilterChip, 'SEX'));
+      await tester.tap(find.widgetWithText(FilterChip, 'SÁB'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar'));
+      await tester.pumpAndSettle();
+
+      final salvo = await lerDoDisco();
+      expect(
+        salvo.tabelas.single.dias,
+        ['TERÇA', 'QUARTA', 'QUINTA', 'SÁBADO'],
+      );
+    });
+
+    testWidgets('não dá pra desmarcar o último dia', (tester) async {
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      await abrirAba(tester, 'Tabelas');
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nome'),
+        'Só um dia',
+      );
+
+      for (final sigla in ['SEG', 'QUA', 'QUI', 'SEX']) {
+        await tester.tap(find.widgetWithText(FilterChip, sigla));
+      }
+      await tester.pumpAndSettle();
+      // Terça é o único que sobrou — tentar tirar não deve zerar a lista.
+      await tester.tap(find.widgetWithText(FilterChip, 'TER'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar'));
+      await tester.pumpAndSettle();
+
+      final salvo = await lerDoDisco();
+      expect(salvo.tabelas.single.dias, ['TERÇA']);
+    });
+
     testWidgets('tocar numa tabela troca a ativa', (tester) async {
       final a = Tabela.nova(nome: 'Primeira');
       final b = Tabela.nova(nome: 'Segunda');

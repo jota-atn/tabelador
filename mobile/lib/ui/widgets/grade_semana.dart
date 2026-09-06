@@ -9,11 +9,8 @@ import '../../theme/color_density.dart';
 import '../../util/horario_atual.dart' as horario_atual;
 import 'item_swatch.dart';
 
-/// Abreviações dos dias na largura de uma coluna de grade.
-const List<String> kDiasCurtos = ['SEG', 'TER', 'QUA', 'QUI', 'SEX'];
-
-/// A grade 5×N em chrome neutro — a cara do projeto, o `fancy_grid` do script
-/// virando UI.
+/// A grade N×M em chrome neutro — a cara do projeto, o `fancy_grid` do script
+/// virando UI. N colunas de acordo com [Tabela.dias], não fixo em 5.
 ///
 /// Só leitura no sentido de não arrastar: tocar num dia chama [aoTocarDia],
 /// que abre o editor daquele dia inteiro; toque longo numa célula chama
@@ -34,7 +31,7 @@ class GradeSemana extends StatelessWidget {
   final ColorDensity densidade;
   final Item? Function(String? id) itemPorId;
 
-  /// Recebe o nome do dia (de [kDias]).
+  /// Recebe o nome do dia (de [Tabela.dias]).
   final void Function(String dia)? aoTocarDia;
 
   /// Recebe o nome do dia e o índice do slot.
@@ -45,10 +42,10 @@ class GradeSemana extends StatelessWidget {
   static const double _larguraHora = 46;
   static const double _alturaCabecalho = 26;
 
-  /// Segunda a sexta são 1..5 em DateTime.weekday. No fim de semana nenhuma
-  /// coluna é destacada — não faz sentido apontar "hoje" para um dia que a
-  /// grade não tem.
-  static int indiceDeHoje([DateTime? agora]) => horario_atual.indiceDeHoje(agora);
+  /// Índice de hoje dentro de [dias], ou -1 se hoje não é um dos dias da
+  /// tabela — não faz sentido apontar "hoje" pra uma coluna que não existe.
+  static int indiceDeHoje(List<String> dias, [DateTime? agora]) =>
+      horario_atual.indiceDeHoje(dias, agora);
 
   /// Em qual faixa de horário estamos agora, ou -1 fora do expediente da
   /// tabela.
@@ -74,7 +71,7 @@ class GradeSemana extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final agora = DateTime.now();
-    final hoje = indiceDeHoje(agora);
+    final hoje = indiceDeHoje(tabela.dias, agora);
     final slotAgora = _slotCorrente(agora);
     final topoLinhaDoAgora = _topoLinhaDoAgora(agora, hoje);
 
@@ -116,14 +113,16 @@ class GradeSemana extends StatelessWidget {
                 ],
               ),
             ),
-            for (var dia = 0; dia < kDias.length; dia++) ...[
+            for (var dia = 0; dia < tabela.dias.length; dia++) ...[
               // Fio fininho só entre dias — discreto o bastante pra não virar
               // o `fancy_grid` 100%-borda do script original, mas o
               // suficiente pra separar dois dias com cores parecidas coladas.
               if (dia > 0) Container(width: 1, color: scheme.outlineVariant),
               Expanded(
                 child: GestureDetector(
-                  onTap: aoTocarDia == null ? null : () => aoTocarDia!(kDias[dia]),
+                  onTap: aoTocarDia == null
+                      ? null
+                      : () => aoTocarDia!(tabela.dias[dia]),
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     // Destaque de hoje: neutro de propósito, pra não competir com
@@ -140,7 +139,7 @@ class GradeSemana extends StatelessWidget {
                           height: _alturaCabecalho,
                           child: Center(
                             child: Text(
-                              kDiasCurtos[dia],
+                              kDiaAbreviado[tabela.dias[dia]]!,
                               style: TextStyle(
                                 fontSize: 10,
                                 letterSpacing: 0.6,
@@ -161,14 +160,16 @@ class GradeSemana extends StatelessWidget {
                                 ? null
                                 : () {
                                     unawaited(HapticFeedback.selectionClick());
-                                    aoEditarCelula!(kDias[dia], slot);
+                                    aoEditarCelula!(tabela.dias[dia], slot);
                                   },
                             child: SizedBox(
                               height: alturaLinha,
                               child: Padding(
                                 padding: const EdgeInsets.all(2),
                                 child: _Celula(
-                                  item: itemPorId(tabela.celula(kDias[dia], slot)),
+                                  item: itemPorId(
+                                    tabela.celula(tabela.dias[dia], slot),
+                                  ),
                                   densidade: densidade,
                                 ),
                               ),
