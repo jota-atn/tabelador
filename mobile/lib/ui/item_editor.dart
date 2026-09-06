@@ -153,7 +153,7 @@ class _ItemEditorState extends State<ItemEditor> {
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Nome',
-                hintText: 'Cálculo II, Academia, Reunião semanal...',
+                hintText: 'Academia, Reunião semanal, Consulta médica...',
               ),
               validator: _naoVazio,
               onChanged: _aoDigitarNome,

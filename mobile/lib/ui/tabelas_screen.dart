@@ -459,7 +459,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
               labelText: 'Nome',
-              hintText: '2026.1',
+              hintText: 'Trabalho, Academia, Rotina de setembro...',
             ),
           ),
           const SizedBox(height: 20),
