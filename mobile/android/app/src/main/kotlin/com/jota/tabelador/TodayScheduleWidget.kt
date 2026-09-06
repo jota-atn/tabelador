@@ -20,6 +20,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -142,7 +143,7 @@ class TodayScheduleWidget : GlanceAppWidget() {
                 Spacer(
                     modifier = GlanceModifier
                         .width(slot.barWidthDp.dp)
-                        .fillMaxSize()
+                        .fillMaxHeight()
                         .background(corTema(slot.barLight, slot.barDark)),
                 )
                 Spacer(modifier = GlanceModifier.width(4.dp))
