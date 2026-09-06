@@ -176,6 +176,39 @@ void main() {
       expect(salvo.tabelas.single.celula('SEGUNDA', 0), _calc.id);
     });
 
+    testWidgets('arrastar pra um slot ocupado troca os dois', (tester) async {
+      final fisica = Item(
+        id: 'fisica',
+        nome: 'Física I',
+        sigla: 'FIS',
+        tipo: 'Aula',
+        cor: ItemColor.tomate,
+      );
+      var tabela = Tabela.nova(nome: '2026.1');
+      tabela = tabela.comCelula('SEGUNDA', 0, _calc.id);
+      tabela = tabela.comCelula('SEGUNDA', 1, fisica.id);
+      semear(itens: [_calc, fisica], tabelas: [tabela], ativa: tabela.id);
+
+      await abrirEditor(tester, 'SEG');
+
+      final origem = tester.getCenter(find.text('Cálculo II'));
+      final destino = tester.getCenter(find.text('Física I'));
+
+      final gesto = await tester.startGesture(origem);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+      await gesto.moveTo(Offset.lerp(origem, destino, 0.5)!);
+      await tester.pump();
+      await gesto.moveTo(destino);
+      await tester.pump();
+      await gesto.up();
+      await tester.pumpAndSettle();
+
+      final salvo = await lerDoDisco();
+      // O que estava no destino foi pra origem — nenhum dos dois sumiu.
+      expect(salvo.tabelas.single.celula('SEGUNDA', 0), fisica.id);
+      expect(salvo.tabelas.single.celula('SEGUNDA', 1), _calc.id);
+    });
+
     testWidgets('deslizar a linha esvazia o horário', (tester) async {
       var tabela = Tabela.nova(nome: '2026.1');
       tabela = tabela.comCelula('SEGUNDA', 0, _calc.id);

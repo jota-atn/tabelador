@@ -57,13 +57,17 @@ class _DiaEditorState extends State<DiaEditor> {
         .definirCelula(tabela.id, kDias[_dia], slot, itemId);
   }
 
-  /// Soltar num slot: grava o destino e, se veio de outro slot do mesmo dia,
-  /// esvazia a origem — arrastar entre slots move, não copia.
+  /// Soltar num slot: grava o destino e, se veio de outro slot do mesmo dia
+  /// (não da paleta), resolve a origem. Destino vazio: origem só esvazia —
+  /// mover, não copiar. Destino ocupado: o que estava lá vai pra origem —
+  /// **troca**, em vez de sumir sob o item que chegou.
   Future<void> _aoSoltar(Tabela tabela, int destino, _Carga carga) async {
     // Sem await: vibração é feedback, não deve atrasar a gravação.
     unawaited(HapticFeedback.selectionClick());
-    if (carga.origem != null && carga.origem != destino) {
-      await _definir(tabela, carga.origem!, null);
+    final origem = carga.origem;
+    if (origem != null && origem != destino) {
+      final itemNoDestino = tabela.celula(kDias[_dia], destino);
+      await _definir(tabela, origem, itemNoDestino);
     }
     await _definir(tabela, destino, carga.itemId);
   }
