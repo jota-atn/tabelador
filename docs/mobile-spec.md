@@ -299,6 +299,99 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
   configurável em Aparência, alarme inexato (sem pedir permissão de alarme
   exato), sem persistir a reboot de propósito. Ver "Notificações" acima.
 
+## Eventos e Google Agenda (planejado, não implementado)
+
+Pedido: puxar compromissos do Google Agenda pra dentro das tabelas e criar
+eventos no app que vão pro Google Agenda. "Evento" é o nome do conceito novo:
+um momento com data (único ou recorrente), que pode ou não estar vinculado a
+um item — uma prova vinculada a SO, um "Aniversário de Pedro" solto.
+
+**A tensão central**: a tabela é um molde semanal sem data ("SEGUNDA, slot
+0" vale pra toda segunda), em blocos largos (`intervalo`, 2h por padrão), e
+cobre só alguns dias e algumas horas. Evento tem data e hora exatas. Todas as
+decisões abaixo saem daí.
+
+### Decisões confirmadas
+
+- **Sync via agenda do próprio Android (`CalendarContract`)**, não Google
+  Sign-In + Calendar API. O Android já sincroniza as agendas da conta Google
+  do aparelho; o app só lê/grava no provider local. Sem projeto no Google
+  Cloud, sem OAuth/token expirando (app em modo teste perde autorização a cada
+  7 dias), funciona offline, e "puxar semanalmente" deixa de ser necessário —
+  o app lê na hora de desenhar. Consequência: não existe "conta logada no
+  app"; em configuração o usuário escolhe *em qual agenda* (de qual conta)
+  eventos novos são salvos e *quais agendas* aparecem no app. Permissões
+  `READ_CALENDAR`/`WRITE_CALENDAR`. Plugin (`device_calendar` ou similar) vs.
+  platform channel próprio em Kotlin fica pra decidir na implementação —
+  testar build do plugin isolado primeiro (ver gotcha do `share_plus`).
+- **Conflito com item (evento no horário de um item)**: o item continua na
+  célula, o evento vira um **selo no canto** — na cor de destaque do item se
+  o evento é vinculado a ele (ex: "!" pra prova de SO no horário de SO),
+  ponto neutro se não. Tocar na célula abre folha com item + eventos daquele
+  horário. Descartados: evento sobrescrever o item (esconde a aula) e célula
+  dividida (não cabe em ~55dp).
+- **Abaixo da grade: lista "Próximos"** (~14 dias), não calendário mensal.
+  Título, data/hora, item vinculado ("Prova · SO · qui 13/11 10h"). Cobre
+  todo evento que não tem lugar na grade. Visão mensal só se fizer falta.
+
+### Proposta (ainda a validar no uso)
+
+**Modelo**:
+
+```
+Evento { id, titulo, tipo (texto livre c/ autocomplete, como Item.tipo),
+         inicio, fim?, diaInteiro, repeticao (nenhuma|semanal|mensal|anual),
+         itemId?, local?, notas?, origem (app|google), googleId? }
+```
+
+O vínculo evento→item fica num mapa local (`googleId → itemId`), porque
+`ExtendedProperties` do `CalendarContract` só é gravável por sync adapter.
+Eventos importados chegam sem vínculo; o app pode *sugerir* um quando a
+sigla de um item aparece no título ("Prova de SO" → SO?), sempre pedindo
+confirmação.
+
+**Grade da tela inicial** passa a representar a **semana atual**: cabeçalho
+de coluna ganha a data ("SEG 10"). Onde cada evento cai:
+
+1. Dentro do horário, célula vazia → "fantasma" tracejado com título curto
+   (distingue de item sem fugir do visual neutro).
+2. Dentro do horário, célula com item → selo (decisão acima).
+3. Fora do horário da tabela ou dia inteiro → faixas finas por coluna ("dia
+   todo" em cima, "antes/depois" embaixo), só renderizadas na semana que tem
+   evento assim.
+4. Dia que a tabela não tem → só na lista "Próximos".
+
+Evento é mapeado pro(s) slot(s) que sua faixa `[inicio, fim)` sobrepõe.
+Interruptor por tabela "mostrar eventos" (padrão ligado) — aniversário não
+precisa aparecer na tabela da academia; eventos vinculados a itens da tabela
+aparecem sempre.
+
+**Criação**, do mais contextual ao mais genérico:
+- Toque longo em célula com item → "Novo evento para SO": vinculado, data da
+  próxima ocorrência daquele slot, hora do slot. Prova no horário da aula em
+  dois toques.
+- Toque longo em célula vazia → data/hora do slot pré-preenchidas.
+- "+ evento" na tela do item → vinculado.
+- "+" na tela inicial → formulário limpo.
+
+Formulário: título, tipo, data, início/fim ou "dia todo", repetição
+(nenhuma/semanal/mensal/anual — sem editor de RRULE), item vinculado
+(opcional, com busca), local, notas, lembrete (reaproveita
+`NotificationScheduler`), "salvar no Google Agenda" (padrão ligado se houver
+agenda configurada). Editar recorrente altera a série inteira (só esta
+ocorrência fica pra depois).
+
+**Eventos por item**: seção "Eventos" na tela do item — próximos em
+destaque, passados recolhidos ("12 passados"), "+ evento".
+
+### Ordem sugerida
+
+1. Eventos locais (modelo, formulário, grade com data, "Próximos", seção no
+   item) — sem Google, pra validar o uso antes da sync.
+2. Ler do Google (permissão, escolha de agendas exibidas).
+3. Gravar no Google (agenda de destino).
+4. Extras: eventos no widget, notificação de evento.
+
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
