@@ -540,6 +540,74 @@ aparelho.
 
 Validado no aparelho: evento criado no app apareceu no Google Agenda.
 
+### Criação de evento em chips (redesenho, 2026-11-11)
+
+Motivo: o formulário de tela inteira tinha 11 campos de mesmo peso — "muita
+coisa pra clicar pra criar um simples evento". Princípio: **chips pra tudo;
+texto só onde nenhuma escolha representa** (título, local, notas).
+
+Descartado: reconhecimento de texto livre ("prova SO quinta 10h"). Não por
+segurança (texto local, sem rede nem execução), mas por **ambiguidade** —
+"sexta" num título, sigla que é palavra comum — o app adivinharia errado e
+o usuário teria que conferir, o oposto de prático.
+
+**Folha que sobe de baixo** (não tela inteira), por cima da grade/
+calendário. Mesma folha pra criar e editar. Ordem:
+
+1. **Tipo** — lista fixa, cada um define padrões (o ganho real não é a
+   categoria, é o que ela preenche):
+
+   | Tipo | Padrão |
+   |---|---|
+   | Prova | duração do horário do item (2h sem item) |
+   | Entrega | prazo (um horário, sem duração) |
+   | Lembrete | prazo |
+   | Compromisso, Consulta, Reunião, Outro | 1h |
+   | Viagem | dia todo (um dia só — vários dias fica pra depois) |
+   | Aniversário | dia todo, repete todo ano |
+
+   Sem tipo personalizado por enquanto. Evento antigo com tipo em texto
+   livre que não bate com a lista é tratado como "Outro" (o texto antigo
+   continua salvo).
+2. **Item** — chips **coloridos** (cor do item) dos itens da **tabela da
+   célula** (toque longo) ou da **tabela ativa** (resto); último chip "Outro
+   item…" abre lista com busca de todos. Tocar de novo desmarca. Escolher
+   item preenche local, título e próximo horário (cada um só enquanto o
+   usuário não mexeu).
+3. **Quando** — [Próximo de SO · qui 10:00] [Hoje] [Amanhã] [📅].
+4. **Início** — chip com a hora; toque abre o relógio. Some em dia todo.
+5. **Duração** em vez de término — [Dia todo] [Prazo] [30 min] [1h] [2h]
+   [Horário de SO] [Outra…] ("Outra…" pergunta até que horas). "Dia todo"
+   como duração elimina o interruptor separado.
+6. **Título** — opcional: vazio vira "Prova · Sistemas Operacionais" (tipo +
+   item), mostrado como dica no campo. Só é obrigatório sem tipo útil e sem
+   item.
+7. **Chips de resumo** numa linha: [📍 Bloco C] [↻ Não repete] [＋ Notas]
+   [G Principal]. Relevantes demais pra esconder, mas sem poluir: cada chip
+   **mostra o valor atual**; preenchido é cheio, vazio tem contorno e "＋".
+   Toque abre só aquele detalhe logo abaixo (texto curto, chips de repetição,
+   texto longo, escolha de agenda).
+   **Segurar e arrastar** como atalho nos de lista (repetição, Google): ao
+   segurar, as opções aparecem numa fileira **acima** do chip, arrasto
+   **horizontal** (não briga com fechar/rolar a folha, que são verticais),
+   vibração ao trocar de opção, soltar escolhe, soltar fora cancela. Nunca o
+   único caminho — não é descobrível nem acessível sozinho.
+
+**Repetição ganha "Diária"** (Não repete, Diária, Semanal, Mensal, Anual;
+`FREQ=DAILY` no Google).
+
+Caso típico: prova de SO na próxima aula = Prova, SO, Salvar — três toques,
+nenhum teclado. Do toque longo na célula: Prova, Salvar.
+
+### "Esta semana" no lugar de "Próximos 14 dias"
+
+14 dias acumulava demais, e a grade já mostra a semana. Agora: **"Esta
+semana · N"**, de hoje até domingo, **acordeão começando recolhido** (estado
+lembrado). Recolhido mostra uma linha: "Próximo: Prova · SO, qui 10h".
+Aberto, **agrupado por dia** (Hoje, Amanhã, qui 13/11) em vez de repetir a
+data em cada linha. No fim de semana, link "Próxima semana · N" pro
+calendário.
+
 ### Limitações conhecidas
 
 - Grade mostra só a semana atual (sem navegar pra próxima); pra frente, usar
