@@ -21,6 +21,7 @@ class SemanaCorpo extends StatelessWidget {
     required this.itemPorId,
     this.aoTocarDia,
     this.aoEditarCelula,
+    this.rodape,
   });
 
   final Tabela tabela;
@@ -29,7 +30,12 @@ class SemanaCorpo extends StatelessWidget {
   final void Function(String dia)? aoTocarDia;
   final void Function(String dia, int slot)? aoEditarCelula;
 
-  static const _padding = EdgeInsets.fromLTRB(10, 6, 10, 24);
+  /// Conteúdo extra abaixo da dica — a lista "Próximos" na tela inicial.
+  final Widget? rodape;
+
+  // Com rodapé (tela inicial) há um FAB por cima — o fundo extra impede que
+  // ele cubra a última linha da lista.
+  EdgeInsets get _padding => EdgeInsets.fromLTRB(10, 6, 10, rodape == null ? 24 : 88);
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,10 @@ class SemanaCorpo extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
         ),
+        if (rodape != null) ...[
+          const SizedBox(height: 24),
+          rodape!,
+        ],
       ],
     );
 

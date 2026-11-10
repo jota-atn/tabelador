@@ -5,7 +5,9 @@ import '../model/tabela.dart';
 import '../state/app_state.dart';
 import 'aparencia_screen.dart';
 import 'dia_editor.dart';
+import 'evento_editor.dart';
 import 'widgets/celula_picker.dart';
+import 'widgets/proximos_eventos.dart';
 import 'widgets/semana_corpo.dart';
 
 /// A tela inicial: a semana inteira da tabela ativa, só leitura.
@@ -80,8 +82,16 @@ class SemanaScreen extends StatelessWidget {
                   dia: dia,
                   slot: slot,
                 ),
+                rodape: const ProximosEventos(),
               ),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const EventoEditor()),
+        ),
+        tooltip: 'Novo evento',
+        child: const Icon(Icons.event_outlined),
+      ),
     );
   }
 }

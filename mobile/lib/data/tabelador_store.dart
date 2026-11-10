@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
@@ -11,6 +12,7 @@ class DadosSalvos {
   const DadosSalvos({
     required this.itens,
     required this.tabelas,
+    this.eventos = const [],
     required this.tabelaAtivaId,
     required this.densidade,
     required this.notificacoesAtivas,
@@ -19,6 +21,7 @@ class DadosSalvos {
 
   final List<Item> itens;
   final List<Tabela> tabelas;
+  final List<Evento> eventos;
   final String? tabelaAtivaId;
   final ColorDensity densidade;
   final bool notificacoesAtivas;
@@ -42,6 +45,7 @@ class DadosSalvos {
 class TabeladorStore {
   static const _kItens = 'items_json';
   static const _kTabelas = 'tables_json';
+  static const _kEventos = 'events_json';
   static const _kAtiva = 'active_table_id';
   static const _kDensidade = 'color_density';
   static const _kNotificacoesAtivas = 'notifications_enabled';
@@ -53,6 +57,7 @@ class TabeladorStore {
     return DadosSalvos(
       itens: _decodificarLista(prefs.getString(_kItens), Item.fromJson),
       tabelas: _decodificarLista(prefs.getString(_kTabelas), Tabela.fromJson),
+      eventos: _decodificarLista(prefs.getString(_kEventos), Evento.fromJson),
       tabelaAtivaId: prefs.getString(_kAtiva),
       densidade: ColorDensity.fromKey(prefs.getString(_kDensidade)),
       notificacoesAtivas: prefs.getBool(_kNotificacoesAtivas) ?? false,
@@ -73,6 +78,14 @@ class TabeladorStore {
     await prefs.setString(
       _kTabelas,
       jsonEncode([for (final t in tabelas) t.toJson()]),
+    );
+  }
+
+  Future<void> salvarEventos(List<Evento> eventos) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _kEventos,
+      jsonEncode([for (final e in eventos) e.toJson()]),
     );
   }
 

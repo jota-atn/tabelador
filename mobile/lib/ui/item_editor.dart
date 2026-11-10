@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../theme/item_palette.dart';
+import '../util/formato_data.dart';
+import 'evento_editor.dart';
+import 'widgets/evento_tile.dart';
 import 'widgets/item_swatch.dart';
 import 'widgets/largura_maxima.dart';
 
@@ -206,6 +210,12 @@ class _ItemEditorState extends State<ItemEditor> {
                 hintText: 'Com quem, o que levar, o que lembrar...',
               ),
             ),
+            // Item novo ainda não tem id pra vincular evento — a seção só
+            // aparece depois do primeiro salvar.
+            if (!novo) ...[
+              const SizedBox(height: 28),
+              _EventosDoItem(item: widget.original!),
+            ],
           ],
           ),
         ),
@@ -359,6 +369,84 @@ class _SeletorDeCor extends StatelessWidget {
               ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// "Eventos" na tela do item: os próximos em destaque, os passados
+/// recolhidos, e o atalho pra criar um já vinculado.
+class _EventosDoItem extends StatelessWidget {
+  const _EventosDoItem({required this.item});
+
+  final Item item;
+
+  /// Até onde procurar a próxima ocorrência de um recorrente — anual precisa
+  /// de pelo menos um ano de janela pra sempre achar a próxima.
+  static const _janela = Duration(days: 400);
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final scheme = Theme.of(context).colorScheme;
+    final agora = DateTime.now();
+    final hoje = inicioDoDia(agora);
+
+    final proximos = <Ocorrencia>[];
+    final passados = <Ocorrencia>[];
+    for (final e in state.eventosDoItem(item.id)) {
+      final futuras = e
+          .ocorrenciasEntre(hoje, hoje.add(_janela))
+          .where((o) => e.diaInteiro || !o.fim.isBefore(agora));
+      if (futuras.isNotEmpty) {
+        proximos.add(futuras.first);
+      } else {
+        passados.add(Ocorrencia(e, e.inicio, e.inicio.add(e.duracao)));
+      }
+    }
+    proximos.sort((a, b) => a.inicio.compareTo(b.inicio));
+    passados.sort((a, b) => b.inicio.compareTo(a.inicio));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Eventos',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => EventoEditor(itemId: item.id),
+                ),
+              ),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Evento'),
+            ),
+          ],
+        ),
+        if (proximos.isEmpty && passados.isEmpty)
+          Text(
+            'Provas, entregas e outros momentos ligados a ${item.sigla} aparecem aqui.',
+            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+          ),
+        for (final o in proximos) EventoTile(ocorrencia: o, mostrarItem: false),
+        if (passados.isNotEmpty)
+          ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+            title: Text(
+              passados.length == 1 ? '1 passado' : '${passados.length} passados',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
+            children: [
+              for (final o in passados)
+                EventoTile(ocorrencia: o, mostrarItem: false, esmaecido: true),
+            ],
+          ),
       ],
     );
   }

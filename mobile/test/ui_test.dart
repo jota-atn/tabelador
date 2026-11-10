@@ -372,7 +372,7 @@ void main() {
       expect(find.text('CALC2'), findsNothing);
 
       // Desarquivar traz ele de volta pra paleta.
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Voltar'));
       await tester.pumpAndSettle();
       await abrirAba(tester, 'Itens');
       await tester.tap(find.byIcon(Icons.more_vert));

@@ -1,5 +1,6 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
@@ -96,6 +97,11 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
             theme: buildAppTheme(lightDynamic, Brightness.light),
             darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
             themeMode: _mode,
+            // Só pt-BR: seletor de data/hora e textos padrão do Material
+            // (OK/Cancelar, meses) no mesmo idioma do resto do app.
+            locale: const Locale('pt', 'BR'),
+            supportedLocales: const [Locale('pt', 'BR')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: AppShell(onToggleBrightness: _toggleBrightness),
           );
         },

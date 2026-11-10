@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/tabelador_store.dart';
+import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
@@ -16,6 +17,7 @@ class AppState extends ChangeNotifier {
 
   List<Item> _itens = [];
   List<Tabela> _tabelas = [];
+  List<Evento> _eventos = [];
   String? _tabelaAtivaId;
   ColorDensity _densidade = ColorDensity.fallback;
   bool _notificacoesAtivas = false;
@@ -24,6 +26,7 @@ class AppState extends ChangeNotifier {
 
   List<Item> get itens => List.unmodifiable(_itens);
   List<Tabela> get tabelas => List.unmodifiable(_tabelas);
+  List<Evento> get eventos => List.unmodifiable(_eventos);
   ColorDensity get densidade => _densidade;
   bool get notificacoesAtivas => _notificacoesAtivas;
   int get antecedenciaMinutos => _antecedenciaMinutos;
@@ -80,6 +83,7 @@ class AppState extends ChangeNotifier {
     final dados = await _store.carregar();
     _itens = [...dados.itens];
     _tabelas = [...dados.tabelas];
+    _eventos = [...dados.eventos];
     _densidade = dados.densidade;
     _notificacoesAtivas = dados.notificacoesAtivas;
     _antecedenciaMinutos = dados.antecedenciaMinutos;
@@ -124,9 +128,18 @@ class AppState extends ChangeNotifier {
         if (i.id != itemId) i,
     ];
     _tabelas = [for (final t in _tabelas) t.semItem(itemId)];
+    // Evento vinculado não some junto: a prova continua existindo, só deixa
+    // de apontar pra disciplina.
+    final tinhaEvento = _eventos.any((e) => e.itemId == itemId);
+    if (tinhaEvento) {
+      _eventos = [
+        for (final e in _eventos) e.itemId == itemId ? e.semItem() : e,
+      ];
+    }
     notifyListeners();
     await _store.salvarItens(_itens);
     await _store.salvarTabelas(_tabelas);
+    if (tinhaEvento) await _store.salvarEventos(_eventos);
   }
 
   Future<void> definirArquivado(String itemId, bool arquivado) async {
@@ -267,6 +280,66 @@ class AppState extends ChangeNotifier {
     await _store.salvarTabelas(_tabelas);
   }
 
+  // -------------------------------------------------------------- eventos
+
+  Evento? eventoPorId(String? id) {
+    if (id == null) return null;
+    for (final e in _eventos) {
+      if (e.id == id) return e;
+    }
+    return null;
+  }
+
+  /// Todas as ocorrências que começam em `[de, ate)`, de todos os eventos,
+  /// em ordem cronológica.
+  List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
+    final todas = [
+      for (final e in _eventos) ...e.ocorrenciasEntre(de, ate),
+    ]..sort((a, b) => a.inicio.compareTo(b.inicio));
+    return todas;
+  }
+
+  List<Evento> eventosDoItem(String itemId) =>
+      List.unmodifiable(_eventos.where((e) => e.itemId == itemId));
+
+  /// Tipos já usados em eventos, pro autocomplete — separado dos tipos de
+  /// item ("Aula", "Treino") porque o vocabulário é outro ("Prova",
+  /// "Entrega"). Os padrões entram mesmo sem uso, pra o primeiro evento já
+  /// ter o que tocar.
+  List<String> get tiposDeEventoConhecidos {
+    final vistos = <String>{
+      'Prova',
+      'Entrega',
+      'Compromisso',
+      for (final e in _eventos)
+        if (e.tipo.trim().isNotEmpty) e.tipo.trim(),
+    };
+    return vistos.toList()..sort();
+  }
+
+  Future<void> adicionarEvento(Evento evento) async {
+    _eventos = [..._eventos, evento];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  Future<void> atualizarEvento(Evento evento) async {
+    _eventos = [
+      for (final e in _eventos) e.id == evento.id ? evento : e,
+    ];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  Future<void> removerEvento(String eventoId) async {
+    _eventos = [
+      for (final e in _eventos)
+        if (e.id != eventoId) e,
+    ];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
   // --------------------------------------------------------- preferências
 
   Future<void> definirDensidade(ColorDensity densidade) async {
@@ -298,13 +371,14 @@ class AppState extends ChangeNotifier {
         'versao': 1,
         'itens': [for (final i in _itens) i.toJson()],
         'tabelas': [for (final t in _tabelas) t.toJson()],
+        'eventos': [for (final e in _eventos) e.toJson()],
         'tabelaAtivaId': _tabelaAtivaId,
         'densidade': _densidade.key,
         'notificacoesAtivas': _notificacoesAtivas,
         'antecedenciaMinutos': _antecedenciaMinutos,
       };
 
-  /// Substitui TUDO (itens, tabelas, tabela ativa, densidade) pelo conteúdo
+  /// Substitui TUDO (itens, tabelas, eventos, tabela ativa, densidade) pelo conteúdo
   /// de [dados] — não mescla com o que já existe. Lança se o formato não
   /// bater; quem chama decide como avisar o usuário, já que só a UI sabe
   /// como isso deveria aparecer numa tela.
@@ -321,10 +395,17 @@ class AppState extends ChangeNotifier {
     final tabelas = [
       for (final e in tabelasBrutas) Tabela.fromJson(e as Map<String, dynamic>),
     ];
+    // Backup de antes dos eventos não tem a chave — vira lista vazia, não erro.
+    final eventosBrutos = dados['eventos'];
+    final eventos = [
+      if (eventosBrutos is List)
+        for (final e in eventosBrutos) Evento.fromJson(e as Map<String, dynamic>),
+    ];
     final tabelaAtivaIdBruto = dados['tabelaAtivaId'] as String?;
 
     _itens = itens;
     _tabelas = tabelas;
+    _eventos = eventos;
     // Mesma regra tolerante do carregamento normal: id ativo que não bate
     // com nenhuma tabela do backup cai na primeira, ou em nada.
     _tabelaAtivaId = _tabelas.any((t) => t.id == tabelaAtivaIdBruto)
@@ -337,6 +418,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await _store.salvarItens(_itens);
     await _store.salvarTabelas(_tabelas);
+    await _store.salvarEventos(_eventos);
     await _store.salvarTabelaAtiva(_tabelaAtivaId);
     await _store.salvarDensidade(_densidade);
     await _store.salvarNotificacoesAtivas(_notificacoesAtivas);
