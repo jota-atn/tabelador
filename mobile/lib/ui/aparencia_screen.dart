@@ -242,6 +242,23 @@ class AparenciaScreen extends StatelessWidget {
               MaterialPageRoute<void>(builder: (_) => const AgendasScreen()),
             ),
           ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.waving_hand_outlined),
+            title: const Text('Rever a introdução'),
+            subtitle: Text(
+              'As telas de boas-vindas. Nada é apagado.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // Volta pra raiz primeiro: a introdução toma o lugar da tela
+              // inicial, e esta tela ficaria por cima dela.
+              final state = context.read<AppState>();
+              Navigator.of(context).popUntil((r) => r.isFirst);
+              state.reverOnboarding();
+            },
+          ),
           const SizedBox(height: 28),
           Text(
             'BACKUP',

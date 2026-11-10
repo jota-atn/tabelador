@@ -576,6 +576,13 @@ class AppState extends ChangeNotifier {
     await _store.salvarOnboardingVisto(true);
   }
 
+  /// "Rever a introdução" em Aparência.
+  Future<void> reverOnboarding() async {
+    _onboardingVisto = false;
+    notifyListeners();
+    await _store.salvarOnboardingVisto(false);
+  }
+
   bool _cartaoGoogle = false;
 
   /// Cartão "Novo: conecte o Google Agenda": só pra quem já usava o app,
