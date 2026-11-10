@@ -529,6 +529,37 @@ como avulso pro filtro `mostrarEventos` da tabela.
    formulário, padrão ligado se houver agenda configurada).
 4. ~~Eventos no widget, notificação de evento~~ (feito).
 
+## Onboarding (planejado, não implementado)
+
+Hoje o app abre direto em "Nenhuma tabela ativa", sem explicar nada. O que
+mais pede explicação é o Google Agenda — principalmente que turma do
+Classroom só aparece se for marcada (ver "Leitura do Google Agenda"), coisa
+que ninguém descobriria sozinho.
+
+**Fluxo de primeira abertura**, uma vez só, com "Pular" sempre visível e
+cada passo opcional:
+
+1. **Boas-vindas** — uma frase: monte sua semana em tabelas, e seus
+   compromissos aparecem junto.
+2. **Primeira tabela** — nome, dias, horários; o mesmo formulário de
+   `_ConfigTabela`, embutido. Pulável.
+3. **Google Agenda** — o app lê (e grava) nas agendas que o celular já
+   sincroniza; botão "Conectar" pede a permissão e abre a escolha de
+   agendas. Destaque: *"Usa o Classroom? Marque suas turmas e as atividades
+   aparecem aqui."* Escolher onde salvar eventos novos.
+4. **Widget e avisos** — como pôr o widget na tela inicial (instrução, o
+   Android não deixa o app adicionar sozinho em todo launcher) e ligar os
+   avisos ali mesmo.
+
+**Quem já usa o app** (já tem tabela) não vê o fluxo inteiro: um cartão
+discreto na tela inicial, uma vez — "Novo: conecte o Google Agenda" —
+fechável, e não volta depois de fechado ou de conectar.
+
+Flag persistida (`onboarding_visto`), não inferida de "não tem tabela" —
+quem apagou todas as tabelas não deveria ver as boas-vindas de novo.
+
+Fica pra depois da gravação no Google, pra o passo 3 já sair completo.
+
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
