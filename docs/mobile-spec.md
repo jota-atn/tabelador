@@ -693,6 +693,24 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
+## Ideias futuras (anotadas em 2026-11-10)
+
+Nada decidido nem desenhado ainda — só o que ficou na mesa ao fim do dia.
+
+- **"Esta semana" fechada mostrar todos os eventos de hoje**, não só o
+  próximo; o botão "Ver mais" ficaria pros dias seguintes. Em dia de prova
+  + consulta, os dois aparecem sem abrir nada.
+- **Vincular evento do Google a item pela sigla** no título ("Prova SO" →
+  SO): sugerir, não vincular sozinho (sigla pode ser palavra comum).
+- **Viagem de vários dias**: hoje "Viagem" é dia todo de um dia só.
+- **Navegar entre semanas na grade** (hoje só a atual; pra frente, só pelo
+  calendário).
+- **Editar uma ocorrência só** de evento recorrente.
+- **Chave de assinatura própria** pra release, antes de distribuir pra
+  mais gente. Hoje a release assina com a chave de debug deste computador:
+  atualização gerada em outra máquina é recusada pelo Android, e a pessoa
+  teria que desinstalar e perder os dados.
+
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
