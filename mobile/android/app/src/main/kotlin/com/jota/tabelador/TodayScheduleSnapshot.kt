@@ -18,6 +18,20 @@ data class ScheduleSlot(
     val barWidthDp: Int,
 )
 
+/** Uma ocorrência de evento com data absoluta (`yyyy-MM-dd`). */
+data class ScheduleEvent(
+    val date: String,
+    val allDay: Boolean,
+    val startMin: Int,
+    val endMin: Int,
+    val time: String,
+    val title: String,
+    val sigla: String?,
+    val local: String?,
+    val barLight: String,
+    val barDark: String,
+)
+
 /**
  * Espelho Kotlin do JSON `today_schedule_json` escrito pelo Flutter (ver
  * `lib/native_widget/today_schedule_snapshot.dart`). Carrega a semana
@@ -28,6 +42,8 @@ data class ScheduleSlot(
 data class TodayScheduleSnapshot(
     val tableName: String,
     val week: Map<String, List<ScheduleSlot>>,
+    /** Eventos dos próximos dias; o widget filtra os de hoje ao desenhar. */
+    val events: List<ScheduleEvent> = emptyList(),
 ) {
     companion object {
         val vazio = TodayScheduleSnapshot(tableName = "", week = emptyMap())
@@ -46,9 +62,36 @@ data class TodayScheduleSnapshot(
                         }
                     }
                 }
-                TodayScheduleSnapshot(tableName = obj.optString("tableName"), week = week)
+                TodayScheduleSnapshot(
+                    tableName = obj.optString("tableName"),
+                    week = week,
+                    events = parseEvents(obj.optJSONArray("events")),
+                )
             } catch (e: Exception) {
                 vazio
+            }
+        }
+
+        private fun parseEvents(array: JSONArray?): List<ScheduleEvent> {
+            if (array == null) return emptyList()
+            return buildList {
+                for (i in 0 until array.length()) {
+                    val e = array.getJSONObject(i)
+                    add(
+                        ScheduleEvent(
+                            date = e.optString("date"),
+                            allDay = e.optBoolean("allDay", false),
+                            startMin = e.optInt("startMin", 0),
+                            endMin = e.optInt("endMin", 0),
+                            time = e.optString("time"),
+                            title = e.optString("title"),
+                            sigla = if (e.has("sigla")) e.optString("sigla") else null,
+                            local = if (e.has("local")) e.optString("local") else null,
+                            barLight = e.optString("barLight", "#888888"),
+                            barDark = e.optString("barDark", "#888888"),
+                        ),
+                    )
+                }
             }
         }
 

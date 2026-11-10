@@ -16,6 +16,20 @@ const AndroidNotificationChannel kCanalHorarios = AndroidNotificationChannel(
   description: 'Avisa antes de cada horário preenchido da tabela ativa',
 );
 
+const AndroidNotificationChannel kCanalEventos = AndroidNotificationChannel(
+  'eventos',
+  'Eventos',
+  description: 'Avisa antes de provas, compromissos e outros eventos',
+);
+
+/// Quantos dias à frente os avisos de evento ficam agendados. Evento é
+/// alarme único (não recorrente como o de horário), então a janela anda
+/// sozinha a cada vez que o app abre e o agendador ressincroniza.
+const int kDiasAvisoEventos = 14;
+
+/// Hora do aviso de evento de dia inteiro, no próprio dia.
+const int kHoraAvisoDiaTodo = 8;
+
 /// Prepara o plugin de notificação local — ícone, canal Android, fuso do
 /// aparelho. Chamado uma vez em `main()`, antes de criar o
 /// [NotificationScheduler].
@@ -39,6 +53,10 @@ Future<FlutterLocalNotificationsPlugin> inicializarNotificacoes() async {
       .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(kCanalHorarios);
+  await plugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(kCanalEventos);
 
   return plugin;
 }
@@ -103,10 +121,20 @@ class NotificationScheduler {
             _appState.antecedenciaMinutos,
             _appState.itemPorId,
           );
+    final avisosDeEvento =
+        !_appState.notificacoesAtivas || !_appState.notificarEventos
+            ? const <_AvisoUnico>[]
+            : _construirAvisosDeEvento(
+                _appState,
+                _appState.antecedenciaMinutos,
+                DateTime.now(),
+              );
 
     final assinatura = jsonEncode([
       for (final a in agendamentos)
         [a.id, a.titulo, a.corpo, a.diaSemana, a.hora, a.minuto],
+      for (final a in avisosDeEvento)
+        [a.id, a.titulo, a.corpo, a.quando.toIso8601String()],
     ]);
     if (assinatura == _ultimaAssinatura) return;
     _ultimaAssinatura = assinatura;
@@ -130,6 +158,25 @@ class NotificationScheduler {
         // aviso de "está chegando", não pra um compromisso ao segundo.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+    for (final a in avisosDeEvento) {
+      await _plugin.zonedSchedule(
+        a.id,
+        a.titulo,
+        a.corpo,
+        tz.TZDateTime.from(a.quando, tz.local),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            kCanalEventos.id,
+            kCanalEventos.name,
+            channelDescription: kCanalEventos.description,
+          ),
+        ),
+        // Mesmo tradeoff do aviso de horário: inexato, sem permissão extra.
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -159,6 +206,66 @@ class _Agendamento {
   final int diaSemana;
   final int hora;
   final int minuto;
+}
+
+class _AvisoUnico {
+  const _AvisoUnico({
+    required this.id,
+    required this.titulo,
+    required this.corpo,
+    required this.quando,
+  });
+
+  final int id;
+  final String titulo;
+  final String corpo;
+  final DateTime quando;
+}
+
+/// Base dos ids de aviso de evento — bem acima do maior id de horário
+/// (7 × 100 + slot), pra nunca colidir.
+const int _kBaseIdEvento = 100000;
+
+/// Um aviso por ocorrência de evento nos próximos [kDiasAvisoEventos] dias,
+/// de **todos** os eventos — ao contrário da grade, não filtra pela tabela
+/// ativa: o aniversário escondido da tabela da academia continua merecendo
+/// aviso. Aviso que já passou não é agendado.
+List<_AvisoUnico> _construirAvisosDeEvento(
+  AppState state,
+  int antecedenciaMinutos,
+  DateTime agora,
+) {
+  final hoje = DateTime(agora.year, agora.month, agora.day);
+  final ocorrencias = state.ocorrenciasEntre(
+    hoje,
+    DateTime(hoje.year, hoje.month, hoje.day + kDiasAvisoEventos),
+  );
+
+  final resultado = <_AvisoUnico>[];
+  for (final o in ocorrencias) {
+    final e = o.evento;
+    final quando = e.diaInteiro
+        ? DateTime(o.inicio.year, o.inicio.month, o.inicio.day, kHoraAvisoDiaTodo)
+        : o.inicio.subtract(Duration(minutes: antecedenciaMinutos));
+    if (!quando.isAfter(agora)) continue;
+
+    final local = e.local ?? state.itemPorId(e.itemId)?.local;
+    String doisDigitos(int n) => n.toString().padLeft(2, '0');
+    resultado.add(
+      _AvisoUnico(
+        id: _kBaseIdEvento + resultado.length,
+        titulo: e.titulo,
+        corpo: [
+          e.diaInteiro
+              ? 'Hoje'
+              : 'Às ${doisDigitos(o.inicio.hour)}:${doisDigitos(o.inicio.minute)}',
+          ?local,
+        ].join(' · '),
+        quando: quando,
+      ),
+    );
+  }
+  return resultado;
 }
 
 /// Um agendamento por célula preenchida da tabela — o próprio `id` (dia da

@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   ColorDensity _densidade = ColorDensity.fallback;
   bool _notificacoesAtivas = false;
   int _antecedenciaMinutos = 15;
+  bool _notificarEventos = true;
   bool _carregado = false;
 
   List<Item> get itens => List.unmodifiable(_itens);
@@ -30,6 +31,7 @@ class AppState extends ChangeNotifier {
   ColorDensity get densidade => _densidade;
   bool get notificacoesAtivas => _notificacoesAtivas;
   int get antecedenciaMinutos => _antecedenciaMinutos;
+  bool get notificarEventos => _notificarEventos;
   bool get carregado => _carregado;
 
   String? get tabelaAtivaId => _tabelaAtivaId;
@@ -87,6 +89,7 @@ class AppState extends ChangeNotifier {
     _densidade = dados.densidade;
     _notificacoesAtivas = dados.notificacoesAtivas;
     _antecedenciaMinutos = dados.antecedenciaMinutos;
+    _notificarEventos = dados.notificarEventos;
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -259,7 +262,7 @@ class AppState extends ChangeNotifier {
       horaInicial: origem.horaInicial,
       intervalo: origem.intervalo,
       qtdHorarios: origem.qtdHorarios,
-    ).copyWith(celulas: origem.celulas);
+    ).copyWith(celulas: origem.celulas, mostrarEventos: origem.mostrarEventos);
 
     await adicionarTabela(copia);
     return copia;
@@ -363,6 +366,13 @@ class AppState extends ChangeNotifier {
     await _store.salvarAntecedenciaMinutos(minutos);
   }
 
+  Future<void> definirNotificarEventos(bool ativo) async {
+    if (_notificarEventos == ativo) return;
+    _notificarEventos = ativo;
+    notifyListeners();
+    await _store.salvarNotificarEventos(ativo);
+  }
+
   // ------------------------------------------------------------- backup
 
   /// Tudo que o app guarda, num mapa pronto pra virar JSON. Mesmo formato
@@ -376,6 +386,7 @@ class AppState extends ChangeNotifier {
         'densidade': _densidade.key,
         'notificacoesAtivas': _notificacoesAtivas,
         'antecedenciaMinutos': _antecedenciaMinutos,
+        'notificarEventos': _notificarEventos,
       };
 
   /// Substitui TUDO (itens, tabelas, eventos, tabela ativa, densidade) pelo conteúdo
@@ -414,6 +425,7 @@ class AppState extends ChangeNotifier {
     _densidade = ColorDensity.fromKey(dados['densidade'] as String?);
     _notificacoesAtivas = dados['notificacoesAtivas'] as bool? ?? false;
     _antecedenciaMinutos = dados['antecedenciaMinutos'] as int? ?? 15;
+    _notificarEventos = dados['notificarEventos'] as bool? ?? true;
 
     notifyListeners();
     await _store.salvarItens(_itens);
@@ -423,5 +435,6 @@ class AppState extends ChangeNotifier {
     await _store.salvarDensidade(_densidade);
     await _store.salvarNotificacoesAtivas(_notificacoesAtivas);
     await _store.salvarAntecedenciaMinutos(_antecedenciaMinutos);
+    await _store.salvarNotificarEventos(_notificarEventos);
   }
 }

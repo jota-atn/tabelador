@@ -4,11 +4,18 @@ import 'package:provider/provider.dart';
 import '../../model/tabela.dart';
 import '../../state/app_state.dart';
 import '../../theme/color_density.dart';
+import '../evento_editor.dart';
 import '../item_editor.dart';
 import 'item_swatch.dart';
 
+/// Valor que [SeletorDeItem] devolve pra "novo evento neste horário" — não
+/// colide com id de item (ids são base 36, sem `:`).
+const String _kNovoEvento = ':evento';
+
 /// Abre o seletor de item pra uma célula específica (dia+slot) de [tabela] e
-/// aplica a escolha — usado tanto pelo toque num horário vazio no editor do
+/// aplica a escolha. Com [dataDoSlot] (tela inicial, que mostra a semana
+/// real), oferece também criar um evento ali — vinculado ao item da célula,
+/// se houver — usado tanto pelo toque num horário vazio no editor do
 /// dia quanto pelo toque longo direto numa célula da grade da semana. Os dois
 /// lugares precisam do mesmo comportamento: mesma lista, mesma limpeza com
 /// desfazer.
@@ -17,8 +24,10 @@ Future<void> abrirSeletorDeCelula(
   required Tabela tabela,
   required String dia,
   required int slot,
+  DateTime? dataDoSlot,
 }) async {
   final state = context.read<AppState>();
+  final itemDaCelula = state.itemPorId(tabela.celula(dia, slot));
   final ocupado = tabela.celula(dia, slot) != null;
 
   final escolha = await showModalBottomSheet<String?>(
@@ -28,10 +37,29 @@ Future<void> abrirSeletorDeCelula(
       tabelaId: tabela.id,
       densidade: state.densidade,
       permitirLimpar: ocupado,
+      rotuloNovoEvento: dataDoSlot == null
+          ? null
+          : itemDaCelula == null
+              ? 'Novo evento neste horário'
+              : 'Novo evento para ${itemDaCelula.sigla}',
     ),
   );
 
   if (escolha == null || !context.mounted) return;
+  if (escolha == _kNovoEvento) {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => EventoEditor(
+          itemId: itemDaCelula?.id,
+          inicio: dataDoSlot,
+          // Ocupa o horário inteiro, não 1h genérica — a prova no horário
+          // da aula costuma durar a aula.
+          fim: dataDoSlot!.add(Duration(hours: tabela.intervalo)),
+        ),
+      ),
+    );
+    return;
+  }
   if (escolha.isEmpty) {
     await limparComDesfazer(context, state, tabela.id, dia, slot);
   } else {
@@ -80,11 +108,15 @@ class SeletorDeItem extends StatelessWidget {
     required this.tabelaId,
     required this.densidade,
     required this.permitirLimpar,
+    this.rotuloNovoEvento,
   });
 
   final String tabelaId;
   final ColorDensity densidade;
   final bool permitirLimpar;
+
+  /// Nulo esconde a opção de criar evento (editor do dia, que é molde).
+  final String? rotuloNovoEvento;
 
   Future<void> _criarItem(BuildContext context) {
     return Navigator.of(context).push(
@@ -100,6 +132,12 @@ class SeletorDeItem extends StatelessWidget {
       child: ListView(
         shrinkWrap: true,
         children: [
+          if (rotuloNovoEvento != null)
+            ListTile(
+              leading: const Icon(Icons.event_outlined),
+              title: Text(rotuloNovoEvento!),
+              onTap: () => Navigator.of(context).pop(_kNovoEvento),
+            ),
           if (permitirLimpar)
             ListTile(
               leading: const Icon(Icons.close),

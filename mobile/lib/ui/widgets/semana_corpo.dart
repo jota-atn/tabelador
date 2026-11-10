@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../model/item.dart';
 import '../../model/tabela.dart';
 import '../../theme/color_density.dart';
+import '../../util/eventos_na_grade.dart';
 import 'grade_semana.dart';
 
 /// Corpo compartilhado por Semana e pela tela dedicada de uma tabela: a
@@ -22,6 +23,7 @@ class SemanaCorpo extends StatelessWidget {
     this.aoTocarDia,
     this.aoEditarCelula,
     this.rodape,
+    this.eventos,
   });
 
   final Tabela tabela;
@@ -32,6 +34,9 @@ class SemanaCorpo extends StatelessWidget {
 
   /// Conteúdo extra abaixo da dica — a lista "Próximos" na tela inicial.
   final Widget? rodape;
+
+  /// Ver [GradeSemana.eventos].
+  final EventosDaSemana? eventos;
 
   // Com rodapé (tela inicial) há um FAB por cima — o fundo extra impede que
   // ele cubra a última linha da lista.
@@ -50,6 +55,7 @@ class SemanaCorpo extends StatelessWidget {
           itemPorId: itemPorId,
           aoTocarDia: aoTocarDia,
           aoEditarCelula: aoEditarCelula,
+          eventos: eventos,
         ),
         const SizedBox(height: 18),
         Text(

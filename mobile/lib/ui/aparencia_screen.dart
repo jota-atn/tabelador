@@ -180,7 +180,7 @@ class AparenciaScreen extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Avisar antes de cada horário'),
             subtitle: Text(
-              'Da tabela ativa, com item preenchido.',
+              'Da tabela ativa, com item preenchido, e dos eventos.',
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
             value: state.notificacoesAtivas,
@@ -206,6 +206,16 @@ class AparenciaScreen extends StatelessWidget {
                   },
                 ),
               ],
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Avisar eventos também'),
+              subtitle: Text(
+                'Com hora: na mesma antecedência. Dia todo: às 8h do dia.',
+                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+              ),
+              value: state.notificarEventos,
+              onChanged: state.definirNotificarEventos,
             ),
           ],
           const SizedBox(height: 28),

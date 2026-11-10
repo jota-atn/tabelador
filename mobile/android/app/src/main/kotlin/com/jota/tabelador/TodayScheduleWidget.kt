@@ -78,6 +78,8 @@ class TodayScheduleWidget : GlanceAppWidget() {
         val agora = Calendar.getInstance()
         val dayLabel = nomeDoDiaAtual(agora)
         val slotsDeHoje = snapshot.week[dayLabel] ?: emptyList()
+        val hojeIso = dataIso(agora)
+        val linhas = linhasDoDia(slotsDeHoje, snapshot.events.filter { it.date == hojeIso })
 
         // A largura decide só o nível de detalhe agora: alargar o widget
         // (2x2 -> 3x2, por exemplo) libera uma segunda linha de detalhe
@@ -115,15 +117,24 @@ class TodayScheduleWidget : GlanceAppWidget() {
             }
             Spacer(modifier = GlanceModifier.height(8.dp))
 
-            if (slotsDeHoje.isEmpty()) {
+            if (linhas.isEmpty()) {
                 EstadoVazio(context, dayLabel)
             } else {
                 // LazyColumn em vez de Column: o mesmo mecanismo de scroll
                 // (RemoteViews ListView por baixo) que widgets como o do
                 // Gmail usam — dia cheio de horários vira scroll, não corte.
                 LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-                    items(slotsDeHoje) { slot ->
-                        SlotRow(context, slot, estaNoSlotAgora(slot.time, agora), mostrarDetalhe, alturaLinha)
+                    items(linhas) { linha ->
+                        when (linha) {
+                            is Linha.DeSlot -> SlotRow(
+                                context,
+                                linha.slot,
+                                estaNoSlotAgora(linha.slot.time, agora),
+                                mostrarDetalhe,
+                                alturaLinha,
+                            )
+                            is Linha.DeEvento -> EventoRow(context, linha.evento, mostrarDetalhe, alturaLinha)
+                        }
                     }
                 }
             }
@@ -132,8 +143,57 @@ class TodayScheduleWidget : GlanceAppWidget() {
 
     @Composable
     private fun EstadoVazio(context: Context, dayLabel: String) {
-        val texto = if (dayLabel.isNotBlank()) "Sem aulas — $dayLabel" else "Sem aulas hoje"
+        val texto = if (dayLabel.isNotBlank()) "Nada marcado — $dayLabel" else "Nada marcado hoje"
         Text(text = texto, style = TextStyle(fontSize = 13.sp, color = neutralOnSurfaceVariant(context)))
+    }
+
+    /**
+     * Evento entre os horários, em ordem de hora. Fundo neutro e barra fina
+     * na cor do item vinculado (ou neutra) — o mesmo contraste "item é
+     * preenchido, evento não" da grade do app, sem depender de borda
+     * tracejada, que RemoteViews não desenha.
+     */
+    @Composable
+    private fun EventoRow(context: Context, evento: ScheduleEvent, mostrarDetalhe: Boolean, alturaLinha: Int) {
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(alturaLinha.dp)
+                .clickable(actionStartActivity<MainActivity>(context)),
+            verticalAlignment = Alignment.Vertical.CenterVertically,
+        ) {
+            Spacer(
+                modifier = GlanceModifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .background(corTema(evento.barLight, evento.barDark)),
+            )
+            Spacer(modifier = GlanceModifier.width(6.dp))
+            Column(modifier = GlanceModifier.padding(horizontal = 2.dp)) {
+                Text(
+                    text = evento.time,
+                    style = TextStyle(fontSize = 9.sp, color = neutralOnSurfaceVariant(context)),
+                )
+                Text(
+                    text = evento.title,
+                    maxLines = 1,
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = neutralOnSurface(context),
+                    ),
+                )
+                val detalhe = listOfNotNull(evento.sigla, evento.local)
+                    .takeIf { mostrarDetalhe && it.isNotEmpty() }
+                    ?.joinToString(" · ")
+                if (detalhe != null) {
+                    Text(
+                        text = detalhe,
+                        style = TextStyle(fontSize = 9.sp, color = neutralOnSurfaceVariant(context)),
+                    )
+                }
+            }
+        }
     }
 
     @Composable
@@ -192,6 +252,33 @@ class TodayScheduleWidget : GlanceAppWidget() {
         }
     }
 }
+
+private sealed class Linha {
+    abstract val minuto: Int
+    abstract val ordem: Int
+
+    data class DeSlot(val slot: ScheduleSlot) : Linha() {
+        override val minuto = (slot.time.substringBefore(':').trim().toIntOrNull() ?: 0) * 60
+        override val ordem = 1
+    }
+
+    data class DeEvento(val evento: ScheduleEvent) : Linha() {
+        override val minuto = if (evento.allDay) -1 else evento.startMin
+        override val ordem = 2
+    }
+}
+
+/**
+ * Horários e eventos de hoje numa lista só, por hora de início — dia
+ * inteiro primeiro; empate (evento que começa junto com o horário) põe o
+ * horário antes, já que é o evento que "acontece dentro" dele.
+ */
+private fun linhasDoDia(slots: List<ScheduleSlot>, eventos: List<ScheduleEvent>): List<Linha> =
+    (slots.map { Linha.DeSlot(it) } + eventos.map { Linha.DeEvento(it) })
+        .sortedWith(compareBy({ it.minuto }, { it.ordem }))
+
+private fun dataIso(c: Calendar): String =
+    "%04d-%02d-%02d".format(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH))
 
 /// "Aula · Bloco C, sala 204" — mesma junção que o editor do dia usa no
 /// Flutter (tipo e local, o que houver). Null se não tiver nenhum dos dois.

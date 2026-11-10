@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
+import '../calendario_screen.dart';
 import 'evento_tile.dart';
 
 /// Quantos dias à frente a lista "Próximos" alcança.
@@ -35,14 +36,26 @@ class ProximosEventos extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-          child: Text(
-            'Próximos',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+          padding: const EdgeInsets.fromLTRB(4, 0, 0, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Próximos',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
+                ),
+                child: const Text('Ver mês'),
+              ),
+            ],
           ),
         ),
         if (ocorrencias.isEmpty)

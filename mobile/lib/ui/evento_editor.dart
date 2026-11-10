@@ -4,22 +4,33 @@ import 'package:provider/provider.dart';
 import '../model/evento.dart';
 import '../model/item.dart';
 import '../state/app_state.dart';
+import '../util/eventos_na_grade.dart';
 import '../util/formato_data.dart';
 import '../util/id.dart';
 import 'widgets/largura_maxima.dart';
 
 /// Cadastro e edição de um [Evento].
 ///
-/// [original] nulo é evento novo. [itemId] e [inicio] pré-preenchem vínculo
-/// e data/hora — é assim que "+ evento" na tela de um item já chega
-/// vinculado, e (no próximo lote) que o toque longo numa célula já chega com
-/// o horário dela.
+/// [original] nulo é evento novo. [itemId], [inicio] e [fim] pré-preenchem
+/// vínculo e data/hora — é assim que "+ evento" na tela de um item já chega
+/// vinculado, e o toque longo numa célula já chega com o horário dela.
+///
+/// Feito pra que o caso comum ("prova de SO na próxima aula") saia em poucos
+/// toques: escolher o item já traz o local dele e pula a data pro próximo
+/// horário do item na tabela; tocar num tipo já monta o título.
 class EventoEditor extends StatefulWidget {
-  const EventoEditor({super.key, this.original, this.itemId, this.inicio});
+  const EventoEditor({
+    super.key,
+    this.original,
+    this.itemId,
+    this.inicio,
+    this.fim,
+  });
 
   final Evento? original;
   final String? itemId;
   final DateTime? inicio;
+  final DateTime? fim;
 
   @override
   State<EventoEditor> createState() => _EventoEditorState();
@@ -45,12 +56,21 @@ class _EventoEditorState extends State<EventoEditor> {
   /// caso mais comum sem precisar digitar nada.
   bool _tituloAutomatico = true;
 
+  /// Mesmo esquema pro local: acompanha o do item vinculado até o usuário
+  /// digitar outro.
+  bool _localAutomatico = true;
+
+  /// Data/hora acompanham o próximo horário do item escolhido enquanto o
+  /// usuário não mexer nelas — e só se nada veio pré-preenchido (toque longo
+  /// numa célula já diz exatamente quando).
+  bool _quandoAutomatico = true;
+
   @override
   void initState() {
     super.initState();
     final o = widget.original;
     final inicio = o?.inicio ?? widget.inicio ?? _proximaHoraCheia();
-    final fim = o?.fim ?? inicio.add(const Duration(hours: 1));
+    final fim = o?.fim ?? widget.fim ?? inicio.add(const Duration(hours: 1));
 
     _titulo = TextEditingController(text: o?.titulo ?? '');
     _tipo = TextEditingController(text: o?.tipo ?? '');
@@ -63,8 +83,44 @@ class _EventoEditorState extends State<EventoEditor> {
     _repeticao = o?.repeticao ?? Repeticao.nenhuma;
     _itemId = o?.itemId ?? widget.itemId;
     _tituloAutomatico = o == null;
+    _localAutomatico = o == null || o.local == null;
+    _quandoAutomatico = o == null && widget.inicio == null;
 
     if (_tituloAutomatico) _tipo.addListener(_atualizarTituloAutomatico);
+    if (o == null && _itemId != null) _aplicarItem();
+  }
+
+  /// O que escolher um item preenche sozinho: título, local, data/hora — cada
+  /// um só se ainda estiver no automático.
+  void _aplicarItem() {
+    final state = context.read<AppState>();
+    final item = state.itemPorId(_itemId);
+    _atualizarTituloAutomatico();
+    if (_localAutomatico) _local.text = item?.local ?? '';
+    if (_quandoAutomatico && item != null) {
+      final proximo = _proximoHorario(state, item.id);
+      if (proximo != null) _aplicarHorario(proximo.inicio, proximo.fim);
+    }
+  }
+
+  /// Próximo horário do item na tabela ativa; se ele não está nela, em
+  /// qualquer outra tabela que o tenha.
+  ({DateTime inicio, DateTime fim})? _proximoHorario(AppState state, String itemId) {
+    final agora = DateTime.now();
+    final ativa = state.tabelaAtiva;
+    final tabelas = [?ativa, ...state.tabelas.where((t) => t.id != ativa?.id)];
+    for (final t in tabelas) {
+      final p = proximoHorarioDoItem(t, itemId, agora);
+      if (p != null) return p;
+    }
+    return null;
+  }
+
+  void _aplicarHorario(DateTime inicio, DateTime fim) {
+    _data = inicioDoDia(inicio);
+    _horaInicio = TimeOfDay.fromDateTime(inicio);
+    _horaFim = TimeOfDay.fromDateTime(fim);
+    _diaInteiro = false;
   }
 
   static DateTime _proximaHoraCheia() {
@@ -99,7 +155,12 @@ class _EventoEditorState extends State<EventoEditor> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (escolhida != null) setState(() => _data = escolhida);
+    if (escolhida != null) {
+      setState(() {
+        _data = escolhida;
+        _quandoAutomatico = false;
+      });
+    }
   }
 
   Future<void> _escolherHora({required bool inicio}) async {
@@ -109,6 +170,7 @@ class _EventoEditorState extends State<EventoEditor> {
     );
     if (escolhida == null) return;
     setState(() {
+      _quandoAutomatico = false;
       if (inicio) {
         // Arrastar o início leva o fim junto, mantendo a duração — o mesmo
         // que o Google Agenda faz, e evita fim antes do início.
@@ -242,10 +304,10 @@ class _EventoEditorState extends State<EventoEditor> {
               _SeletorDeItem(
                 itens: itensVinculaveis,
                 selecionado: _itemId,
-                aoEscolher: (id) {
-                  setState(() => _itemId = id);
-                  _atualizarTituloAutomatico();
-                },
+                aoEscolher: (id) => setState(() {
+                  _itemId = id;
+                  _aplicarItem();
+                }),
               ),
               const SizedBox(height: 20),
               SwitchListTile(
@@ -253,6 +315,21 @@ class _EventoEditorState extends State<EventoEditor> {
                 title: const Text('Dia todo'),
                 value: _diaInteiro,
                 onChanged: (v) => setState(() => _diaInteiro = v),
+              ),
+              _AtalhosDeData(
+                data: _data,
+                proximoHorario: _itemId == null
+                    ? null
+                    : _proximoHorario(state, _itemId!),
+                siglaDoItem: state.itemPorId(_itemId)?.sigla,
+                aoEscolherDia: (d) => setState(() {
+                  _data = d;
+                  _quandoAutomatico = false;
+                }),
+                aoEscolherHorario: (p) => setState(() {
+                  _aplicarHorario(p.inicio, p.fim);
+                  _quandoAutomatico = false;
+                }),
               ),
               _LinhaDeEscolha(
                 icone: Icons.calendar_today_outlined,
@@ -276,6 +353,18 @@ class _EventoEditorState extends State<EventoEditor> {
                 ),
               ],
               const SizedBox(height: 8),
+              TextFormField(
+                controller: _local,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: 'Local',
+                  helperText: _localAutomatico && _local.text.isNotEmpty
+                      ? 'Do item vinculado'
+                      : null,
+                ),
+                onChanged: (_) => setState(() => _localAutomatico = false),
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<Repeticao>(
                 initialValue: _repeticao,
                 isExpanded: true,
@@ -285,12 +374,6 @@ class _EventoEditorState extends State<EventoEditor> {
                     DropdownMenuItem(value: r, child: Text(r.rotulo)),
                 ],
                 onChanged: (r) => setState(() => _repeticao = r ?? _repeticao),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _local,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(labelText: 'Local'),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -408,6 +491,57 @@ class _SeletorDeItem extends StatelessWidget {
           ),
       ],
       onChanged: aoEscolher,
+    );
+  }
+}
+
+/// Chips de data rápida: hoje, amanhã e — com item vinculado que está em
+/// alguma tabela — o próximo horário dele, que é o caso mais comum de prova
+/// e entrega.
+class _AtalhosDeData extends StatelessWidget {
+  const _AtalhosDeData({
+    required this.data,
+    required this.proximoHorario,
+    required this.siglaDoItem,
+    required this.aoEscolherDia,
+    required this.aoEscolherHorario,
+  });
+
+  final DateTime data;
+  final ({DateTime inicio, DateTime fim})? proximoHorario;
+  final String? siglaDoItem;
+  final ValueChanged<DateTime> aoEscolherDia;
+  final ValueChanged<({DateTime inicio, DateTime fim})> aoEscolherHorario;
+
+  @override
+  Widget build(BuildContext context) {
+    final hoje = inicioDoDia(DateTime.now());
+    final amanha = DateTime(hoje.year, hoje.month, hoje.day + 1);
+    final p = proximoHorario;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        if (p != null)
+          ChoiceChip(
+            label: Text(
+              'Próximo de $siglaDoItem · ${rotuloDoDia(p.inicio, DateTime.now()).toLowerCase()} ${hora(p.inicio)}',
+            ),
+            selected: data == inicioDoDia(p.inicio),
+            onSelected: (_) => aoEscolherHorario(p),
+          ),
+        ChoiceChip(
+          label: const Text('Hoje'),
+          selected: data == hoje,
+          onSelected: (_) => aoEscolherDia(hoje),
+        ),
+        ChoiceChip(
+          label: const Text('Amanhã'),
+          selected: data == amanha,
+          onSelected: (_) => aoEscolherDia(amanha),
+        ),
+      ],
     );
   }
 }

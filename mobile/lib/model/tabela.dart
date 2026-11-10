@@ -58,6 +58,7 @@ class Tabela {
     this.qtdHorarios = 6,
     List<String>? dias,
     Map<String, List<String?>>? celulas,
+    this.mostrarEventos = true,
     required this.criadaEm,
     required this.atualizadaEm,
   })  : dias = ordenarDias(dias ?? kDiasPadrao),
@@ -99,6 +100,11 @@ class Tabela {
   /// null. Sempre completa: nunca falta um dia de [dias] nem sobra/falta
   /// posição.
   final Map<String, List<String?>> celulas;
+
+  /// Se eventos avulsos (sem item, ou de item que não está nesta tabela)
+  /// aparecem na grade dela. Aniversário não precisa aparecer na tabela da
+  /// academia; evento vinculado a item desta tabela aparece sempre.
+  final bool mostrarEventos;
 
   final DateTime criadaEm;
   final DateTime atualizadaEm;
@@ -200,6 +206,7 @@ class Tabela {
     int? qtdHorarios,
     List<String>? dias,
     Map<String, List<String?>>? celulas,
+    bool? mostrarEventos,
     DateTime? atualizadaEm,
   }) {
     return Tabela(
@@ -210,6 +217,7 @@ class Tabela {
       qtdHorarios: qtdHorarios ?? this.qtdHorarios,
       dias: dias ?? this.dias,
       celulas: celulas ?? this.celulas,
+      mostrarEventos: mostrarEventos ?? this.mostrarEventos,
       criadaEm: criadaEm,
       atualizadaEm: atualizadaEm ?? DateTime.now(),
     );
@@ -223,6 +231,7 @@ class Tabela {
         'qtdHorarios': qtdHorarios,
         'dias': dias,
         'celulas': celulas,
+        if (!mostrarEventos) 'mostrarEventos': false,
         'criadaEm': criadaEm.toIso8601String(),
         'atualizadaEm': atualizadaEm.toIso8601String(),
       };
@@ -250,6 +259,7 @@ class Tabela {
               id as String?,
           ],
       },
+      mostrarEventos: json['mostrarEventos'] as bool? ?? true,
       criadaEm: DateTime.tryParse(json['criadaEm'] as String? ?? '') ?? agora,
       atualizadaEm:
           DateTime.tryParse(json['atualizadaEm'] as String? ?? '') ?? agora,

@@ -363,6 +363,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
   late int _intervalo;
   late int _qtdHorarios;
   late Set<String> _dias;
+  late bool _mostrarEventos;
 
   @override
   void initState() {
@@ -373,6 +374,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
     _intervalo = o?.intervalo ?? 2;
     _qtdHorarios = o?.qtdHorarios ?? 6;
     _dias = (o?.dias ?? kDiasPadrao).toSet();
+    _mostrarEventos = o?.mostrarEventos ?? true;
   }
 
   @override
@@ -410,7 +412,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         intervalo: _intervalo,
         qtdHorarios: _qtdHorarios,
         dias: _diasSelecionados,
-      );
+      ).copyWith(mostrarEventos: _mostrarEventos);
       await state.adicionarTabela(nova);
       // Tabela recém-criada vira a ativa mesmo já havendo outra — é a que
       // acabou de virar o foco. `adicionarTabela` só ativa sozinha quando é
@@ -434,6 +436,7 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         intervalo: _intervalo,
         qtdHorarios: _qtdHorarios,
         dias: _diasSelecionados,
+        mostrarEventos: _mostrarEventos,
       ),
     );
     navigator.pop();
@@ -526,6 +529,17 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
           Text(
             _previaHorarios.join('   '),
             style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Mostrar eventos avulsos'),
+            subtitle: Text(
+              'Eventos de itens desta tabela aparecem sempre.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            value: _mostrarEventos,
+            onChanged: (v) => setState(() => _mostrarEventos = v),
           ),
           if (_perdidas > 0) ...[
             const SizedBox(height: 14),

@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
+import '../util/eventos_na_grade.dart';
 
 /// Monta o JSON enviado ao widget nativo (`today_schedule_json`) a partir da
 /// tabela ativa, densidade e os dois esquemas de cor (claro/escuro).
@@ -27,6 +29,7 @@ String construirSnapshotJson({
   required ColorDensity densidade,
   required ColorScheme claro,
   required ColorScheme escuro,
+  List<Ocorrencia> ocorrencias = const [],
 }) {
   final week = <String, dynamic>{};
   if (tabelaAtiva != null) {
@@ -65,10 +68,52 @@ String construirSnapshotJson({
     }
   }
 
+  // Eventos vão com data absoluta (não por dia da semana, como os itens):
+  // o nativo filtra pelos de hoje na hora de desenhar. O chamador manda uma
+  // janela de alguns dias pra frente, pra o widget continuar certo mesmo
+  // sem o app abrir por um tempo.
+  final events = <Map<String, dynamic>>[
+    for (final o in ocorrencias)
+      if (tabelaAtiva == null || eventoVisivelNaTabela(tabelaAtiva, o.evento))
+        _evento(o, itemPorId(o.evento.itemId), claro, escuro),
+  ];
+
   return jsonEncode({
     'tableName': tabelaAtiva?.nome ?? '',
     'week': week,
+    'events': events,
   });
+}
+
+String _doisDigitos(int n) => n.toString().padLeft(2, '0');
+
+Map<String, dynamic> _evento(
+  Ocorrencia o,
+  Item? item,
+  ColorScheme claro,
+  ColorScheme escuro,
+) {
+  final i = o.inicio;
+  final f = o.fim;
+  return {
+    'date': '${i.year}-${_doisDigitos(i.month)}-${_doisDigitos(i.day)}',
+    'allDay': o.evento.diaInteiro,
+    // Minutos desde meia-noite — o nativo ordena e compara com "agora" sem
+    // precisar parsear hora.
+    'startMin': i.hour * 60 + i.minute,
+    'endMin': f.isAfter(i) ? f.hour * 60 + f.minute : i.hour * 60 + i.minute,
+    'time': o.evento.diaInteiro
+        ? 'Dia todo'
+        : f.isAfter(i)
+            ? '${_doisDigitos(i.hour)}:${_doisDigitos(i.minute)}–${_doisDigitos(f.hour)}:${_doisDigitos(f.minute)}'
+            : '${_doisDigitos(i.hour)}:${_doisDigitos(i.minute)}',
+    'title': o.evento.titulo,
+    if (item != null) 'sigla': item.sigla,
+    'local': ?(o.evento.local ?? item?.local),
+    // Barra lateral: cor do item vinculado, ou neutra pra evento avulso.
+    'barLight': _hex(item?.cor.tone(40) ?? claro.outline),
+    'barDark': _hex(item?.cor.tone(80) ?? escuro.outline),
+  };
 }
 
 /// [Color]'s `.r`/`.g`/`.b` são componentes de ponto flutuante em 0.0..1.0
