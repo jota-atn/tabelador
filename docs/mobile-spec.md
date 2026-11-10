@@ -146,24 +146,46 @@ Uma chave `today_schedule_json` no `SharedPreferences` nativo (via `home_widget`
 ```json
 {
   "tableName": "2026.1",
-  "dayLabel": "TERÇA",
-  "hasClassesToday": true,
-  "slots": [
+  "week": {
+    "SEGUNDA": [
+      {
+        "time": "8:00-10:00",
+        "sigla": "CÁLC II",
+        "tipo": "Aula",
+        "local": "Bloco C, sala 204",
+        "bgLight": "#FFECF0",   "bgDark": "#6A002F",
+        "fgLight": "#1A1C1E",   "fgDark": "#E3E2E5",
+        "barLight": "#AB365C",  "barDark": "#FFB1C8",
+        "barWidthDp": 4
+      }
+    ],
+    "TERÇA": []
+  },
+  "events": [
     {
-      "time": "8:00-10:00",
-      "sigla": "CÁLC II",
-      "tipo": "Aula",
-      "local": "Bloco C, sala 204",
-      "bgLight": "#FFECF0",   "bgDark": "#6A002F",
-      "fgLight": "#1A1C1E",   "fgDark": "#E3E2E5",
-      "barLight": "#AB365C",  "barDark": "#FFB1C8",
-      "barWidthDp": 4
+      "date": "2026-11-10", "allDay": false,
+      "startMin": 600, "endMin": 720, "time": "10:00–12:00",
+      "title": "Prova · Sistemas Operacionais", "sigla": "SO", "local": "Bloco C",
+      "barLight": "#3A5BA0", "barDark": "#B0C6FF"
     }
   ]
 }
 ```
 
 Cores já resolvidas em hex, porque `RemoteViews` não tem como consultar a paleta do Flutter em runtime.
+
+**Semana inteira, não "hoje"**: o snapshot leva todos os dias da tabela ativa
+em `week`, e o lado nativo escolhe o dia de hoje a cada redesenho. Se o
+snapshot carregasse só o dia já resolvido, o widget ficaria preso nele até o
+Flutter rodar de novo — e o Android redesenha sozinho (`updatePeriodMillis`)
+sem acionar o Flutter.
+
+**Eventos** vão em `events` com data absoluta, de hoje até 7 dias à frente; o
+nativo filtra os de hoje e intercala com os horários por hora de início (dia
+todo primeiro; empate põe o horário antes do evento). Evento aparece como
+linha de fundo neutro com barra fina na cor do item vinculado, ou neutra —
+RemoteViews não desenha borda tracejada, então o "fantasma" da grade vira
+isso. Respeita o mesmo filtro da grade (`Tabela.mostrarEventos`).
 
 O widget **segue a densidade escolhida no app** — se a grade está em Sólido e o widget continua em Discreto, parece defeito. Por isso o snapshot carrega fundo, texto e filete já resolvidos por slot, com `barWidthDp: 0` significando "sem filete". O widget segue burro: pinta o que recebe, sem conhecer densidade nem paleta.
 
@@ -298,8 +320,16 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
 - **Notificações de horário se aproximando**: interruptor + antecedência
   configurável em Aparência, alarme inexato (sem pedir permissão de alarme
   exato), sem persistir a reboot de propósito. Ver "Notificações" acima.
+- **Widget resolve o dia sozinho e rola**: snapshot com a semana inteira (o
+  nativo escolhe hoje a cada redesenho), `SizeMode.Exact` pra redimensionar
+  valer de verdade, `LazyColumn` pra dia cheio rolar em vez de cortar.
+- **Eventos**: ver a seção própria abaixo.
 
-## Eventos e Google Agenda (planejado, não implementado)
+## Eventos e Google Agenda
+
+**Status (2026-11-11)**: fase 1 (eventos locais, grade, widget, notificação,
+calendário mensal) implementada. Sync com o Google Agenda (fases 2 e 3)
+ainda não começou.
 
 Pedido: puxar compromissos do Google Agenda pra dentro das tabelas e criar
 eventos no app que vão pro Google Agenda. "Evento" é o nome do conceito novo:
@@ -325,72 +355,135 @@ decisões abaixo saem daí.
   platform channel próprio em Kotlin fica pra decidir na implementação —
   testar build do plugin isolado primeiro (ver gotcha do `share_plus`).
 - **Conflito com item (evento no horário de um item)**: o item continua na
-  célula, o evento vira um **selo no canto** — na cor de destaque do item se
-  o evento é vinculado a ele (ex: "!" pra prova de SO no horário de SO),
-  ponto neutro se não. Tocar na célula abre folha com item + eventos daquele
-  horário. Descartados: evento sobrescrever o item (esconde a aula) e célula
-  dividida (não cabe em ~55dp).
-- **Abaixo da grade: lista "Próximos"** (~14 dias), não calendário mensal.
-  Título, data/hora, item vinculado ("Prova · SO · qui 13/11 10h"). Cobre
-  todo evento que não tem lugar na grade. Visão mensal só se fizer falta.
+  célula, o evento vira um **selo no canto**. Descartados: evento sobrescrever
+  o item (esconde a aula) e célula dividida (não cabe em ~55dp).
+- **Abaixo da grade: lista "Próximos"** (14 dias), não calendário mensal
+  embutido. O mês inteiro ficou numa tela própria (ver "Calendário" abaixo).
+- **Criar evento tem que ser rápido.** Pedido explícito: nada de formulário
+  "difícil". Tudo que dá pra deduzir do contexto chega preenchido.
 
-### Proposta (ainda a validar no uso)
-
-**Modelo**:
+### Modelo
 
 ```
-Evento { id, titulo, tipo (texto livre c/ autocomplete, como Item.tipo),
-         inicio, fim?, diaInteiro, repeticao (nenhuma|semanal|mensal|anual),
-         itemId?, local?, notas?, origem (app|google), googleId? }
+Evento { id, titulo, tipo, inicio, fim?, diaInteiro,
+         repeticao (nenhuma|semanal|mensal|anual), itemId?, local?, notas? }
+Tabela  { …, mostrarEventos (padrão true) }
 ```
 
-O vínculo evento→item fica num mapa local (`googleId → itemId`), porque
-`ExtendedProperties` do `CalendarContract` só é gravável por sync adapter.
-Eventos importados chegam sem vínculo; o app pode *sugerir* um quando a
-sigla de um item aparece no título ("Prova de SO" → SO?), sempre pedindo
-confirmação.
+`lib/model/evento.dart`. `ocorrenciasEntre(de, ate)` expande a recorrência:
+mensal no dia 31 pula mês sem dia 31, anual em 29/02 só cai em ano bissexto
+(igual ao Google Agenda, em vez de escorregar pro dia seguinte); soma dias
+pelo calendário, não por 24h, pra horário de verão não deslocar a hora.
+Persistido em `events_json`, incluído no backup (backup antigo sem a chave
+abre com lista vazia). Apagar um item **solta** os eventos dele (viram
+avulsos) em vez de apagá-los. Editar recorrente altera a série inteira.
 
-**Grade da tela inicial** passa a representar a **semana atual**: cabeçalho
-de coluna ganha a data ("SEG 10"). Onde cada evento cai:
+Ainda não no modelo (entra com o Google): `origem (app|google)`, `googleId`,
+e o mapa local `googleId → itemId` — `ExtendedProperties` do
+`CalendarContract` só é gravável por sync adapter, então o vínculo de evento
+importado tem que morar no app. Sugestão de vínculo por sigla no título
+("Prova de SO" → SO?), sempre pedindo confirmação.
 
-1. Dentro do horário, célula vazia → "fantasma" tracejado com título curto
-   (distingue de item sem fugir do visual neutro).
-2. Dentro do horário, célula com item → selo (decisão acima).
-3. Fora do horário da tabela ou dia inteiro → faixas finas por coluna ("dia
-   todo" em cima, "antes/depois" embaixo), só renderizadas na semana que tem
-   evento assim.
-4. Dia que a tabela não tem → só na lista "Próximos".
+### Grade da tela inicial
 
-Evento é mapeado pro(s) slot(s) que sua faixa `[inicio, fim)` sobrepõe.
-Interruptor por tabela "mostrar eventos" (padrão ligado) — aniversário não
-precisa aparecer na tabela da academia; eventos vinculados a itens da tabela
-aparecem sempre.
+Representa a **semana atual**: cabeçalho de coluna ganha a data ("SEG" em
+cima, "9" embaixo). Onde cada evento cai (`lib/util/eventos_na_grade.dart`,
+função pura, testada sem UI):
 
-**Criação**, do mais contextual ao mais genérico:
-- Toque longo em célula com item → "Novo evento para SO": vinculado, data da
-  próxima ocorrência daquele slot, hora do slot. Prova no horário da aula em
-  dois toques.
-- Toque longo em célula vazia → data/hora do slot pré-preenchidas.
-- "+ evento" na tela do item → vinculado.
-- "+" na tela inicial → formulário limpo.
+1. Dentro do horário, célula vazia → **fantasma**: contorno tracejado com o
+   título (e "+N" se houver mais de um).
+2. Dentro do horário, célula com item → **selo** no canto: "!" se o evento é
+   vinculado àquele item (a prova de SO no horário de SO), ponto se não. Cor
+   do selo = cor do texto da célula, então funciona nas três densidades.
+3. Dia todo → faixa fina **"dia todo"** em cima; fora do horário da tabela
+   (antes ou depois) → faixa **"outros"** embaixo. Só renderizadas na semana
+   que tem evento assim.
+4. Dia que a tabela não tem → só na lista "Próximos" e no calendário.
 
-Formulário: título, tipo, data, início/fim ou "dia todo", repetição
-(nenhuma/semanal/mensal/anual — sem editor de RRULE), item vinculado
-(opcional, com busca), local, notas, lembrete (reaproveita
-`NotificationScheduler`), "salvar no Google Agenda" (padrão ligado se houver
-agenda configurada). Editar recorrente altera a série inteira (só esta
-ocorrência fica pra depois).
+Evento com faixa ocupa todo slot que `[inicio, fim)` sobrepõe; pontual (sem
+término) marca o slot que contém o início. Tocar numa célula/faixa com
+evento abre uma folha com o item daquele horário e os eventos; sem evento, o
+toque continua abrindo o dia inteiro.
 
-**Eventos por item**: seção "Eventos" na tela do item — próximos em
-destaque, passados recolhidos ("12 passados"), "+ evento".
+`Tabela.mostrarEventos` (interruptor "Mostrar eventos avulsos" na
+configuração da tabela): desligado, só passa evento vinculado a item que a
+tabela usa.
 
-### Ordem sugerida
+A tela de montar uma tabela (`TabelaEditorScreen`) continua sem datas nem
+eventos — ali a grade é molde.
 
-1. Eventos locais (modelo, formulário, grade com data, "Próximos", seção no
-   item) — sem Google, pra validar o uso antes da sync.
+### Criação, do mais contextual ao mais genérico
+
+- **Toque longo numa célula da tela inicial** → primeira opção do menu é
+  "Novo evento para SO" (ou "Novo evento neste horário" se vazia): chega
+  vinculado, com início e fim do **horário inteiro**, na data desta semana —
+  ou da próxima, se nesta já passou.
+- **"+ Evento" na tela do item** → vinculado, data no próximo horário do item.
+- **Calendário**: "+" ou segurar um dia → evento naquele dia.
+- **Botão de evento na tela inicial** → formulário limpo, próxima hora cheia.
+
+Formulário (`lib/ui/evento_editor.dart`):
+- **Escolher o item preenche sozinho**: o **local do item** (com o aviso "Do
+  item vinculado"), e a data/hora do **próximo horário do item** (procura na
+  tabela ativa, depois nas outras). Cada campo só acompanha o item enquanto o
+  usuário não mexer nele.
+- **Título automático**: tocar num tipo monta "Prova · Sistemas
+  Operacionais" enquanto o título não for digitado à mão.
+- **Tipos** com sugestão fixa (Prova, Entrega, Compromisso) + os já usados.
+- **Atalhos de data**: "Próximo de SO · qui 10:00", "Hoje", "Amanhã".
+- Mudar o início leva o término junto, mantendo a duração.
+- Caso mais comum — prova na próxima aula — sai em 4 toques: segurar a
+  célula, "Novo evento para SO", "Prova", "Salvar".
+
+App passou a usar `flutter_localizations` em pt-BR (seletores de data/hora,
+OK/Cancelar).
+
+### Onde eventos aparecem
+
+- **Lista "Próximos"** abaixo da grade: 14 dias, some o que já terminou.
+  Link "Ver mês" pro calendário.
+- **Tela do item**: seção "Eventos" — próximos em destaque, passados
+  recolhidos ("3 passados"), "+ Evento".
+- **Calendário** (`lib/ui/calendario_screen.dart`, ícone na barra da tela
+  inicial ou "Ver mês"): grade do mês sempre com 6 semanas (altura não pula
+  entre meses), segunda primeiro. Cada dia mostra até 3 barrinhas na cor do
+  item vinculado (neutras pra avulso) + "+N" — dá pra bater o olho e ver
+  "semana de provas de SO" sem ler nada. Tocar num dia lista os eventos dele
+  embaixo; tocar num dia do mês vizinho leva pra lá. Troca de mês por swipe
+  ou setas; "Hoje" volta. Contador de eventos do mês no cabeçalho. Mostra
+  **todos** os eventos, sem filtro de tabela. Criar no dia por toque longo,
+  não toque duplo — com `onDoubleTap` o toque simples esperaria ~300ms pra
+  confirmar, e selecionar dia ficaria lento.
+- **Widget**: ver "Snapshot enviado ao widget".
+- **Notificações**: ver abaixo.
+
+### Notificação de evento
+
+Interruptor "Avisar eventos também" em Aparência (só aparece com as
+notificações ligadas; padrão ligado). Com hora: mesma antecedência dos
+horários. Dia todo: às 8h do dia. Alarme **único** por ocorrência (não
+recorrente como o de horário), agendado pros próximos 14 dias — a janela anda
+sozinha toda vez que o app abre e o agendador ressincroniza. Canal próprio
+("Eventos"), ids a partir de 100000 pra nunca colidir com os de horário.
+Avisa de **todos** os eventos, sem o filtro da tabela ativa: o aniversário
+escondido da tabela da academia continua merecendo aviso. Inexato, como o
+resto.
+
+### Limitações conhecidas
+
+- Grade mostra só a semana atual (sem navegar pra próxima); pra frente, usar
+  o calendário.
+- Evento que começou num dia anterior e ainda está acontecendo não aparece
+  em "Próximos" nem na grade (só olham o dia de início).
+- Editar só uma ocorrência de recorrente: não existe.
+
+### Próximos passos
+
+1. ~~Eventos locais~~ (feito).
 2. Ler do Google (permissão, escolha de agendas exibidas).
-3. Gravar no Google (agenda de destino).
-4. Extras: eventos no widget, notificação de evento.
+3. Gravar no Google (agenda de destino, "salvar no Google Agenda" no
+   formulário, padrão ligado se houver agenda configurada).
+4. ~~Eventos no widget, notificação de evento~~ (feito).
 
 ## Pontos em aberto
 
