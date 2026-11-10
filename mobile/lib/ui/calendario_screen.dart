@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../util/formato_data.dart';
-import 'evento_editor.dart';
+import 'folha_evento.dart';
 import 'widgets/evento_tile.dart';
 import 'widgets/largura_maxima.dart';
 
@@ -67,12 +67,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     // Hora cheia seguinte, no dia escolhido — o mesmo default do botão de
     // evento da tela inicial, só que na data certa.
     final hora = (agora.hour + 1).clamp(0, 23);
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => EventoEditor(
-          inicio: DateTime(dia.year, dia.month, dia.day, hora),
-        ),
-      ),
+    return abrirFolhaDeEvento(
+      context,
+      inicio: DateTime(dia.year, dia.month, dia.day, hora),
     );
   }
 

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../model/tabela.dart';
 import '../../state/app_state.dart';
 import '../../theme/color_density.dart';
-import '../evento_editor.dart';
+import '../folha_evento.dart';
 import '../item_editor.dart';
 import 'item_swatch.dart';
 
@@ -47,16 +47,15 @@ Future<void> abrirSeletorDeCelula(
 
   if (escolha == null || !context.mounted) return;
   if (escolha == _kNovoEvento) {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => EventoEditor(
-          itemId: itemDaCelula?.id,
-          inicio: dataDoSlot,
-          // Ocupa o horário inteiro, não 1h genérica — a prova no horário
-          // da aula costuma durar a aula.
-          fim: dataDoSlot!.add(Duration(hours: tabela.intervalo)),
-        ),
-      ),
+    await abrirFolhaDeEvento(
+      context,
+      itemId: itemDaCelula?.id,
+      inicio: dataDoSlot,
+      // Ocupa o horário inteiro, não 1h genérica — a prova no horário da
+      // aula costuma durar a aula.
+      fim: dataDoSlot!.add(Duration(hours: tabela.intervalo)),
+      // Chips de item vêm desta tabela, não necessariamente da ativa.
+      tabelaId: tabela.id,
     );
     return;
   }

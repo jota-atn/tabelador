@@ -7,7 +7,7 @@ import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../theme/item_palette.dart';
 import '../util/formato_data.dart';
-import 'evento_editor.dart';
+import 'folha_evento.dart';
 import 'widgets/evento_tile.dart';
 import 'widgets/item_swatch.dart';
 import 'widgets/largura_maxima.dart';
@@ -419,11 +419,7 @@ class _EventosDoItem extends StatelessWidget {
               ),
             ),
             TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => EventoEditor(itemId: item.id),
-                ),
-              ),
+              onPressed: () => abrirFolhaDeEvento(context, itemId: item.id),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Evento'),
             ),

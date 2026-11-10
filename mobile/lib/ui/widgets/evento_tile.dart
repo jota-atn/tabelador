@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../model/evento.dart';
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
-import '../evento_editor.dart';
+import '../folha_evento.dart';
 import 'item_swatch.dart';
 
 /// Uma ocorrência de evento numa lista: bloco de data à esquerda, título e
@@ -16,6 +16,7 @@ class EventoTile extends StatelessWidget {
     required this.ocorrencia,
     this.mostrarItem = true,
     this.esmaecido = false,
+    this.mostrarData = true,
   });
 
   final Ocorrencia ocorrencia;
@@ -25,6 +26,10 @@ class EventoTile extends StatelessWidget {
 
   /// Eventos passados aparecem apagados, pra não competir com os próximos.
   final bool esmaecido;
+
+  /// Dentro de um grupo por dia ("Esta semana"), a data já está no
+  /// cabeçalho do grupo: o bloco da esquerda mostra a hora no lugar.
+  final bool mostrarData;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +51,22 @@ class EventoTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: SizedBox(
+      leading: !mostrarData
+          ? SizedBox(
+              width: 48,
+              child: Center(
+                child: Text(
+                  evento.diaInteiro ? 'dia todo' : hora(ocorrencia.inicio),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: evento.diaInteiro ? 11 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: corTexto,
+                  ),
+                ),
+              ),
+            )
+          : SizedBox(
         width: 48,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -73,7 +93,7 @@ class EventoTile extends StatelessWidget {
         style: TextStyle(color: corTexto),
       ),
       subtitle: Text(
-        '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes',
+        mostrarData ? '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes' : detalhes,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -99,9 +119,7 @@ class EventoTile extends StatelessWidget {
       // vez do formulário.
       onTap: evento.externo
           ? () => _detalhesExterno(context, ocorrencia, state)
-          : () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => EventoEditor(original: evento)),
-              ),
+          : () => abrirFolhaDeEvento(context, original: evento),
     );
   }
 }

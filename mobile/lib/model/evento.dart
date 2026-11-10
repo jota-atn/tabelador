@@ -7,6 +7,7 @@ import '../util/id.dart';
 /// aniversário (anual).
 enum Repeticao {
   nenhuma('nenhuma', 'Não repete'),
+  diaria('diaria', 'Todo dia'),
   semanal('semanal', 'Toda semana'),
   mensal('mensal', 'Todo mês'),
   anual('anual', 'Todo ano');
@@ -20,6 +21,44 @@ enum Repeticao {
         (r) => r.key == key,
         orElse: () => Repeticao.nenhuma,
       );
+}
+
+/// Como a duração de um evento é escolhida na folha de criação. Não é
+/// guardado — sai de [Evento.diaInteiro]/[Evento.fim] — mas é o que os tipos
+/// definem como padrão.
+enum DuracaoPadrao { diaTodo, prazo, umaHora, horarioDoItem }
+
+/// Tipos fixos de evento. O valor real não é a categoria, é o padrão que
+/// cada um preenche (duração, repetição) — tocar em "Aniversário" já deixa
+/// dia todo e anual.
+enum TipoEvento {
+  prova('Prova', DuracaoPadrao.horarioDoItem),
+  entrega('Entrega', DuracaoPadrao.prazo),
+  lembrete('Lembrete', DuracaoPadrao.prazo),
+  compromisso('Compromisso', DuracaoPadrao.umaHora),
+  consulta('Consulta', DuracaoPadrao.umaHora),
+  reuniao('Reunião', DuracaoPadrao.umaHora),
+  viagem('Viagem', DuracaoPadrao.diaTodo),
+  aniversario('Aniversário', DuracaoPadrao.diaTodo, repeticao: Repeticao.anual),
+  outro('Outro', DuracaoPadrao.umaHora);
+
+  const TipoEvento(this.rotulo, this.duracao, {this.repeticao = Repeticao.nenhuma});
+
+  final String rotulo;
+  final DuracaoPadrao duracao;
+  final Repeticao repeticao;
+
+  /// [Evento.tipo] é texto (compatível com eventos de antes dos tipos
+  /// fixos); o que não bate com nenhum rótulo conta como "Outro". Vazio é
+  /// "sem tipo".
+  static TipoEvento? doTexto(String texto) {
+    final t = texto.trim().toLowerCase();
+    if (t.isEmpty) return null;
+    for (final tipo in TipoEvento.values) {
+      if (tipo.rotulo.toLowerCase() == t) return tipo;
+    }
+    return TipoEvento.outro;
+  }
 }
 
 /// Um momento com data — ao contrário do [Item], que é um molde sem data
@@ -122,6 +161,15 @@ class Evento {
     switch (repeticao) {
       case Repeticao.nenhuma:
         considerar(inicio);
+      case Repeticao.diaria:
+        var n = de.isAfter(inicio) ? de.difference(inicio).inDays - 1 : 0;
+        if (n < 0) n = 0;
+        while (true) {
+          final c = _somarDias(inicio, n);
+          if (!c.isBefore(ate)) break;
+          considerar(c);
+          n++;
+        }
       case Repeticao.semanal:
         // Pula direto pra primeira semana relevante em vez de iterar desde
         // o início da série (um evento de 2020 não deveria custar 300 voltas).

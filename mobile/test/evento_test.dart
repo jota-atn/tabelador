@@ -143,24 +143,37 @@ void main() {
       return state;
     }
 
-    testWidgets('"Próximos" mostra o que vem e esconde o que já passou',
+    testWidgets('"Esta semana" mostra o próximo; botão embaixo abre o resto',
         (tester) async {
       final state = await montar(tester, const SingleChildScrollView(
         child: ProximosEventos(),
       ));
-      final agora = DateTime.now();
+      // Daqui a pouco: sempre cai nesta semana (salvo rodar o teste nos
+      // últimos minutos de domingo).
+      final logo = DateTime.now().add(const Duration(minutes: 5));
+      await state.adicionarEvento(Evento.novo(titulo: 'Aniversário de Pedro', inicio: logo));
       await state.adicionarEvento(Evento.novo(
-        titulo: 'Aniversário de Pedro',
-        inicio: agora.add(const Duration(days: 2)),
+        titulo: 'Dentista',
+        inicio: logo.add(const Duration(minutes: 1)),
       ));
       await state.adicionarEvento(Evento.novo(
         titulo: 'Já foi',
-        inicio: agora.subtract(const Duration(days: 2)),
+        inicio: DateTime.now().subtract(const Duration(days: 2)),
       ));
       await tester.pump();
 
       expect(find.text('Aniversário de Pedro'), findsOneWidget);
+      expect(find.text('Dentista'), findsNothing);
+
+      await tester.tap(find.text('Ver mais 1 evento da semana'));
+      await tester.pump();
+      expect(find.text('Dentista'), findsOneWidget);
       expect(find.text('Já foi'), findsNothing);
+      expect(state.semanaAberta, isTrue); // lembrado
+
+      await tester.tap(find.text('Mostrar só o próximo'));
+      await tester.pump();
+      expect(find.text('Dentista'), findsNothing);
     });
 
     testWidgets('tela do item separa próximos de passados', (tester) async {

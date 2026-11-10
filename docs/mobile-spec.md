@@ -552,10 +552,15 @@ segurança (texto local, sem rede nem execução), mas por **ambiguidade** —
 o usuário teria que conferir, o oposto de prático.
 
 **Folha que sobe de baixo** (não tela inteira), por cima da grade/
-calendário. Mesma folha pra criar e editar. Ordem:
+calendário, com animação mais lenta que a padrão (420 ms subindo) pra o
+olho acompanhar. Mesma folha pra criar e editar. Cabeçalho com ícone,
+"Novo evento" e ✕; **Salvar** grande preso no rodapé. Ordem:
 
-1. **Tipo** — lista fixa, cada um define padrões (o ganho real não é a
-   categoria, é o que ela preenche):
+1. **Título** — opcional: vazio vira "Prova · Sistemas Operacionais" (tipo +
+   item), mostrado como dica no campo. Só é obrigatório sem tipo útil e sem
+   item.
+2. **Tipo** — lista fixa com ícone, cada um define padrões (o ganho real
+   não é a categoria, é o que ela preenche):
 
    | Tipo | Padrão |
    |---|---|
@@ -569,44 +574,63 @@ calendário. Mesma folha pra criar e editar. Ordem:
    Sem tipo personalizado por enquanto. Evento antigo com tipo em texto
    livre que não bate com a lista é tratado como "Outro" (o texto antigo
    continua salvo).
-2. **Item** — chips **coloridos** (cor do item) dos itens da **tabela da
-   célula** (toque longo) ou da **tabela ativa** (resto); último chip "Outro
-   item…" abre lista com busca de todos. Tocar de novo desmarca. Escolher
+3. **Item** — chips **coloridos** (cor do item) dos itens da **tabela da
+   célula** (toque longo) ou da **tabela ativa** (resto); último chip
+   "Outro…" abre lista com busca de todos. Tocar de novo desmarca. Escolher
    item preenche local, título e próximo horário (cada um só enquanto o
    usuário não mexeu).
-3. **Quando** — [Próximo de SO · qui 10:00] [Hoje] [Amanhã] [📅].
-4. **Início** — chip com a hora; toque abre o relógio. Some em dia todo.
-5. **Duração** em vez de término — [Dia todo] [Prazo] [30 min] [1h] [2h]
-   [Horário de SO] [Outra…] ("Outra…" pergunta até que horas). "Dia todo"
-   como duração elimina o interruptor separado.
-6. **Título** — opcional: vazio vira "Prova · Sistemas Operacionais" (tipo +
-   item), mostrado como dica no campo. Só é obrigatório sem tipo útil e sem
-   item.
-7. **Chips de resumo** numa linha: [📍 Bloco C] [↻ Não repete] [＋ Notas]
-   [G Principal]. Relevantes demais pra esconder, mas sem poluir: cada chip
-   **mostra o valor atual**; preenchido é cheio, vazio tem contorno e "＋".
-   Toque abre só aquele detalhe logo abaixo (texto curto, chips de repetição,
-   texto longo, escolha de agenda).
-   **Segurar e arrastar** como atalho nos de lista (repetição, Google): ao
-   segurar, as opções aparecem numa fileira **acima** do chip, arrasto
-   **horizontal** (não briga com fechar/rolar a folha, que são verticais),
-   vibração ao trocar de opção, soltar escolhe, soltar fora cancela. Nunca o
-   único caminho — não é descobrível nem acessível sozinho.
+4. **Quando** — [Próximo de SO · qui 10:00] [Hoje] [Amanhã] [📅 Outra data].
+   - **Horário**: chips com o início de cada horário da tabela (08:00,
+     10:00…) e [Outro…] (relógio). Com item vinculado, o horário que ele
+     ocupa no dia escolhido vira "10:00 · SO" — só o do item vinculado.
+     Some em dia todo.
+   - **Duração** em vez de término — [Dia todo] [Prazo] [SO · 2h] [30 min]
+     [1h] [2h] [Outra…] ("Outra…" pergunta até que horas). "Dia todo" como
+     duração elimina o interruptor separado.
+5. **Detalhes** — chips [📍 Local] [↻ Não repete] [☁ Salvar em], cada um
+   **mostrando o valor atual** (preenchido é cheio). Tocar abre um **menu
+   flutuante acima do chip** (abaixo, se não couber; nunca passa da borda);
+   tocar fora fecha. **Segurar e arrastar pra cima** pelo menu escolhe
+   direto, com vibração ao trocar; soltar sem destacar nada deixa o menu
+   aberto. Arrasto só começa depois do toque longo ganhar o gesto, então
+   não briga com rolar/fechar a folha.
+   - Local: o do item, os dos outros itens da tabela, "Digitar…", "Sem
+     local". Sem sugestão, tocar já abre a caixinha de texto.
+   - Salvar em: "Só no app" e cada agenda gravável com a **conta** embaixo
+     (a principal de cada conta tem o e-mail como nome — antes aparecia
+     "Principal" repetido). No chip, só a parte antes do @.
+6. **Notas** — campo opcional no fim (não chip).
 
-**Repetição ganha "Diária"** (Não repete, Diária, Semanal, Mensal, Anual;
-`FREQ=DAILY` no Google).
+Cada seção (Tipo, Item, Quando, Detalhes) é um **cartão** com ícone
+colorido, título forte e, à direita, o valor escolhido ("Prova",
+"qui 12/11 · 10:00–12:00") — dá pra conferir o evento lendo só os
+cabeçalhos.
+
+**Alinhamento**: todos os chips são o mesmo componente (`GradeDeChips`),
+mesma altura, em linhas **justificadas** — cada linha estica os chips
+proporcionalmente ao tamanho natural até ocupar a largura toda, e as linhas
+são equilibradas (mesmo número de linhas do empacotamento cheio, larguras
+parecidas) pra não sobrar chip sozinho esticado.
+
+**Teclado**: só um padding fino acompanha `viewInsets`; o corpo da folha não
+é refeito a cada quadro da animação do teclado (antes era, e engasgava).
+
+**Repetição ganha "Diária"** (Não repete, Todo dia, Toda semana, Todo mês,
+Todo ano; `FREQ=DAILY` no Google).
 
 Caso típico: prova de SO na próxima aula = Prova, SO, Salvar — três toques,
 nenhum teclado. Do toque longo na célula: Prova, Salvar.
 
 ### "Esta semana" no lugar de "Próximos 14 dias"
 
-14 dias acumulava demais, e a grade já mostra a semana. Agora: **"Esta
-semana · N"**, de hoje até domingo, **acordeão começando recolhido** (estado
-lembrado). Recolhido mostra uma linha: "Próximo: Prova · SO, qui 10h".
-Aberto, **agrupado por dia** (Hoje, Amanhã, qui 13/11) em vez de repetir a
-data em cada linha. No fim de semana, link "Próxima semana · N" pro
-calendário.
+14 dias acumulava demais, e a grade já mostra a semana. Agora **"Esta
+semana"** (de agora até domingo, só o que ainda não terminou; dia todo vale
+até o fim do dia), com a quantidade num selo e o botão **Mês** (calendário)
+no cabeçalho — o cabeçalho não abre nem fecha nada. Fechada, mostra só o
+**próximo evento** como linha normal da lista e, se houver mais, o botão
+"Ver mais N eventos da semana"; aberta, tudo **agrupado por dia** (Hoje,
+Amanhã, qui 13/11) e "Mostrar só o próximo". Estado lembrado. No fim de
+semana, link "Próxima semana · N" pro calendário.
 
 ### Limitações conhecidas
 

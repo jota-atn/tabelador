@@ -11,7 +11,7 @@ import 'package:tabelador/native_widget/today_schedule_snapshot.dart';
 import 'package:tabelador/state/app_state.dart';
 import 'package:tabelador/theme/color_density.dart';
 import 'package:tabelador/theme/item_palette.dart';
-import 'package:tabelador/ui/evento_editor.dart';
+import 'package:tabelador/ui/folha_evento.dart';
 import 'package:tabelador/util/eventos_na_grade.dart';
 
 // 2026-11-09 é uma segunda. Tabela padrão: 8h, blocos de 2h, 6 horários
@@ -136,24 +136,45 @@ void main() {
     expect(ev['local'], 'Bloco C');
   });
 
-  group('formulário de evento', () {
+  group('folha de evento', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    testWidgets('vincular item traz o local e o título sozinhos', (tester) async {
+    /// Monta uma tela com um botão que abre a folha — ela é um bottom sheet,
+    /// precisa de uma rota por baixo pra fechar ao salvar.
+    Future<AppState> abrir(WidgetTester tester, AppState state, {String? itemId}) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.5;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: state,
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => abrirFolhaDeEvento(context, itemId: itemId),
+                  child: const Text('abrir'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('abrir'));
+      await tester.pumpAndSettle();
+      return state;
+    }
+
+    testWidgets('prova de um item: tipo + salvar, sem digitar nada', (tester) async {
       final state = AppState();
       await state.carregar();
       final item = Item.novo(nome: 'Sistemas Operacionais', sigla: 'SO', local: 'Bloco C');
       await state.adicionarItem(item);
+      await abrir(tester, state, itemId: item.id);
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: state,
-          child: MaterialApp(home: EventoEditor(itemId: item.id)),
-        ),
-      );
-      await tester.pumpAndSettle();
+      // Local veio do item, no chip de resumo.
+      expect(find.text('Bloco C'), findsOneWidget);
 
-      // Tocar no tipo monta o título; salvar sem digitar nada.
       await tester.tap(find.text('Prova'));
       await tester.pump();
       await tester.tap(find.text('Salvar'));
@@ -161,8 +182,89 @@ void main() {
 
       final salvo = state.eventos.single;
       expect(salvo.titulo, 'Prova · Sistemas Operacionais');
+      expect(salvo.tipo, 'Prova');
       expect(salvo.local, 'Bloco C');
       expect(salvo.itemId, item.id);
+    });
+
+    testWidgets('aniversário já vira dia todo e anual', (tester) async {
+      final state = AppState();
+      await state.carregar();
+      await abrir(tester, state);
+
+      await tester.tap(find.text('Aniversário'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).first, 'Pedro');
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+
+      final salvo = state.eventos.single;
+      expect(salvo.titulo, 'Pedro');
+      expect(salvo.diaInteiro, isTrue);
+      expect(salvo.repeticao, Repeticao.anual);
+    });
+
+    testWidgets('sem tipo, item nem título não salva', (tester) async {
+      final state = AppState();
+      await state.carregar();
+      await abrir(tester, state);
+      await tester.tap(find.text('Salvar'));
+      await tester.pump();
+      expect(state.eventos, isEmpty);
+      expect(find.text('Escolha um tipo, um item ou dê um título.'), findsOneWidget);
+    });
+
+    testWidgets('segurar e arrastar pra cima no chip de repetição escolhe direto', (tester) async {
+      final state = AppState();
+      await state.carregar();
+      await abrir(tester, state);
+
+      final chip = find.text('Não repete');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      final gesto = await tester.startGesture(tester.getCenter(chip));
+      await tester.pump(const Duration(milliseconds: 600)); // vira toque longo
+      await tester.pumpAndSettle();
+      // O menu abre acima do chip; desliza até "Todo mês" e solta.
+      await gesto.moveTo(tester.getCenter(find.text('Todo mês')));
+      await tester.pump();
+      await gesto.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Todo mês'), findsOneWidget); // o chip, menu fechado
+      expect(find.text('Todo ano'), findsNothing);
+    });
+
+    testWidgets('tocar no chip abre o menu; tocar na opção escolhe', (tester) async {
+      final state = AppState();
+      await state.carregar();
+      await abrir(tester, state);
+
+      await tester.ensureVisible(find.text('Não repete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Não repete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Toda semana'));
+      await tester.pumpAndSettle();
+      expect(find.text('Toda semana'), findsOneWidget);
+      expect(find.text('Todo dia'), findsNothing);
+    });
+
+    testWidgets('sugere os horários da tabela como chips', (tester) async {
+      final state = AppState();
+      await state.carregar();
+      await abrir(tester, state);
+
+      await tester.tap(find.text('Lembrete'));
+      await tester.pump();
+      // Tabela padrão: 8, 10, 12, 14, 16, 18.
+      await tester.ensureVisible(find.text('14:00'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('14:00'));
+      await tester.pump();
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      expect(state.eventos.single.inicio.hour, 14);
     });
   });
 }

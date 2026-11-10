@@ -7,7 +7,7 @@ import '../util/eventos_na_grade.dart';
 import 'aparencia_screen.dart';
 import 'calendario_screen.dart';
 import 'dia_editor.dart';
-import 'evento_editor.dart';
+import 'folha_evento.dart';
 import 'widgets/celula_picker.dart';
 import 'widgets/proximos_eventos.dart';
 import 'widgets/semana_corpo.dart';
@@ -125,9 +125,7 @@ class SemanaScreen extends StatelessWidget {
               ),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const EventoEditor()),
-        ),
+        onPressed: () => abrirFolhaDeEvento(context),
         tooltip: 'Novo evento',
         child: const Icon(Icons.event_outlined),
       ),

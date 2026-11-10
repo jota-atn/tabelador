@@ -110,6 +110,7 @@ class AppState extends ChangeNotifier {
     _agendas = {...dados.agendas};
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
+    _semanaAberta = dados.semanaAberta;
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -523,7 +524,7 @@ class AppState extends ChangeNotifier {
       final atualizado = {
         for (final a in lista)
           if (_agendas.containsKey(a.id))
-            a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
+            a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
       };
       final igual = atualizado.length == _agendas.length &&
           atualizado.entries.every((e) => _agendas[e.key] == e.value);
@@ -543,6 +544,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await _store.salvarAgendas(_agendas);
     await recarregarEventosExternos();
+  }
+
+  bool _semanaAberta = false;
+  bool get semanaAberta => _semanaAberta;
+
+  Future<void> alternarSemanaAberta() async {
+    _semanaAberta = !_semanaAberta;
+    notifyListeners();
+    await _store.salvarSemanaAberta(_semanaAberta);
   }
 
   // --------------------------------------------------------- preferências

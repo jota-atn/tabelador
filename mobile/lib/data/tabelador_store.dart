@@ -23,6 +23,7 @@ class DadosSalvos {
     this.agendas = const {},
     this.agendasConfiguradas = false,
     this.agendaDestino,
+    this.semanaAberta = false,
   });
 
   final List<Item> itens;
@@ -45,6 +46,9 @@ class DadosSalvos {
   /// Última agenda usada em "salvar também em".
   final String? agendaDestino;
 
+  /// Acordeão "Esta semana" da tela inicial aberto ou recolhido.
+  final bool semanaAberta;
+
   static const DadosSalvos vazio = DadosSalvos(
     itens: [],
     tabelas: [],
@@ -57,10 +61,14 @@ class DadosSalvos {
 
 @immutable
 class AgendaEscolhida {
-  const AgendaEscolhida({required this.nome, this.cor, this.gravavel = false});
+  const AgendaEscolhida({required this.nome, this.cor, this.gravavel = false, this.conta = ''});
 
   final String nome;
   final int? cor;
+
+  /// Conta dona da agenda (o e-mail, no Google). Vazia em escolhas antigas
+  /// até a próxima leitura das agendas preencher.
+  final String conta;
 
   /// Dá pra gravar evento nela (dono/colaborador; feriados e turmas não).
   final bool gravavel;
@@ -69,12 +77,14 @@ class AgendaEscolhida {
         'nome': nome,
         if (cor != null) 'cor': cor,
         if (gravavel) 'gravavel': true,
+        if (conta.isNotEmpty) 'conta': conta,
       };
 
   factory AgendaEscolhida.fromJson(Map<String, dynamic> j) => AgendaEscolhida(
         nome: j['nome'] as String? ?? '',
         cor: j['cor'] as int?,
         gravavel: j['gravavel'] as bool? ?? false,
+        conta: j['conta'] as String? ?? '',
       );
 
   @override
@@ -82,10 +92,11 @@ class AgendaEscolhida {
       other is AgendaEscolhida &&
       other.nome == nome &&
       other.cor == cor &&
-      other.gravavel == gravavel;
+      other.gravavel == gravavel &&
+      other.conta == conta;
 
   @override
-  int get hashCode => Object.hash(nome, cor, gravavel);
+  int get hashCode => Object.hash(nome, cor, gravavel, conta);
 }
 
 /// Persistência em `SharedPreferences` + JSON.
@@ -104,6 +115,7 @@ class TabeladorStore {
   static const _kNotificarEventos = 'notifications_events';
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
+  static const _kSemanaAberta = 'week_list_open';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -120,6 +132,7 @@ class TabeladorStore {
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
+      semanaAberta: prefs.getBool(_kSemanaAberta) ?? false,
     );
   }
 
@@ -182,6 +195,11 @@ class TabeladorStore {
       _kAgendas,
       jsonEncode({for (final e in agendas.entries) e.key: e.value.toJson()}),
     );
+  }
+
+  Future<void> salvarSemanaAberta(bool aberta) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSemanaAberta, aberta);
   }
 
   Future<void> salvarAgendaDestino(String? id) async {

@@ -221,6 +221,7 @@ Map<String, Object?> camposParaAparelho(Evento e) {
     // que não existe — é o que a RFC 5545 já faz com data inválida.
     'rrule': switch (e.repeticao) {
       Repeticao.nenhuma => null,
+      Repeticao.diaria => 'FREQ=DAILY',
       Repeticao.semanal => 'FREQ=WEEKLY',
       Repeticao.mensal => 'FREQ=MONTHLY',
       Repeticao.anual => 'FREQ=YEARLY',

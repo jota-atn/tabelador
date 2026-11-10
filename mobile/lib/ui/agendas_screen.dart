@@ -62,14 +62,14 @@ class _AgendasScreenState extends State<AgendasScreen> {
       if (!state.agendasConfiguradas) {
         await state.definirAgendas({
           for (final a in lista)
-            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
+            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
         });
       } else {
         // Nome/cor podem ter mudado no Google desde a última vez.
         final atual = state.agendas;
         final atualizado = {
           for (final a in lista)
-            if (atual.containsKey(a.id)) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
+            if (atual.containsKey(a.id)) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
         };
         if (!_mapasIguais(atual, atualizado)) await state.definirAgendas(atualizado);
       }
@@ -98,7 +98,7 @@ class _AgendasScreenState extends State<AgendasScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final novo = {...state.agendas};
     if (marcar) {
-      novo[agenda.id] = AgendaEscolhida(nome: agenda.nome, cor: agenda.cor, gravavel: !agenda.somenteLeitura);
+      novo[agenda.id] = AgendaEscolhida(nome: agenda.nome, cor: agenda.cor, gravavel: !agenda.somenteLeitura, conta: agenda.conta);
     } else {
       novo.remove(agenda.id);
     }
