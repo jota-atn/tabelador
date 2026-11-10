@@ -22,6 +22,7 @@ class DadosSalvos {
     this.notificarEventos = true,
     this.agendas = const {},
     this.agendasConfiguradas = false,
+    this.agendaDestino,
   });
 
   final List<Item> itens;
@@ -41,6 +42,9 @@ class DadosSalvos {
   /// aplicada) — distingue "nunca configurou" de "desmarcou tudo".
   final bool agendasConfiguradas;
 
+  /// Última agenda usada em "salvar também em".
+  final String? agendaDestino;
+
   static const DadosSalvos vazio = DadosSalvos(
     itens: [],
     tabelas: [],
@@ -53,22 +57,35 @@ class DadosSalvos {
 
 @immutable
 class AgendaEscolhida {
-  const AgendaEscolhida({required this.nome, this.cor});
+  const AgendaEscolhida({required this.nome, this.cor, this.gravavel = false});
 
   final String nome;
   final int? cor;
 
-  Map<String, dynamic> toJson() => {'nome': nome, if (cor != null) 'cor': cor};
+  /// Dá pra gravar evento nela (dono/colaborador; feriados e turmas não).
+  final bool gravavel;
 
-  factory AgendaEscolhida.fromJson(Map<String, dynamic> j) =>
-      AgendaEscolhida(nome: j['nome'] as String? ?? '', cor: j['cor'] as int?);
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        if (cor != null) 'cor': cor,
+        if (gravavel) 'gravavel': true,
+      };
+
+  factory AgendaEscolhida.fromJson(Map<String, dynamic> j) => AgendaEscolhida(
+        nome: j['nome'] as String? ?? '',
+        cor: j['cor'] as int?,
+        gravavel: j['gravavel'] as bool? ?? false,
+      );
 
   @override
   bool operator ==(Object other) =>
-      other is AgendaEscolhida && other.nome == nome && other.cor == cor;
+      other is AgendaEscolhida &&
+      other.nome == nome &&
+      other.cor == cor &&
+      other.gravavel == gravavel;
 
   @override
-  int get hashCode => Object.hash(nome, cor);
+  int get hashCode => Object.hash(nome, cor, gravavel);
 }
 
 /// Persistência em `SharedPreferences` + JSON.
@@ -86,6 +103,7 @@ class TabeladorStore {
   static const _kAntecedenciaMinutos = 'notifications_lead_minutes';
   static const _kNotificarEventos = 'notifications_events';
   static const _kAgendas = 'device_calendars_json';
+  static const _kAgendaDestino = 'device_calendar_target';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -101,6 +119,7 @@ class TabeladorStore {
       notificarEventos: prefs.getBool(_kNotificarEventos) ?? true,
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
+      agendaDestino: prefs.getString(_kAgendaDestino),
     );
   }
 
@@ -163,6 +182,15 @@ class TabeladorStore {
       _kAgendas,
       jsonEncode({for (final e in agendas.entries) e.key: e.value.toJson()}),
     );
+  }
+
+  Future<void> salvarAgendaDestino(String? id) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (id == null) {
+      await prefs.remove(_kAgendaDestino);
+    } else {
+      await prefs.setString(_kAgendaDestino, id);
+    }
   }
 
   static Map<String, AgendaEscolhida> _decodificarAgendas(String? bruto) {

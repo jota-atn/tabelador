@@ -109,6 +109,7 @@ class AppState extends ChangeNotifier {
     _notificarEventos = dados.notificarEventos;
     _agendas = {...dados.agendas};
     _agendasConfiguradas = dados.agendasConfiguradas;
+    _agendaDestinoPadrao = dados.agendaDestino;
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -319,9 +320,16 @@ class AppState extends ChangeNotifier {
   /// Todas as ocorrências que começam em `[de, ate)`, de todos os eventos,
   /// em ordem cronológica.
   List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
+    // Evento do app gravado no Google volta na leitura como externo — fica
+    // só a versão do app, que tem vínculo com item e é editável.
+    final espelhados = {
+      for (final e in _eventos)
+        if (e.idNoAparelho != null) e.idNoAparelho,
+    };
     final todas = [
       for (final e in _eventos) ...e.ocorrenciasEntre(de, ate),
-      for (final e in _externos) ...e.ocorrenciasEntre(de, ate),
+      for (final e in _externos)
+        if (!espelhados.contains(e.idNoAparelho)) ...e.ocorrenciasEntre(de, ate),
     ]..sort((a, b) => a.inicio.compareTo(b.inicio));
     return todas;
   }
@@ -344,28 +352,116 @@ class AppState extends ChangeNotifier {
     return vistos.toList()..sort();
   }
 
-  Future<void> adicionarEvento(Evento evento) async {
-    _eventos = [..._eventos, evento];
+  /// Salva [evento] e, com [salvarEm] (id de agenda do aparelho), grava
+  /// uma cópia lá — que o Android sobe pro Google. Devolve false se a cópia
+  /// falhou: o evento fica salvo no app mesmo assim, só não no Google, e
+  /// quem chama avisa.
+  Future<bool> adicionarEvento(Evento evento, {String? salvarEm}) async {
+    var salvo = evento;
+    var ok = true;
+    if (salvarEm != null) {
+      final r = await _espelhar(evento, salvarEm);
+      ok = r != null;
+      if (r != null) salvo = r;
+    }
+    _eventos = [..._eventos, salvo];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+    if (salvarEm != null) await _lembrarDestino(salvarEm);
+    return ok;
   }
 
-  Future<void> atualizarEvento(Evento evento) async {
+  /// Como [adicionarEvento], resolvendo a cópia no aparelho conforme
+  /// mudou: mesma agenda atualiza; outra agenda apaga lá e cria cá; nenhuma
+  /// ("só no app") apaga a cópia.
+  Future<bool> atualizarEvento(Evento evento, {String? salvarEm}) async {
+    final anterior = eventoPorId(evento.id);
+    // O formulário não sabe do espelho; herda do que estava salvo.
+    var salvo = evento.comEspelho(anterior?.idNoAparelho, anterior?.agendaDestinoId);
+    var ok = true;
+    final fonte = _fonteExterna;
+
+    if (fonte != null) {
+      try {
+        if (salvo.idNoAparelho != null && salvo.agendaDestinoId != salvarEm) {
+          await fonte.apagarEvento(salvo.idNoAparelho!);
+          salvo = salvo.comEspelho(null, null);
+        }
+        if (salvarEm != null) {
+          final r = await _espelhar(salvo, salvarEm, idNoAparelho: salvo.idNoAparelho);
+          ok = r != null;
+          if (r != null) salvo = r;
+        }
+      } catch (_) {
+        ok = false;
+      }
+    }
+
     _eventos = [
-      for (final e in _eventos) e.id == evento.id ? evento : e,
+      for (final e in _eventos) e.id == evento.id ? salvo : e,
     ];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+    if (salvarEm != null) await _lembrarDestino(salvarEm);
+    return ok;
   }
 
+  /// Apaga do app e, se houver, a cópia na agenda do aparelho (e do Google).
   Future<void> removerEvento(String eventoId) async {
+    final evento = eventoPorId(eventoId);
     _eventos = [
       for (final e in _eventos)
         if (e.id != eventoId) e,
     ];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+    final idLa = evento?.gravadoNoGoogle == true ? evento!.idNoAparelho : null;
+    if (idLa != null) {
+      try {
+        await _fonteExterna?.apagarEvento(idLa);
+      } catch (_) {
+        // Já sumiu de lá (apagado pelo Google Agenda): nada a fazer.
+      }
+      unawaited(recarregarEventosExternos());
+    }
   }
+
+  Future<Evento?> _espelhar(Evento evento, String agendaId, {String? idNoAparelho}) async {
+    final fonte = _fonteExterna;
+    if (fonte == null) return null;
+    try {
+      final id = await fonte.gravarEvento(evento, agendaId, idNoAparelho: idNoAparelho);
+      unawaited(recarregarEventosExternos());
+      return evento.comEspelho(id, agendaId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Última agenda escolhida em "salvar também em" — vira o padrão do
+  /// próximo evento, pra decidir isso uma vez só.
+  String? _agendaDestinoPadrao;
+  String? get agendaDestinoPadrao =>
+      _agendas[_agendaDestinoPadrao]?.gravavel == true ? _agendaDestinoPadrao : null;
+
+  Future<void> _lembrarDestino(String agendaId) async {
+    if (_agendaDestinoPadrao == agendaId) return;
+    _agendaDestinoPadrao = agendaId;
+    await _store.salvarAgendaDestino(agendaId);
+  }
+
+  /// "Só no app" escolhido explicitamente também vira o padrão.
+  Future<void> esquecerDestino() async {
+    if (_agendaDestinoPadrao == null) return;
+    _agendaDestinoPadrao = null;
+    await _store.salvarAgendaDestino(null);
+  }
+
+  /// Agendas onde dá pra gravar: escolhidas e não somente-leitura.
+  Map<String, AgendaEscolhida> get agendasGravaveis => {
+        for (final e in _agendas.entries)
+          if (e.value.gravavel) e.key: e.value,
+      };
 
   // ------------------------------------------------- agendas do aparelho
 
@@ -395,6 +491,7 @@ class AppState extends ChangeNotifier {
         _recarregarDeNovo = false;
         var novos = const <Evento>[];
         if (_agendas.isNotEmpty && await fonte.temPermissao()) {
+          await _atualizarMetadadosDasAgendas(fonte);
           final agora = DateTime.now();
           try {
             novos = await fonte.lerEventos(
@@ -414,6 +511,29 @@ class AppState extends ChangeNotifier {
       } while (_recarregarDeNovo);
     } finally {
       _recarregando = false;
+    }
+  }
+
+  /// Nome, cor e "dá pra gravar" das agendas escolhidas podem mudar no
+  /// Google (ou vir de uma versão do app que não guardava "gravável").
+  /// Agenda que sumiu do aparelho sai da escolha.
+  Future<void> _atualizarMetadadosDasAgendas(FonteDeEventosExternos fonte) async {
+    try {
+      final lista = await fonte.listar();
+      final atualizado = {
+        for (final a in lista)
+          if (_agendas.containsKey(a.id))
+            a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
+      };
+      final igual = atualizado.length == _agendas.length &&
+          atualizado.entries.every((e) => _agendas[e.key] == e.value);
+      if (!igual) {
+        _agendas = atualizado;
+        notifyListeners();
+        await _store.salvarAgendas(_agendas);
+      }
+    } catch (_) {
+      // Sem conseguir listar, segue com o que já estava salvo.
     }
   }
 

@@ -328,8 +328,7 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
 ## Eventos e Google Agenda
 
 **Status (2026-11-11)**: fase 1 (eventos locais, grade, widget, notificação,
-calendário mensal) e fase 2 (ler do Google Agenda) implementadas. Fase 3
-(gravar no Google) ainda não começou.
+calendário mensal) fase 2 (ler do Google Agenda) e fase 3 (gravar no Google) implementadas.
 
 Pedido: puxar compromissos do Google Agenda pra dentro das tabelas e criar
 eventos no app que vão pro Google Agenda. "Evento" é o nome do conceito novo:
@@ -508,6 +507,39 @@ leitura: tocar abre uma folha de detalhes com a agenda de origem, não o
 formulário. Cor: a da agenda onde item vinculado usaria a do item. Conta
 como avulso pro filtro `mostrarEventos` da tabela.
 
+### Gravação no Google (fase 3)
+
+Mesmo caminho da leitura, ao contrário: o app grava na **agenda do
+Android**, numa agenda da conta Google, e o próprio Android sobe pro Google
+— sem API nem login. Agenda local (sem conta) deixaria o evento só no
+aparelho.
+
+- Formulário ganha **"Salvar também em"**: "Só no app" ou uma agenda
+  escolhida e gravável (dono/colaborador — feriados e turmas não aparecem).
+  Novo evento começa na **última usada** (`device_calendar_target`); escolher
+  "Só no app" explicitamente também vira o padrão.
+- `Evento.idNoAparelho` + `agendaDestinoId` (persistidos): o espelho do
+  evento lá. Editar na mesma agenda atualiza a linha; trocar de agenda apaga
+  lá e cria cá; "Só no app" apaga a cópia; apagar no app apaga lá. Cópia
+  apagada pelo Google desde a última gravação é recriada em vez de perder a
+  edição em silêncio.
+- **Sem duplicar**: o evento gravado volta na leitura como externo; em
+  `ocorrenciasEntre` o externo cujo `idNoAparelho` bate com o de um evento do
+  app é descartado — fica a versão do app, que tem vínculo com item.
+- Dia inteiro em meia-noite UTC com fuso UTC; recorrente com `RRULE`
+  (`FREQ=WEEKLY|MONTHLY|YEARLY`, mesma semântica de pular data inválida) +
+  `DURATION` em vez de `DTEND`, como o provider exige.
+- **Sem lembrete** no evento gravado: quem avisa é o tabelador; lembrete do
+  Google em cima daria aviso duplicado.
+- Falha ao gravar: salva no app mesmo assim e avisa ("não deu pra gravar no
+  Google Agenda").
+- "Gravável" das agendas escolhidas é atualizado do aparelho a cada
+  releitura — quem escolheu agendas numa versão anterior não precisa abrir a
+  tela de novo.
+- Lista marca "· Google" no evento do app que tem cópia lá.
+
+Validado no aparelho: evento criado no app apareceu no Google Agenda.
+
 ### Limitações conhecidas
 
 - Grade mostra só a semana atual (sem navegar pra próxima); pra frente, usar
@@ -516,6 +548,8 @@ como avulso pro filtro `mostrarEventos` da tabela.
   em "Próximos" nem na grade (só olham o dia de início).
 - Editar só uma ocorrência de recorrente: não existe.
 - Evento do Google não é editável no app, nem vinculável a item ainda.
+- Edição feita no Google Agenda num evento criado no app é sobrescrita na
+  próxima edição pelo app (a versão do app é a fonte de verdade).
 - Calendário além da janela de leitura (2 meses atrás, ~13 meses à frente)
   mostra só os eventos do app.
 - Aviso às 8h vale pra todo evento de dia inteiro, feriado incluído.
@@ -525,8 +559,7 @@ como avulso pro filtro `mostrarEventos` da tabela.
 1. ~~Eventos locais~~ (feito).
 2. ~~Ler do Google~~ (feito). Pendente dessa fase: sugerir vínculo de
    evento do Google com item pela sigla no título.
-3. Gravar no Google (agenda de destino, "salvar no Google Agenda" no
-   formulário, padrão ligado se houver agenda configurada).
+3. ~~Gravar no Google~~ (feito).
 4. ~~Eventos no widget, notificação de evento~~ (feito).
 
 ## Onboarding (planejado, não implementado)

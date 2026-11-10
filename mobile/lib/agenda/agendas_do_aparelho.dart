@@ -72,6 +72,14 @@ class AgendaDoAparelho {
 abstract class FonteDeEventosExternos {
   Future<bool> temPermissao();
 
+  Future<List<AgendaDoAparelho>> listar();
+
+  /// Grava [evento] (do app) na agenda [agendaId] do aparelho — cria se
+  /// [idNoAparelho] for nulo, atualiza se não. Devolve o id lá.
+  Future<String> gravarEvento(Evento evento, String agendaId, {String? idNoAparelho});
+
+  Future<void> apagarEvento(String idNoAparelho);
+
   /// Ocorrências das agendas [agendaIds] que se sobrepõem a `[de, ate)`.
   Future<List<Evento>> lerEventos(
     Set<String> agendaIds,
@@ -105,6 +113,7 @@ class AgendasDoAparelho implements FonteDeEventosExternos {
     return r.isSuccess && (r.data ?? false);
   }
 
+  @override
   Future<List<AgendaDoAparelho>> listar() async {
     final bruto = await _canal.invokeListMethod<Map<Object?, Object?>>('listarAgendas');
     return [for (final m in bruto ?? const []) AgendaDoAparelho.fromMap(m)];
@@ -115,6 +124,20 @@ class AgendasDoAparelho implements FonteDeEventosExternos {
   /// leva de segundos a alguns minutos, não é imediato.
   Future<void> definirSincronizacao(String id, {required bool ativa}) =>
       _canal.invokeMethod<void>('definirSincronizacao', {'id': id, 'ativa': ativa});
+
+  @override
+  Future<String> gravarEvento(Evento evento, String agendaId, {String? idNoAparelho}) async {
+    final id = await _canal.invokeMethod<String>('gravarEvento', {
+      'eventoId': idNoAparelho,
+      'agendaId': agendaId,
+      'campos': camposParaAparelho(evento),
+    });
+    return id!;
+  }
+
+  @override
+  Future<void> apagarEvento(String idNoAparelho) =>
+      _canal.invokeMethod<void>('apagarEvento', {'eventoId': idNoAparelho});
 
   @override
   Future<List<Evento>> lerEventos(
@@ -169,5 +192,38 @@ Evento eventoDoAparelho(Map<Object?, Object?> m, Map<String, int?> cores) {
     notas: texto(m['descricao']),
     agendaId: agendaId,
     corExterna: cores[agendaId],
+    idNoAparelho: '${m['eventoId']}',
   );
+}
+
+/// O que vai pro `gravarEvento` nativo. Dia inteiro em meia-noite UTC (o
+/// inverso de [eventoDoAparelho]); evento sem término vira um ponto
+/// (início = fim); repetição vira RRULE.
+@visibleForTesting
+Map<String, Object?> camposParaAparelho(Evento e) {
+  int inicio;
+  int fim;
+  if (e.diaInteiro) {
+    inicio = DateTime.utc(e.inicio.year, e.inicio.month, e.inicio.day).millisecondsSinceEpoch;
+    fim = DateTime.utc(e.inicio.year, e.inicio.month, e.inicio.day + 1).millisecondsSinceEpoch;
+  } else {
+    inicio = e.inicio.millisecondsSinceEpoch;
+    fim = (e.fim != null && e.fim!.isAfter(e.inicio) ? e.fim! : e.inicio).millisecondsSinceEpoch;
+  }
+  return {
+    'titulo': e.titulo,
+    'inicio': inicio,
+    'fim': fim,
+    'diaInteiro': e.diaInteiro,
+    'local': e.local,
+    'descricao': e.notas,
+    // Mesma semântica do app: mensal num dia 31 e anual em 29/02 pulam o
+    // que não existe — é o que a RFC 5545 já faz com data inválida.
+    'rrule': switch (e.repeticao) {
+      Repeticao.nenhuma => null,
+      Repeticao.semanal => 'FREQ=WEEKLY',
+      Repeticao.mensal => 'FREQ=MONTHLY',
+      Repeticao.anual => 'FREQ=YEARLY',
+    },
+  };
 }

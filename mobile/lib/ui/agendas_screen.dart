@@ -62,14 +62,14 @@ class _AgendasScreenState extends State<AgendasScreen> {
       if (!state.agendasConfiguradas) {
         await state.definirAgendas({
           for (final a in lista)
-            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor),
+            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
         });
       } else {
         // Nome/cor podem ter mudado no Google desde a última vez.
         final atual = state.agendas;
         final atualizado = {
           for (final a in lista)
-            if (atual.containsKey(a.id)) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor),
+            if (atual.containsKey(a.id)) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura),
         };
         if (!_mapasIguais(atual, atualizado)) await state.definirAgendas(atualizado);
       }
@@ -98,7 +98,7 @@ class _AgendasScreenState extends State<AgendasScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final novo = {...state.agendas};
     if (marcar) {
-      novo[agenda.id] = AgendaEscolhida(nome: agenda.nome, cor: agenda.cor);
+      novo[agenda.id] = AgendaEscolhida(nome: agenda.nome, cor: agenda.cor, gravavel: !agenda.somenteLeitura);
     } else {
       novo.remove(agenda.id);
     }
@@ -265,8 +265,9 @@ class _Lista extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Text(
-          'Marque as agendas que devem aparecer no app. Eventos delas são só '
-          'leitura por enquanto.',
+          'Marque as agendas que devem aparecer no app. Eventos criados no app '
+          'podem ser salvos numa delas (escolha no próprio formulário) e vão '
+          'pro Google Agenda.',
           style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
         ),
       ),

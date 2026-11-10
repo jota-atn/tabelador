@@ -39,6 +39,7 @@ class EventoTile extends StatelessWidget {
       if (evento.tipo.isNotEmpty) evento.tipo,
       if (mostrarItem && item != null) item.sigla,
       if (evento.repeticao != Repeticao.nenhuma) evento.repeticao.rotulo.toLowerCase(),
+      if (evento.gravadoNoGoogle) 'Google',
     ].join(' · ');
 
     final corTexto = esmaecido ? scheme.onSurfaceVariant : scheme.onSurface;

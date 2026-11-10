@@ -12,8 +12,46 @@ class _FonteFalsa implements FonteDeEventosExternos {
   final bool permissao;
   Set<String>? pedidas;
 
+  /// O que o app gravou "no aparelho": id lá -> (evento, agenda).
+  final gravados = <String, (Evento, String)>{};
+  var _proximoId = 100;
+
   @override
   Future<bool> temPermissao() async => permissao;
+
+  @override
+  Future<List<AgendaDoAparelho>> listar() async => const [
+        AgendaDoAparelho(
+          id: 'principal',
+          nome: 'eu@gmail.com',
+          conta: 'eu@gmail.com',
+          tipoConta: 'com.google',
+          cor: null,
+          nivelAcesso: 700,
+          visivel: true,
+          sincroniza: true,
+        ),
+        AgendaDoAparelho(
+          id: 'feriados',
+          nome: 'Feriados no Brasil',
+          conta: 'eu@gmail.com',
+          tipoConta: 'com.google',
+          cor: null,
+          nivelAcesso: 200,
+          visivel: true,
+          sincroniza: true,
+        ),
+      ];
+
+  @override
+  Future<String> gravarEvento(Evento evento, String agendaId, {String? idNoAparelho}) async {
+    final id = idNoAparelho ?? '${_proximoId++}';
+    gravados[id] = (evento, agendaId);
+    return id;
+  }
+
+  @override
+  Future<void> apagarEvento(String idNoAparelho) async => gravados.remove(idNoAparelho);
 
   @override
   Future<List<Evento>> lerEventos(
@@ -26,6 +64,16 @@ class _FonteFalsa implements FonteDeEventosExternos {
     return [
       for (final e in eventos)
         if (agendaIds.contains(e.agendaId)) e,
+      // O que foi gravado volta na leitura como externo, como no Android.
+      for (final g in gravados.entries)
+        if (agendaIds.contains(g.value.$2))
+          Evento(
+            id: 'g:${g.key}',
+            titulo: g.value.$1.titulo,
+            inicio: g.value.$1.inicio,
+            agendaId: g.value.$2,
+            idNoAparelho: g.key,
+          ),
     ];
   }
 }
@@ -110,6 +158,92 @@ void main() {
     await outro.carregar();
     expect(outro.agendasConfiguradas, isTrue);
     expect(outro.agendas.keys, ['feriados']);
+  });
+
+  group('gravar no Google', () {
+    Future<(AppState, _FonteFalsa)> montar() async {
+      final fonte = _FonteFalsa(const []);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({
+        'principal': const AgendaEscolhida(nome: 'eu@gmail.com', gravavel: true),
+        'feriados': const AgendaEscolhida(nome: 'Feriados no Brasil'),
+      });
+      return (state, fonte);
+    }
+
+    final amanha = DateTime.now().add(const Duration(days: 1));
+
+    test('salva cópia, lembra o destino e não duplica na leitura', () async {
+      final (state, fonte) = await montar();
+      expect(state.agendasGravaveis.keys, ['principal']);
+
+      final ok = await state.adicionarEvento(
+        Evento.novo(titulo: 'Prova', inicio: amanha),
+        salvarEm: 'principal',
+      );
+      expect(ok, isTrue);
+      expect(fonte.gravados, hasLength(1));
+      expect(state.eventos.single.gravadoNoGoogle, isTrue);
+      expect(state.agendaDestinoPadrao, 'principal');
+
+      await state.recarregarEventosExternos();
+      expect(state.eventosExternos, hasLength(1)); // voltou na leitura...
+      final ocorrencias = state.ocorrenciasEntre(
+        amanha.subtract(const Duration(days: 1)),
+        amanha.add(const Duration(days: 1)),
+      );
+      expect(ocorrencias, hasLength(1)); // ...mas aparece uma vez só
+      expect(ocorrencias.single.evento.externo, isFalse);
+    });
+
+    test('editar atualiza a mesma cópia; "só no app" apaga ela', () async {
+      final (state, fonte) = await montar();
+      final e = Evento.novo(titulo: 'Prova', inicio: amanha);
+      await state.adicionarEvento(e, salvarEm: 'principal');
+      final idLa = state.eventos.single.idNoAparelho;
+
+      await state.atualizarEvento(
+        Evento(id: e.id, titulo: 'Prova 2', inicio: amanha),
+        salvarEm: 'principal',
+      );
+      expect(fonte.gravados.keys, [idLa]);
+      expect(fonte.gravados[idLa]!.$1.titulo, 'Prova 2');
+
+      await state.atualizarEvento(Evento(id: e.id, titulo: 'Prova 2', inicio: amanha));
+      expect(fonte.gravados, isEmpty);
+      expect(state.eventos.single.gravadoNoGoogle, isFalse);
+    });
+
+    test('apagar no app apaga a cópia', () async {
+      final (state, fonte) = await montar();
+      final e = Evento.novo(titulo: 'Prova', inicio: amanha);
+      await state.adicionarEvento(e, salvarEm: 'principal');
+      await state.removerEvento(e.id);
+      expect(fonte.gravados, isEmpty);
+    });
+
+    test('metadados vêm do aparelho: "gravável" de versão antiga é corrigido',
+        () async {
+      final fonte = _FonteFalsa(const []);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      // Como ficou salvo antes de existir "gravável".
+      await state.definirAgendas({'principal': const AgendaEscolhida(nome: 'x')});
+      expect(state.agendasGravaveis.keys, ['principal']);
+    });
+  });
+
+  test('campos pro aparelho: dia inteiro em meia-noite UTC e RRULE', () {
+    final c = camposParaAparelho(Evento.novo(
+      titulo: 'Aniversário',
+      inicio: DateTime(2026, 12, 25),
+      diaInteiro: true,
+      repeticao: Repeticao.anual,
+    ));
+    expect(c['inicio'], DateTime.utc(2026, 12, 25).millisecondsSinceEpoch);
+    expect(c['fim'], DateTime.utc(2026, 12, 26).millisecondsSinceEpoch);
+    expect(c['rrule'], 'FREQ=YEARLY');
   });
 
   test('sem permissão, nenhum evento externo e nenhum erro', () async {

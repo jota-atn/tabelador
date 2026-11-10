@@ -44,6 +44,8 @@ class Evento {
     this.notas,
     this.agendaId,
     this.corExterna,
+    this.idNoAparelho,
+    this.agendaDestinoId,
   });
 
   Evento.novo({
@@ -58,7 +60,9 @@ class Evento {
     this.notas,
   })  : id = gerarId(),
         agendaId = null,
-        corExterna = null;
+        corExterna = null,
+        idNoAparelho = null,
+        agendaDestinoId = null;
 
   final String id;
   final String titulo;
@@ -84,7 +88,18 @@ class Evento {
   /// Cor da agenda de origem (ARGB), pra marcar evento externo sem item.
   final int? corExterna;
 
+  /// Id do evento na agenda do Android. Em evento do app gravado no Google
+  /// é o espelho dele lá; em evento externo é o próprio evento lido. É o
+  /// que deixa o app reconhecer, na leitura, o que ele mesmo gravou — e não
+  /// mostrar a mesma prova duas vezes.
+  final String? idNoAparelho;
+
+  /// Agenda do aparelho onde este evento do app foi gravado ("salvar também
+  /// em"). Nulo = só no app.
+  final String? agendaDestinoId;
+
   bool get externo => agendaId != null;
+  bool get gravadoNoGoogle => !externo && idNoAparelho != null;
 
   Duration get duracao =>
       fim == null || !fim!.isAfter(inicio) ? Duration.zero : fim!.difference(inicio);
@@ -175,6 +190,8 @@ class Evento {
         if (itemId != null) 'itemId': itemId,
         if (local != null) 'local': local,
         if (notas != null) 'notas': notas,
+        if (idNoAparelho != null) 'idNoAparelho': idNoAparelho,
+        if (agendaDestinoId != null) 'agendaDestinoId': agendaDestinoId,
       };
 
   /// Tolerante como [Item.fromJson]. Sem data de início válida não há o que
@@ -191,8 +208,27 @@ class Evento {
       itemId: json['itemId'] as String?,
       local: json['local'] as String?,
       notas: json['notas'] as String?,
+      idNoAparelho: json['idNoAparelho'] as String?,
+      agendaDestinoId: json['agendaDestinoId'] as String?,
     );
   }
+
+  /// Mesmo evento apontando (ou deixando de apontar, com nulos) pra uma
+  /// cópia na agenda do aparelho.
+  Evento comEspelho(String? idNoAparelho, String? agendaDestinoId) => Evento(
+        id: id,
+        titulo: titulo,
+        inicio: inicio,
+        fim: fim,
+        diaInteiro: diaInteiro,
+        tipo: tipo,
+        repeticao: repeticao,
+        itemId: itemId,
+        local: local,
+        notas: notas,
+        idNoAparelho: idNoAparelho,
+        agendaDestinoId: agendaDestinoId,
+      );
 
   /// Mesmo evento com o vínculo removido — usado quando o item é apagado.
   Evento semItem() => Evento(
@@ -205,6 +241,8 @@ class Evento {
         repeticao: repeticao,
         local: local,
         notas: notas,
+        idNoAparelho: idNoAparelho,
+        agendaDestinoId: agendaDestinoId,
       );
 
   @override
@@ -221,7 +259,9 @@ class Evento {
       other.local == local &&
       other.notas == notas &&
       other.agendaId == agendaId &&
-      other.corExterna == corExterna;
+      other.corExterna == corExterna &&
+      other.idNoAparelho == idNoAparelho &&
+      other.agendaDestinoId == agendaDestinoId;
 
   @override
   int get hashCode => Object.hash(
@@ -237,6 +277,8 @@ class Evento {
         notas,
         agendaId,
         corExterna,
+        idNoAparelho,
+        agendaDestinoId,
       );
 
   @override

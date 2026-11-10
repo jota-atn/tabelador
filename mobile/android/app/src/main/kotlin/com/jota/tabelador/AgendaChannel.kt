@@ -44,6 +44,16 @@ object AgendaChannel {
                             )
                             null
                         }
+                        "gravarEvento" -> gravarEvento(
+                            app,
+                            call.argument<String>("eventoId")?.toLong(),
+                            call.argument<String>("agendaId")!!.toLong(),
+                            call.argument<Map<String, Any?>>("campos")!!,
+                        ).toString()
+                        "apagarEvento" -> {
+                            apagarEvento(app, call.argument<String>("eventoId")!!.toLong())
+                            null
+                        }
                         "lerEventos" -> lerEventos(
                             app,
                             call.argument<List<String>>("ids")!!.map { it.toLong() },
@@ -110,6 +120,80 @@ object AgendaChannel {
         context.contentResolver.update(
             ContentUris.withAppendedId(CalendarContract.Calendars.CONTENT_URI, id),
             valores,
+            null,
+            null,
+        )
+    }
+
+    /**
+     * Cria (sem [eventoId]) ou atualiza um evento na agenda [agendaId]. O
+     * adaptador do Google sobe a mudança pra conta na próxima
+     * sincronização — é assim que evento criado no app chega no Google
+     * Agenda, sem API nem login.
+     *
+     * `campos`: titulo, inicio/fim (ms), diaInteiro, local, descricao, rrule.
+     * Dia inteiro vai em meia-noite UTC com fuso UTC, como o Android exige;
+     * recorrente usa DURATION em vez de DTEND (também exigência do
+     * provider). Sem lembrete: quem avisa é o próprio tabelador, e um
+     * lembrete do Google em cima daria aviso duplicado.
+     */
+    private fun gravarEvento(
+        context: Context,
+        eventoId: Long?,
+        agendaId: Long,
+        campos: Map<String, Any?>,
+    ): Long {
+        val diaInteiro = campos["diaInteiro"] as? Boolean ?: false
+        val inicio = (campos["inicio"] as Number).toLong()
+        val fim = (campos["fim"] as Number).toLong()
+        val rrule = campos["rrule"] as? String
+
+        val valores = ContentValues().apply {
+            put(CalendarContract.Events.CALENDAR_ID, agendaId)
+            put(CalendarContract.Events.TITLE, campos["titulo"] as? String ?: "")
+            put(CalendarContract.Events.EVENT_LOCATION, campos["local"] as? String)
+            put(CalendarContract.Events.DESCRIPTION, campos["descricao"] as? String)
+            put(CalendarContract.Events.DTSTART, inicio)
+            put(CalendarContract.Events.ALL_DAY, if (diaInteiro) 1 else 0)
+            put(
+                CalendarContract.Events.EVENT_TIMEZONE,
+                if (diaInteiro) "UTC" else java.util.TimeZone.getDefault().id,
+            )
+            if (rrule != null) {
+                put(CalendarContract.Events.RRULE, rrule)
+                putNull(CalendarContract.Events.DTEND)
+                val segundos = ((fim - inicio) / 1000).coerceAtLeast(0)
+                put(
+                    CalendarContract.Events.DURATION,
+                    if (diaInteiro) "P${(segundos / 86400).coerceAtLeast(1)}D" else "P${segundos}S",
+                )
+            } else {
+                putNull(CalendarContract.Events.RRULE)
+                putNull(CalendarContract.Events.DURATION)
+                put(CalendarContract.Events.DTEND, fim)
+            }
+        }
+
+        val resolver = context.contentResolver
+        if (eventoId != null) {
+            val linhas = resolver.update(
+                ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventoId),
+                valores,
+                null,
+                null,
+            )
+            // Apagado do lado do Google desde a última gravação: recria em vez
+            // de perder a edição em silêncio.
+            if (linhas > 0) return eventoId
+        }
+        val uri = resolver.insert(CalendarContract.Events.CONTENT_URI, valores)
+            ?: throw IllegalStateException("A agenda recusou o evento")
+        return ContentUris.parseId(uri)
+    }
+
+    private fun apagarEvento(context: Context, eventoId: Long) {
+        context.contentResolver.delete(
+            ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventoId),
             null,
             null,
         )

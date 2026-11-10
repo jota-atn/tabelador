@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../model/evento.dart';
+import '../data/tabelador_store.dart';
 import '../model/item.dart';
 import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
@@ -65,6 +66,11 @@ class _EventoEditorState extends State<EventoEditor> {
   /// numa célula já diz exatamente quando).
   bool _quandoAutomatico = true;
 
+  /// Agenda do aparelho onde gravar uma cópia (que vai pro Google). Novo
+  /// evento começa na última usada — decidir isso uma vez só.
+  String? _destino;
+  bool _destinoMexido = false;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +91,9 @@ class _EventoEditorState extends State<EventoEditor> {
     _tituloAutomatico = o == null;
     _localAutomatico = o == null || o.local == null;
     _quandoAutomatico = o == null && widget.inicio == null;
+    _destino = o == null
+        ? context.read<AppState>().agendaDestinoPadrao
+        : o.agendaDestinoId;
 
     if (_tituloAutomatico) _tipo.addListener(_atualizarTituloAutomatico);
     if (o == null && _itemId != null) _aplicarItem();
@@ -215,12 +224,21 @@ class _EventoEditorState extends State<EventoEditor> {
       notas: opcional(_notas),
     );
 
-    if (widget.original == null) {
-      await state.adicionarEvento(evento);
-    } else {
-      await state.atualizarEvento(evento);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = widget.original == null
+        ? await state.adicionarEvento(evento, salvarEm: _destino)
+        : await state.atualizarEvento(evento, salvarEm: _destino);
+    if (_destino == null && _destinoMexido) await state.esquecerDestino();
+
+    navigator.pop();
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Salvo no app, mas não deu pra gravar no Google Agenda.'),
+        ),
+      );
     }
-    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _apagar() async {
@@ -374,6 +392,14 @@ class _EventoEditorState extends State<EventoEditor> {
                     DropdownMenuItem(value: r, child: Text(r.rotulo)),
                 ],
                 onChanged: (r) => setState(() => _repeticao = r ?? _repeticao),
+              ),
+              _SeletorDeDestino(
+                agendas: state.agendasGravaveis,
+                selecionada: _destino,
+                aoEscolher: (id) => setState(() {
+                  _destino = id;
+                  _destinoMexido = true;
+                }),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -542,6 +568,70 @@ class _AtalhosDeData extends StatelessWidget {
           onSelected: (_) => aoEscolherDia(amanha),
         ),
       ],
+    );
+  }
+}
+
+/// "Salvar também em": só no app, ou numa agenda do Google (que o Android
+/// sincroniza). Some quando não há agenda gravável escolhida — sem Google
+/// configurado, o formulário fica como antes.
+class _SeletorDeDestino extends StatelessWidget {
+  const _SeletorDeDestino({
+    required this.agendas,
+    required this.selecionada,
+    required this.aoEscolher,
+  });
+
+  final Map<String, AgendaEscolhida> agendas;
+  final String? selecionada;
+  final ValueChanged<String?> aoEscolher;
+
+  static String _rotulo(AgendaEscolhida a) =>
+      a.nome.contains('@') ? 'Principal · ${a.nome}' : a.nome;
+
+  @override
+  Widget build(BuildContext context) {
+    if (agendas.isEmpty && selecionada == null) return const SizedBox.shrink();
+
+    final opcoes = {...agendas};
+    // Evento já gravado numa agenda que depois saiu da escolha: continua
+    // listada, senão o Dropdown estoura e a escolha se perde sem aviso.
+    if (selecionada != null && !opcoes.containsKey(selecionada)) {
+      opcoes[selecionada!] = const AgendaEscolhida(nome: 'Agenda do Google');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: DropdownButtonFormField<String?>(
+        initialValue: selecionada,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Salvar também em',
+          helperText: 'O Android envia pro Google Agenda',
+        ),
+        items: [
+          const DropdownMenuItem(value: null, child: Text('Só no app')),
+          for (final e in opcoes.entries)
+            DropdownMenuItem(
+              value: e.key,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 5,
+                    backgroundColor: e.value.cor == null
+                        ? Theme.of(context).colorScheme.outline
+                        : Color(e.value.cor!),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(_rotulo(e.value), overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        onChanged: aoEscolher,
+      ),
     );
   }
 }
