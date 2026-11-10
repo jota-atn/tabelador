@@ -12,7 +12,10 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -36,13 +39,11 @@ import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import es.antonborri.home_widget.actionStartActivity
 import java.util.Calendar
 
-private const val MAX_ROWS = 12
 private const val ROW_HEIGHT_DP = 34
 // Linha ganha uma terceira faixa (tipo/local) quando há altura reservada
 // pra ela — só faz sentido oferecer esse espaço se a largura também sobra.
 private const val ROW_HEIGHT_DETALHADO_DP = 46
 private const val LARGURA_MINIMA_DETALHE_DP = 220
-private const val HEADER_HEIGHT_DP = 26
 private const val WIDGET_CORNER_RADIUS_DP = 16
 
 /**
@@ -54,6 +55,12 @@ private const val WIDGET_CORNER_RADIUS_DP = 16
 class TodayScheduleWidget : GlanceAppWidget() {
     override val stateDefinition = HomeWidgetGlanceStateDefinition()
 
+    // Default é SizeMode.Single: LocalSize.current fica travado num tamanho
+    // mínimo fixo, ignorando o tamanho real que o usuário deu ao widget na
+    // tela — é por isso que redimensionar não liberava mais linhas antes.
+    // Exact recompõe com o tamanho real a cada redimensionamento.
+    override val sizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<HomeWidgetGlanceState>().preferences
@@ -64,21 +71,22 @@ class TodayScheduleWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(context: Context, snapshot: TodayScheduleSnapshot) {
-        // Quantas linhas cabem na altura disponível: pequeno mostra 2-3,
-        // grande mostra o dia inteiro — sem layouts XML duplicados por
-        // tamanho, só uma conta em cima do espaço que o Glance informa.
-        // A largura entra também: alargar o widget (2x2 -> 3x2, por exemplo)
-        // só esticava espaço vazio antes — agora libera uma segunda linha de
-        // detalhe (tipo/local) por slot, que já vinha no snapshot mas nunca
-        // era mostrada.
-        val alturaDp = LocalSize.current.height.value.toInt()
+        // "Hoje" é resolvido aqui, não no snapshot: o Flutter manda a semana
+        // inteira e este cálculo roda de novo a cada redesenho (inclusive os
+        // automáticos do Android, sem o app rodar), então o widget nunca
+        // fica preso no dia de quando foi sincronizado por último.
+        val agora = Calendar.getInstance()
+        val dayLabel = nomeDoDiaAtual(agora)
+        val slotsDeHoje = snapshot.week[dayLabel] ?: emptyList()
+
+        // A largura decide só o nível de detalhe agora: alargar o widget
+        // (2x2 -> 3x2, por exemplo) libera uma segunda linha de detalhe
+        // (tipo/local) por slot, que já vinha no snapshot mas nunca era
+        // mostrada. A altura não precisa mais de conta nenhuma — o que não
+        // cabe fica disponível arrastando pra baixo dentro do `LazyColumn`.
         val larguraDp = LocalSize.current.width.value.toInt()
         val mostrarDetalhe = larguraDp >= LARGURA_MINIMA_DETALHE_DP
         val alturaLinha = if (mostrarDetalhe) ROW_HEIGHT_DETALHADO_DP else ROW_HEIGHT_DP
-        val linhasVisiveis = ((alturaDp - HEADER_HEIGHT_DP) / alturaLinha)
-            .coerceAtLeast(1)
-            .coerceAtMost(MAX_ROWS)
-            .coerceAtMost(if (snapshot.slots.isEmpty()) 1 else snapshot.slots.size)
 
         Column(
             modifier = GlanceModifier
@@ -97,7 +105,7 @@ class TodayScheduleWidget : GlanceAppWidget() {
                     Spacer(modifier = GlanceModifier.width(6.dp))
                 }
                 Text(
-                    text = snapshot.dayLabel,
+                    text = dayLabel,
                     style = TextStyle(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -107,12 +115,16 @@ class TodayScheduleWidget : GlanceAppWidget() {
             }
             Spacer(modifier = GlanceModifier.height(8.dp))
 
-            if (!snapshot.hasClassesToday) {
-                EstadoVazio(context, snapshot.dayLabel)
+            if (slotsDeHoje.isEmpty()) {
+                EstadoVazio(context, dayLabel)
             } else {
-                val agora = Calendar.getInstance()
-                for (slot in snapshot.slots.take(linhasVisiveis)) {
-                    SlotRow(context, slot, estaNoSlotAgora(slot.time, agora), mostrarDetalhe, alturaLinha)
+                // LazyColumn em vez de Column: o mesmo mecanismo de scroll
+                // (RemoteViews ListView por baixo) que widgets como o do
+                // Gmail usam — dia cheio de horários vira scroll, não corte.
+                LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+                    items(slotsDeHoje) { slot ->
+                        SlotRow(context, slot, estaNoSlotAgora(slot.time, agora), mostrarDetalhe, alturaLinha)
+                    }
                 }
             }
         }
@@ -136,7 +148,11 @@ class TodayScheduleWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(alturaLinha.dp)
-                .background(corTema(slot.bgLight, slot.bgDark)),
+                .background(corTema(slot.bgLight, slot.bgDark))
+                // Item dentro de um LazyColumn precisa do próprio clique —
+                // a lista consome o gesto de arrastar, então o clickable do
+                // container só cobre header/margens, não as linhas.
+                .clickable(actionStartActivity<MainActivity>(context)),
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
             if (slot.barWidthDp > 0) {
@@ -193,6 +209,25 @@ private fun parseColor(hex: String): Color =
     } catch (e: IllegalArgumentException) {
         Color.Gray
     }
+
+/**
+ * Nome do dia de hoje, nas mesmas chaves que o Flutter usa como chave do mapa
+ * `week` (ver `kTodosDias` em `lib/model/tabela.dart`). `Calendar.DAY_OF_WEEK`
+ * é 1-based com domingo primeiro (`SUNDAY=1`..`SATURDAY=7`), por isso o mapa
+ * explícito em vez de aritmética de índice.
+ */
+private val NOMES_DIA_POR_CALENDAR = mapOf(
+    Calendar.SUNDAY to "DOMINGO",
+    Calendar.MONDAY to "SEGUNDA",
+    Calendar.TUESDAY to "TERÇA",
+    Calendar.WEDNESDAY to "QUARTA",
+    Calendar.THURSDAY to "QUINTA",
+    Calendar.FRIDAY to "SEXTA",
+    Calendar.SATURDAY to "SÁBADO",
+)
+
+private fun nomeDoDiaAtual(agora: Calendar): String =
+    NOMES_DIA_POR_CALENDAR[agora.get(Calendar.DAY_OF_WEEK)] ?: ""
 
 /**
  * Slot ocupa uma faixa "H:00-H:00" (ver `Tabela.horarios`). O JSON não carrega

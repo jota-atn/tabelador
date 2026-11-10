@@ -29,7 +29,7 @@ Item? _itemPorId(String? id) => id == 'calc' ? _calc : null;
 
 void main() {
   group('construirSnapshotJson', () {
-    test('sem tabela ativa: sem aulas, sem estourar', () {
+    test('sem tabela ativa: semana vazia, sem estourar', () {
       final json = jsonDecode(
         construirSnapshotJson(
           tabelaAtiva: null,
@@ -37,16 +37,14 @@ void main() {
           densidade: ColorDensity.suave,
           claro: _claro,
           escuro: _escuro,
-          agora: DateTime(2026, 8, 10, 9), // segunda
         ),
       );
 
-      expect(json['hasClassesToday'], isFalse);
-      expect(json['slots'], isEmpty);
-      expect(json['dayLabel'], 'SEGUNDA');
+      expect(json['tableName'], '');
+      expect(json['week'], isEmpty);
     });
 
-    test('fim de semana: sem aulas mesmo com tabela cheia', () {
+    test('manda todos os dias da tabela, não só um', () {
       final tabela = Tabela.nova(nome: '2026.1').comCelula('SEGUNDA', 0, 'calc');
 
       final json = jsonDecode(
@@ -56,35 +54,35 @@ void main() {
           densidade: ColorDensity.suave,
           claro: _claro,
           escuro: _escuro,
-          agora: DateTime(2026, 8, 15, 9), // sábado
-        ),
-      );
-
-      expect(json['hasClassesToday'], isFalse);
-      expect(json['slots'], isEmpty);
-      expect(json['dayLabel'], 'SÁBADO');
-    });
-
-    test('dia de semana com aula ocupada: monta o slot com cores resolvidas', () {
-      final tabela = Tabela.nova(nome: '2026.1').comCelula('SEGUNDA', 0, 'calc');
-
-      final json = jsonDecode(
-        construirSnapshotJson(
-          tabelaAtiva: tabela,
-          itemPorId: _itemPorId,
-          densidade: ColorDensity.suave,
-          claro: _claro,
-          escuro: _escuro,
-          agora: DateTime(2026, 8, 10, 9), // segunda
         ),
       );
 
       expect(json['tableName'], '2026.1');
-      expect(json['dayLabel'], 'SEGUNDA');
-      expect(json['hasClassesToday'], isTrue);
-      expect(json['slots'], hasLength(1));
+      final week = json['week'] as Map<String, dynamic>;
+      expect(week.keys.toSet(), tabela.dias.toSet());
+      // Dias sem nada ocupado continuam presentes, só que vazios — quem
+      // resolve "hoje" é o lado nativo, então todo dia da tabela precisa
+      // estar no mapa mesmo sem aula.
+      expect(week['TERÇA'], isEmpty);
+    });
 
-      final slot = json['slots'][0] as Map<String, dynamic>;
+    test('dia com aula ocupada: monta o slot com cores resolvidas', () {
+      final tabela = Tabela.nova(nome: '2026.1').comCelula('SEGUNDA', 0, 'calc');
+
+      final json = jsonDecode(
+        construirSnapshotJson(
+          tabelaAtiva: tabela,
+          itemPorId: _itemPorId,
+          densidade: ColorDensity.suave,
+          claro: _claro,
+          escuro: _escuro,
+        ),
+      );
+
+      final slots = json['week']['SEGUNDA'] as List<dynamic>;
+      expect(slots, hasLength(1));
+
+      final slot = slots[0] as Map<String, dynamic>;
       expect(slot['sigla'], 'CALC');
       expect(slot['tipo'], 'Aula');
       expect(slot['local'], 'Bloco C');
@@ -112,11 +110,10 @@ void main() {
           densidade: ColorDensity.solido,
           claro: _claro,
           escuro: _escuro,
-          agora: DateTime(2026, 8, 10, 9),
         ),
       );
 
-      expect(json['slots'][0]['barWidthDp'], 0);
+      expect(json['week']['SEGUNDA'][0]['barWidthDp'], 0);
     });
 
     test('slot vazio não vira entrada no JSON', () {
@@ -129,12 +126,12 @@ void main() {
           densidade: ColorDensity.suave,
           claro: _claro,
           escuro: _escuro,
-          agora: DateTime(2026, 8, 10, 9),
         ),
       );
 
-      expect(json['hasClassesToday'], isFalse);
-      expect(json['slots'], isEmpty);
+      for (final dia in tabela.dias) {
+        expect(json['week'][dia], isEmpty);
+      }
     });
   });
 }

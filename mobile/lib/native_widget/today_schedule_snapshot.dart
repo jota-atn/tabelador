@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
-import '../util/horario_atual.dart';
 
 /// Monta o JSON enviado ao widget nativo (`today_schedule_json`) a partir da
 /// tabela ativa, densidade e os dois esquemas de cor (claro/escuro).
@@ -14,57 +13,61 @@ import '../util/horario_atual.dart';
 /// quem manda pro nativo é [HomeWidgetSync]. Reaproveita [resolveCellStyle], o
 /// mesmo ponto de reuso que a grade, o editor e a tela de aparência já usam,
 /// pra que o widget nunca pareça estar numa densidade diferente do app.
+///
+/// Manda a **semana inteira**, não só "hoje": resolver qual dia é hoje fica
+/// pro lado nativo (`TodayScheduleWidget.kt`), na hora de desenhar — se o
+/// snapshot só carregasse o dia já resolvido, o widget ficaria preso nesse
+/// dia até o Flutter rodar de novo (abrir o app, alguma mutação de estado).
+/// Como o Android redesenha o widget sozinho a cada `updatePeriodMillis` sem
+/// acionar o Flutter, um snapshot "de hoje" baked-in vira widget mostrando
+/// terça-feira numa quinta se o app ficar dias sem abrir.
 String construirSnapshotJson({
   required Tabela? tabelaAtiva,
   required Item? Function(String? id) itemPorId,
   required ColorDensity densidade,
   required ColorScheme claro,
   required ColorScheme escuro,
-  DateTime? agora,
 }) {
-  final momento = agora ?? DateTime.now();
-  final dayLabel = nomeDoDia(momento);
-  final hoje = tabelaAtiva == null ? -1 : indiceDeHoje(tabelaAtiva.dias, momento);
+  final week = <String, dynamic>{};
+  if (tabelaAtiva != null) {
+    for (final dia in tabelaAtiva.dias) {
+      final slots = <Map<String, dynamic>>[];
+      for (var slot = 0; slot < tabelaAtiva.qtdHorarios; slot++) {
+        final item = itemPorId(tabelaAtiva.celula(dia, slot));
+        if (item == null) continue;
 
-  final slots = <Map<String, dynamic>>[];
-  if (tabelaAtiva != null && hoje >= 0) {
-    final dia = tabelaAtiva.dias[hoje];
-    for (var slot = 0; slot < tabelaAtiva.qtdHorarios; slot++) {
-      final item = itemPorId(tabelaAtiva.celula(dia, slot));
-      if (item == null) continue;
+        final estiloClaro = resolveCellStyle(
+          cor: item.cor,
+          densidade: densidade,
+          esquema: claro,
+        );
+        final estiloEscuro = resolveCellStyle(
+          cor: item.cor,
+          densidade: densidade,
+          esquema: escuro,
+        );
 
-      final estiloClaro = resolveCellStyle(
-        cor: item.cor,
-        densidade: densidade,
-        esquema: claro,
-      );
-      final estiloEscuro = resolveCellStyle(
-        cor: item.cor,
-        densidade: densidade,
-        esquema: escuro,
-      );
-
-      slots.add({
-        'time': tabelaAtiva.horarios[slot],
-        'sigla': item.sigla,
-        'tipo': item.tipo,
-        if (item.local != null) 'local': item.local,
-        'bgLight': _hex(estiloClaro.background),
-        'bgDark': _hex(estiloEscuro.background),
-        'fgLight': _hex(estiloClaro.foreground),
-        'fgDark': _hex(estiloEscuro.foreground),
-        'barLight': _hex(estiloClaro.accent),
-        'barDark': _hex(estiloEscuro.accent),
-        'barWidthDp': estiloClaro.accentWidth.round(),
-      });
+        slots.add({
+          'time': tabelaAtiva.horarios[slot],
+          'sigla': item.sigla,
+          'tipo': item.tipo,
+          if (item.local != null) 'local': item.local,
+          'bgLight': _hex(estiloClaro.background),
+          'bgDark': _hex(estiloEscuro.background),
+          'fgLight': _hex(estiloClaro.foreground),
+          'fgDark': _hex(estiloEscuro.foreground),
+          'barLight': _hex(estiloClaro.accent),
+          'barDark': _hex(estiloEscuro.accent),
+          'barWidthDp': estiloClaro.accentWidth.round(),
+        });
+      }
+      week[dia] = slots;
     }
   }
 
   return jsonEncode({
     'tableName': tabelaAtiva?.nome ?? '',
-    'dayLabel': dayLabel,
-    'hasClassesToday': slots.isNotEmpty,
-    'slots': slots,
+    'week': week,
   });
 }
 
