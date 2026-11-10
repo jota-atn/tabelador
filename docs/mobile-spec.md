@@ -328,8 +328,8 @@ planejadas de antemão, são ajustes que só apareceram usando de verdade.
 ## Eventos e Google Agenda
 
 **Status (2026-11-11)**: fase 1 (eventos locais, grade, widget, notificação,
-calendário mensal) implementada. Sync com o Google Agenda (fases 2 e 3)
-ainda não começou.
+calendário mensal) e fase 2 (ler do Google Agenda) implementadas. Fase 3
+(gravar no Google) ainda não começou.
 
 Pedido: puxar compromissos do Google Agenda pra dentro das tabelas e criar
 eventos no app que vão pro Google Agenda. "Evento" é o nome do conceito novo:
@@ -469,6 +469,45 @@ Avisa de **todos** os eventos, sem o filtro da tabela ativa: o aniversário
 escondido da tabela da academia continua merecendo aviso. Inexato, como o
 resto.
 
+### Leitura do Google Agenda (fase 2)
+
+Tela **Aparência → Agendas do aparelho** (`lib/ui/agendas_screen.dart`):
+pede `READ_CALENDAR`/`WRITE_CALENDAR`, lista as agendas por conta (a
+principal, cujo nome é o e-mail, aparece como "Principal") com caixa de
+seleção e contagem de eventos. Primeira vez: já marca as do Google que estão
+visíveis e sincronizando (as principais + "Feriados no Brasil"); turmas ficam
+pro usuário. Escolha persiste em `device_calendars_json` (id → nome, cor),
+fora do backup — id de agenda é do aparelho.
+
+**A descoberta que mudou o desenho**: cada turma do Classroom é uma agenda,
+mas o Android vem com `SYNC_EVENTS=0` nelas — a agenda existe no aparelho e
+fica vazia, e o app de agenda da Xiaomi e o botão de exibição do Google
+Agenda não mexem nisso (só no que eles mostram). `SYNC_EVENTS` é gravável
+por app comum, então **marcar uma agenda que não sincroniza liga a
+sincronização dela**; o adaptador do Google baixa os eventos sozinho em
+segundos/minutos (validado no aparelho: Projeto de Software 2026.2 baixou 5
+eventos sem nenhuma ação do usuário). Desmarcar não desliga — a
+sincronização pode ter sido ligada antes, por outro app.
+
+**Ponte própria em Kotlin** (`AgendaChannel.kt`, canal `tabelador/agenda`):
+`listarAgendas` (com `SYNC_EVENTS`, `VISIBLE`, nível de acesso),
+`definirSincronizacao`, `lerEventos` (tabela `Instances`, recorrência já
+expandida pelo Android, cancelados fora). O plugin `device_calendar` ficou
+só pra pedir a permissão em runtime: ele não expõe `SYNC_EVENTS` e converte
+evento de dia inteiro com fuso de um jeito difícil de acertar. O app fala só
+com `lib/agenda/agendas_do_aparelho.dart`; trocar o mecanismo mexe só ali.
+
+**Evento externo** = `Evento` com `agendaId` (e `corExterna`, a cor da
+agenda): só em memória, relido do Android ao abrir o app, ao voltar pro
+primeiro plano e ao mudar a seleção; nunca persistido nem no backup. Janela
+de leitura: 62 dias pra trás, 400 pra frente. Dia inteiro vem do Android em
+meia-noite **UTC** — a data sai dos componentes UTC (ler como hora local
+jogaria o Natal pro dia 24 à noite no Brasil). Entra em tudo que usa
+`ocorrenciasEntre`: grade, "Próximos", calendário, widget, avisos. Só
+leitura: tocar abre uma folha de detalhes com a agenda de origem, não o
+formulário. Cor: a da agenda onde item vinculado usaria a do item. Conta
+como avulso pro filtro `mostrarEventos` da tabela.
+
 ### Limitações conhecidas
 
 - Grade mostra só a semana atual (sem navegar pra próxima); pra frente, usar
@@ -476,11 +515,16 @@ resto.
 - Evento que começou num dia anterior e ainda está acontecendo não aparece
   em "Próximos" nem na grade (só olham o dia de início).
 - Editar só uma ocorrência de recorrente: não existe.
+- Evento do Google não é editável no app, nem vinculável a item ainda.
+- Calendário além da janela de leitura (2 meses atrás, ~13 meses à frente)
+  mostra só os eventos do app.
+- Aviso às 8h vale pra todo evento de dia inteiro, feriado incluído.
 
 ### Próximos passos
 
 1. ~~Eventos locais~~ (feito).
-2. Ler do Google (permissão, escolha de agendas exibidas).
+2. ~~Ler do Google~~ (feito). Pendente dessa fase: sugerir vínculo de
+   evento do Google com item pela sigla no título.
 3. Gravar no Google (agenda de destino, "salvar no Google Agenda" no
    formulário, padrão ligado se houver agenda configurada).
 4. ~~Eventos no widget, notificação de evento~~ (feito).

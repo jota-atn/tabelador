@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
+import 'agenda/agendas_do_aparelho.dart';
 import 'native_widget/home_widget_sync.dart';
 import 'notifications/notification_scheduler.dart';
 import 'state/app_state.dart';
@@ -13,7 +14,12 @@ import 'ui/app_shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final notificationsPlugin = await inicializarNotificacoes();
-  runApp(TabeladorApp(notificationsPlugin: notificationsPlugin));
+  runApp(
+    TabeladorApp(
+      notificationsPlugin: notificationsPlugin,
+      agendasDoAparelho: AgendasDoAparelho(),
+    ),
+  );
 }
 
 class TabeladorApp extends StatefulWidget {
@@ -21,9 +27,13 @@ class TabeladorApp extends StatefulWidget {
   /// completo, sem tocar em nenhum canal de plataforma — é o caso dos testes
   /// de widget, que não têm o plugin nativo disponível. Em produção,
   /// `main()` sempre inicializa e passa um.
-  const TabeladorApp({super.key, this.notificationsPlugin});
+  const TabeladorApp({super.key, this.notificationsPlugin, this.agendasDoAparelho});
 
   final FlutterLocalNotificationsPlugin? notificationsPlugin;
+
+  /// Mesmo esquema: nulo nos testes de widget, e o app roda só com os
+  /// eventos criados nele.
+  final AgendasDoAparelho? agendasDoAparelho;
 
   @override
   State<TabeladorApp> createState() => _TabeladorAppState();
@@ -34,7 +44,8 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
   /// segue o tema do sistema.
   ThemeMode _mode = ThemeMode.system;
 
-  late final AppState _appState = AppState()..carregar();
+  late final AppState _appState =
+      AppState(fonteExterna: widget.agendasDoAparelho)..carregar();
   late final HomeWidgetSync _widgetSync = HomeWidgetSync(_appState);
   late final NotificationScheduler? _notificationScheduler =
       widget.notificationsPlugin == null
@@ -63,6 +74,10 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
     if (state == AppLifecycleState.resumed) {
       _widgetSync.sincronizarAgora();
       _notificationScheduler?.sincronizarAgora();
+      // O Android pode ter baixado eventos novos do Google enquanto o app
+      // estava fechado (ou a sincronização de uma turma recém-ligada
+      // terminou) — reler aqui é o que faz eles aparecerem.
+      _appState.recarregarEventosExternos();
     }
   }
 
@@ -84,6 +99,7 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
         Provider<FlutterLocalNotificationsPlugin?>.value(
           value: widget.notificationsPlugin,
         ),
+        Provider<AgendasDoAparelho?>.value(value: widget.agendasDoAparelho),
       ],
       child: DynamicColorBuilder(
         builder: (lightDynamic, darkDynamic) {

@@ -1,0 +1,173 @@
+import 'package:device_calendar/device_calendar.dart' as dc;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+import '../model/evento.dart';
+
+/// Uma agenda que o Android conhece — normalmente as do Google Agenda das
+/// contas do aparelho (a principal, com o e-mail como nome; "Feriados no
+/// Brasil"; uma por turma do Classroom...).
+@immutable
+class AgendaDoAparelho {
+  const AgendaDoAparelho({
+    required this.id,
+    required this.nome,
+    required this.conta,
+    required this.tipoConta,
+    required this.cor,
+    required this.nivelAcesso,
+    required this.visivel,
+    required this.sincroniza,
+  });
+
+  factory AgendaDoAparelho.fromMap(Map<Object?, Object?> m) => AgendaDoAparelho(
+        id: m['id']! as String,
+        nome: (m['nome'] as String?)?.trim().isNotEmpty == true
+            ? m['nome']! as String
+            : 'Sem nome',
+        conta: (m['conta'] as String?) ?? '',
+        tipoConta: (m['tipoConta'] as String?) ?? '',
+        cor: m['cor'] as int?,
+        nivelAcesso: (m['nivelAcesso'] as int?) ?? 0,
+        visivel: (m['visivel'] as bool?) ?? false,
+        sincroniza: (m['sincroniza'] as bool?) ?? false,
+      );
+
+  final String id;
+  final String nome;
+
+  /// Conta dona da agenda (o e-mail, no caso do Google). Agrupa a lista.
+  final String conta;
+
+  /// `com.google`, `LOCAL`... — local é agenda criada por algum app no
+  /// próprio aparelho, sem conta por trás.
+  final String tipoConta;
+
+  /// ARGB, como o Android guarda.
+  final int? cor;
+
+  /// `CALENDAR_ACCESS_LEVEL` do Android: 700 dono, 500 colaborador, 200
+  /// só leitura (feriados, turmas do Classroom pra aluno).
+  final int nivelAcesso;
+
+  /// Marcada pra aparecer no app de agenda do sistema. Não afeta o que o
+  /// Android baixa.
+  final bool visivel;
+
+  /// `SYNC_EVENTS`: se o Android baixa os eventos dela. Turma do Classroom
+  /// costuma vir desligada — aí a agenda existe mas fica vazia no aparelho.
+  final bool sincroniza;
+
+  bool get somenteLeitura => nivelAcesso < 500;
+  bool get doGoogle => tipoConta == 'com.google';
+
+  /// O que já vem marcado na primeira vez: as agendas que o usuário de fato
+  /// usa — do Google, visíveis e sincronizando (a principal de cada conta e
+  /// os feriados, tipicamente). Turmas ficam pra ele escolher.
+  bool get selecionadaPorPadrao => doGoogle && visivel && sincroniza;
+}
+
+/// De onde o [AppState] lê eventos externos. Interface pra os testes
+/// trocarem por uma fonte falsa sem canal de plataforma.
+abstract class FonteDeEventosExternos {
+  Future<bool> temPermissao();
+
+  /// Ocorrências das agendas [agendaIds] que se sobrepõem a `[de, ate)`.
+  Future<List<Evento>> lerEventos(
+    Set<String> agendaIds,
+    DateTime de,
+    DateTime ate, {
+    Map<String, int?> cores = const {},
+  });
+}
+
+/// Agenda do Android (CalendarContract). Permissão pelo plugin
+/// `device_calendar`; o resto por uma ponte própria (`AgendaChannel.kt`),
+/// porque o plugin não expõe a chave de sincronização das agendas nem
+/// trata bem evento de dia inteiro. O app fala só com esta classe — trocar
+/// o mecanismo por baixo mexe só aqui.
+class AgendasDoAparelho implements FonteDeEventosExternos {
+  AgendasDoAparelho([dc.DeviceCalendarPlugin? plugin])
+      : _plugin = plugin ?? dc.DeviceCalendarPlugin();
+
+  final dc.DeviceCalendarPlugin _plugin;
+  static const _canal = MethodChannel('tabelador/agenda');
+
+  @override
+  Future<bool> temPermissao() async {
+    final r = await _plugin.hasPermissions();
+    return r.isSuccess && (r.data ?? false);
+  }
+
+  /// Mostra o diálogo do sistema se ainda não foi concedida.
+  Future<bool> pedirPermissao() async {
+    final r = await _plugin.requestPermissions();
+    return r.isSuccess && (r.data ?? false);
+  }
+
+  Future<List<AgendaDoAparelho>> listar() async {
+    final bruto = await _canal.invokeListMethod<Map<Object?, Object?>>('listarAgendas');
+    return [for (final m in bruto ?? const []) AgendaDoAparelho.fromMap(m)];
+  }
+
+  /// Liga/desliga o "baixar eventos" de uma agenda no Android. Ligado, o
+  /// adaptador do Google baixa os eventos dela na próxima sincronização —
+  /// leva de segundos a alguns minutos, não é imediato.
+  Future<void> definirSincronizacao(String id, {required bool ativa}) =>
+      _canal.invokeMethod<void>('definirSincronizacao', {'id': id, 'ativa': ativa});
+
+  @override
+  Future<List<Evento>> lerEventos(
+    Set<String> agendaIds,
+    DateTime de,
+    DateTime ate, {
+    Map<String, int?> cores = const {},
+  }) async {
+    if (agendaIds.isEmpty) return const [];
+    final bruto = await _canal.invokeListMethod<Map<Object?, Object?>>('lerEventos', {
+      'ids': agendaIds.toList(),
+      'de': de.millisecondsSinceEpoch,
+      'ate': ate.millisecondsSinceEpoch,
+    });
+    return [for (final m in bruto ?? const []) eventoDoAparelho(m, cores)];
+  }
+}
+
+/// Converte uma linha de `lerEventos` em [Evento] externo (só leitura).
+///
+/// Dia inteiro: o Android guarda em meia-noite **UTC**; ler como hora local
+/// jogaria o Natal pro dia 24 à noite em qualquer fuso a oeste de
+/// Greenwich. Por isso a data sai dos componentes UTC, e a hora é ignorada.
+@visibleForTesting
+Evento eventoDoAparelho(Map<Object?, Object?> m, Map<String, int?> cores) {
+  final diaInteiro = (m['diaInteiro'] as bool?) ?? false;
+  final inicioMs = (m['inicio']! as num).toInt();
+  final fimMs = (m['fim'] as num?)?.toInt() ?? inicioMs;
+
+  DateTime inicio;
+  DateTime? fim;
+  if (diaInteiro) {
+    final u = DateTime.fromMillisecondsSinceEpoch(inicioMs, isUtc: true);
+    inicio = DateTime(u.year, u.month, u.day);
+  } else {
+    inicio = DateTime.fromMillisecondsSinceEpoch(inicioMs);
+    fim = DateTime.fromMillisecondsSinceEpoch(fimMs);
+  }
+
+  final agendaId = m['agendaId']! as String;
+  String? texto(Object? v) => (v is String && v.trim().isNotEmpty) ? v.trim() : null;
+
+  return Evento(
+    // Mesma série recorrente gera várias linhas com o mesmo eventoId — o
+    // início desambigua cada ocorrência.
+    id: 'g:${m['eventoId']}:$inicioMs',
+    titulo: texto(m['titulo']) ?? '(sem título)',
+    inicio: inicio,
+    fim: fim,
+    diaInteiro: diaInteiro,
+    local: texto(m['local']),
+    notas: texto(m['descricao']),
+    agendaId: agendaId,
+    corExterna: cores[agendaId],
+  );
+}

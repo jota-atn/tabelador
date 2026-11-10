@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../agenda/agendas_do_aparelho.dart';
 import '../data/tabelador_store.dart';
 import '../model/evento.dart';
 import '../model/item.dart';
@@ -11,13 +14,23 @@ import '../theme/color_density.dart';
 /// Grava a cada mudança em vez de ter botão de salvar. São poucos kilobytes de
 /// JSON e o usuário não deveria pensar em salvar um horário.
 class AppState extends ChangeNotifier {
-  AppState({TabeladorStore? store}) : _store = store ?? TabeladorStore();
+  AppState({TabeladorStore? store, FonteDeEventosExternos? fonteExterna})
+      : _store = store ?? TabeladorStore(),
+        // ignore: prefer_initializing_formals
+        _fonteExterna = fonteExterna;
 
   final TabeladorStore _store;
+
+  /// Nula nos testes (sem canal de plataforma): o app funciona só com os
+  /// eventos locais.
+  final FonteDeEventosExternos? _fonteExterna;
 
   List<Item> _itens = [];
   List<Tabela> _tabelas = [];
   List<Evento> _eventos = [];
+  List<Evento> _externos = [];
+  Map<String, AgendaEscolhida> _agendas = {};
+  bool _agendasConfiguradas = false;
   String? _tabelaAtivaId;
   ColorDensity _densidade = ColorDensity.fallback;
   bool _notificacoesAtivas = false;
@@ -27,7 +40,11 @@ class AppState extends ChangeNotifier {
 
   List<Item> get itens => List.unmodifiable(_itens);
   List<Tabela> get tabelas => List.unmodifiable(_tabelas);
+  /// Só os criados no app. Os do Google ficam em [eventosExternos].
   List<Evento> get eventos => List.unmodifiable(_eventos);
+  List<Evento> get eventosExternos => List.unmodifiable(_externos);
+  Map<String, AgendaEscolhida> get agendas => Map.unmodifiable(_agendas);
+  bool get agendasConfiguradas => _agendasConfiguradas;
   ColorDensity get densidade => _densidade;
   bool get notificacoesAtivas => _notificacoesAtivas;
   int get antecedenciaMinutos => _antecedenciaMinutos;
@@ -90,6 +107,8 @@ class AppState extends ChangeNotifier {
     _notificacoesAtivas = dados.notificacoesAtivas;
     _antecedenciaMinutos = dados.antecedenciaMinutos;
     _notificarEventos = dados.notificarEventos;
+    _agendas = {...dados.agendas};
+    _agendasConfiguradas = dados.agendasConfiguradas;
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -99,6 +118,7 @@ class AppState extends ChangeNotifier {
 
     _carregado = true;
     notifyListeners();
+    unawaited(recarregarEventosExternos());
   }
 
   // ---------------------------------------------------------------- itens
@@ -290,6 +310,9 @@ class AppState extends ChangeNotifier {
     for (final e in _eventos) {
       if (e.id == id) return e;
     }
+    for (final e in _externos) {
+      if (e.id == id) return e;
+    }
     return null;
   }
 
@@ -298,6 +321,7 @@ class AppState extends ChangeNotifier {
   List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
     final todas = [
       for (final e in _eventos) ...e.ocorrenciasEntre(de, ate),
+      for (final e in _externos) ...e.ocorrenciasEntre(de, ate),
     ]..sort((a, b) => a.inicio.compareTo(b.inicio));
     return todas;
   }
@@ -341,6 +365,64 @@ class AppState extends ChangeNotifier {
     ];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+  }
+
+  // ------------------------------------------------- agendas do aparelho
+
+  /// Quanto pra trás e pra frente os eventos externos são lidos. Cobre a
+  /// grade, "Próximos", widget, avisos e alguns meses de calendário; o
+  /// calendário além disso mostra só os eventos do app.
+  static const _janelaPassado = Duration(days: 62);
+  static const _janelaFuturo = Duration(days: 400);
+
+  bool _recarregando = false;
+  bool _recarregarDeNovo = false;
+
+  /// Relê os eventos das agendas escolhidas. Chamada ao carregar, ao voltar
+  /// pro app (o Android pode ter sincronizado algo novo) e ao mudar a
+  /// seleção. Sem permissão, sem fonte ou sem agenda escolhida: lista vazia,
+  /// nunca erro — o app continua funcionando só com os eventos locais.
+  Future<void> recarregarEventosExternos() async {
+    final fonte = _fonteExterna;
+    if (fonte == null) return;
+    if (_recarregando) {
+      _recarregarDeNovo = true;
+      return;
+    }
+    _recarregando = true;
+    try {
+      do {
+        _recarregarDeNovo = false;
+        var novos = const <Evento>[];
+        if (_agendas.isNotEmpty && await fonte.temPermissao()) {
+          final agora = DateTime.now();
+          try {
+            novos = await fonte.lerEventos(
+              _agendas.keys.toSet(),
+              agora.subtract(_janelaPassado),
+              agora.add(_janelaFuturo),
+              cores: {for (final e in _agendas.entries) e.key: e.value.cor},
+            );
+          } catch (_) {
+            novos = const [];
+          }
+        }
+        if (!listEquals(novos, _externos)) {
+          _externos = novos;
+          notifyListeners();
+        }
+      } while (_recarregarDeNovo);
+    } finally {
+      _recarregando = false;
+    }
+  }
+
+  Future<void> definirAgendas(Map<String, AgendaEscolhida> agendas) async {
+    _agendas = {...agendas};
+    _agendasConfiguradas = true;
+    notifyListeners();
+    await _store.salvarAgendas(_agendas);
+    await recarregarEventosExternos();
   }
 
   // --------------------------------------------------------- preferências

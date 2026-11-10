@@ -320,6 +320,9 @@ class _CelulaDoDia extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
                   color: (state.itemPorId(o.evento.itemId)?.cor.tone(escuro ? 70 : 50) ??
+                          (o.evento.corExterna == null
+                              ? null
+                              : Color(o.evento.corExterna!)) ??
                           scheme.outline)
                       .withValues(alpha: doMes ? 1 : 0.4),
                   borderRadius: BorderRadius.circular(2),

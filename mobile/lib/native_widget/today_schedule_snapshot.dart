@@ -111,10 +111,13 @@ Map<String, dynamic> _evento(
     if (item != null) 'sigla': item.sigla,
     'local': ?(o.evento.local ?? item?.local),
     // Barra lateral: cor do item vinculado, ou neutra pra evento avulso.
-    'barLight': _hex(item?.cor.tone(40) ?? claro.outline),
-    'barDark': _hex(item?.cor.tone(80) ?? escuro.outline),
+    'barLight': _hex(item?.cor.tone(40) ?? _corExterna(o.evento) ?? claro.outline),
+    'barDark': _hex(item?.cor.tone(80) ?? _corExterna(o.evento) ?? escuro.outline),
   };
 }
+
+/// Cor da agenda do Google de onde o evento veio, se for externo.
+Color? _corExterna(Evento e) => e.corExterna == null ? null : Color(e.corExterna!);
 
 /// [Color]'s `.r`/`.g`/`.b` são componentes de ponto flutuante em 0.0..1.0
 /// (API de cor ampla do Flutter) — precisa escalar pra 0..255 antes de virar

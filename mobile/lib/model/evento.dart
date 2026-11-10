@@ -42,6 +42,8 @@ class Evento {
     this.itemId,
     this.local,
     this.notas,
+    this.agendaId,
+    this.corExterna,
   });
 
   Evento.novo({
@@ -54,7 +56,9 @@ class Evento {
     this.itemId,
     this.local,
     this.notas,
-  }) : id = gerarId();
+  })  : id = gerarId(),
+        agendaId = null,
+        corExterna = null;
 
   final String id;
   final String titulo;
@@ -71,6 +75,16 @@ class Evento {
   final String? itemId;
   final String? local;
   final String? notas;
+
+  /// Agenda do aparelho de onde o evento veio (Google Agenda). Nulo =
+  /// criado no app. Evento externo é só leitura por enquanto, não é
+  /// persistido (relido do Android a cada abertura) nem vai pro backup.
+  final String? agendaId;
+
+  /// Cor da agenda de origem (ARGB), pra marcar evento externo sem item.
+  final int? corExterna;
+
+  bool get externo => agendaId != null;
 
   Duration get duracao =>
       fim == null || !fim!.isAfter(inicio) ? Duration.zero : fim!.difference(inicio);
@@ -205,7 +219,9 @@ class Evento {
       other.repeticao == repeticao &&
       other.itemId == itemId &&
       other.local == local &&
-      other.notas == notas;
+      other.notas == notas &&
+      other.agendaId == agendaId &&
+      other.corExterna == corExterna;
 
   @override
   int get hashCode => Object.hash(
@@ -219,6 +235,8 @@ class Evento {
         itemId,
         local,
         notas,
+        agendaId,
+        corExterna,
       );
 
   @override

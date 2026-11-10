@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/color_density.dart';
 import '../theme/item_palette.dart';
+import 'agendas_screen.dart';
 import 'widgets/item_swatch.dart';
 import 'widgets/largura_maxima.dart';
 
@@ -218,6 +219,30 @@ class AparenciaScreen extends StatelessWidget {
               onChanged: state.definirNotificarEventos,
             ),
           ],
+          const SizedBox(height: 28),
+          Text(
+            'GOOGLE AGENDA',
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event_available_outlined),
+            title: const Text('Agendas do aparelho'),
+            subtitle: Text(
+              'As que o Android sincroniza com sua conta Google.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AgendasScreen()),
+            ),
+          ),
           const SizedBox(height: 28),
           Text(
             'BACKUP',

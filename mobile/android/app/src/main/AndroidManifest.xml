@@ -2,6 +2,10 @@
     <!-- Aviso de horário se aproximando (Android 13+ exige pedir em runtime
          também, isso só declara que o app pode ter a permissão). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Agenda do Android (CalendarContract): ler eventos do Google Agenda
+         sincronizado no aparelho e, depois, gravar os criados no app. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <application
         android:label="tabelador"
         android:name="${applicationName}"

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/evento.dart';
@@ -18,6 +20,8 @@ class DadosSalvos {
     required this.notificacoesAtivas,
     required this.antecedenciaMinutos,
     this.notificarEventos = true,
+    this.agendas = const {},
+    this.agendasConfiguradas = false,
   });
 
   final List<Item> itens;
@@ -29,6 +33,14 @@ class DadosSalvos {
   final int antecedenciaMinutos;
   final bool notificarEventos;
 
+  /// Agendas do aparelho escolhidas: id -> (nome, cor). Nome e cor ficam
+  /// guardados pra mostrar evento externo sem consultar o Android de novo.
+  final Map<String, AgendaEscolhida> agendas;
+
+  /// Se o usuário já passou pela tela de agendas (e a seleção padrão já foi
+  /// aplicada) — distingue "nunca configurou" de "desmarcou tudo".
+  final bool agendasConfiguradas;
+
   static const DadosSalvos vazio = DadosSalvos(
     itens: [],
     tabelas: [],
@@ -37,6 +49,26 @@ class DadosSalvos {
     notificacoesAtivas: false,
     antecedenciaMinutos: 15,
   );
+}
+
+@immutable
+class AgendaEscolhida {
+  const AgendaEscolhida({required this.nome, this.cor});
+
+  final String nome;
+  final int? cor;
+
+  Map<String, dynamic> toJson() => {'nome': nome, if (cor != null) 'cor': cor};
+
+  factory AgendaEscolhida.fromJson(Map<String, dynamic> j) =>
+      AgendaEscolhida(nome: j['nome'] as String? ?? '', cor: j['cor'] as int?);
+
+  @override
+  bool operator ==(Object other) =>
+      other is AgendaEscolhida && other.nome == nome && other.cor == cor;
+
+  @override
+  int get hashCode => Object.hash(nome, cor);
 }
 
 /// Persistência em `SharedPreferences` + JSON.
@@ -53,6 +85,7 @@ class TabeladorStore {
   static const _kNotificacoesAtivas = 'notifications_enabled';
   static const _kAntecedenciaMinutos = 'notifications_lead_minutes';
   static const _kNotificarEventos = 'notifications_events';
+  static const _kAgendas = 'device_calendars_json';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -66,6 +99,8 @@ class TabeladorStore {
       notificacoesAtivas: prefs.getBool(_kNotificacoesAtivas) ?? false,
       antecedenciaMinutos: prefs.getInt(_kAntecedenciaMinutos) ?? 15,
       notificarEventos: prefs.getBool(_kNotificarEventos) ?? true,
+      agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
+      agendasConfiguradas: prefs.getString(_kAgendas) != null,
     );
   }
 
@@ -120,6 +155,27 @@ class TabeladorStore {
   Future<void> salvarNotificarEventos(bool ativo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotificarEventos, ativo);
+  }
+
+  Future<void> salvarAgendas(Map<String, AgendaEscolhida> agendas) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _kAgendas,
+      jsonEncode({for (final e in agendas.entries) e.key: e.value.toJson()}),
+    );
+  }
+
+  static Map<String, AgendaEscolhida> _decodificarAgendas(String? bruto) {
+    if (bruto == null || bruto.isEmpty) return const {};
+    try {
+      final mapa = jsonDecode(bruto) as Map<String, dynamic>;
+      return {
+        for (final e in mapa.entries)
+          e.key: AgendaEscolhida.fromJson(e.value as Map<String, dynamic>),
+      };
+    } catch (_) {
+      return const {};
+    }
   }
 
   /// JSON corrompido devolve lista vazia em vez de estourar.
