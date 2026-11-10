@@ -47,7 +47,7 @@ Future<void> _abrirConfig(BuildContext context, {Tabela? original}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _ConfigTabela(original: original),
+    builder: (_) => ConfigTabela(original: original),
   );
 }
 
@@ -348,16 +348,22 @@ class _Badge extends StatelessWidget {
 }
 
 /// Criação e configuração da grade: nome, hora inicial, intervalo, quantidade.
-class _ConfigTabela extends StatefulWidget {
-  const _ConfigTabela({this.original});
+class ConfigTabela extends StatefulWidget {
+  const ConfigTabela({super.key, this.original, this.aoCriar});
 
   final Tabela? original;
 
+  /// Embutido (onboarding): em vez de fechar a folha e abrir a tabela, avisa
+  /// quem embutiu. Sem título nem "Cancelar" — a tela de fora cuida disso.
+  final ValueChanged<Tabela>? aoCriar;
+
+  bool get embutido => aoCriar != null;
+
   @override
-  State<_ConfigTabela> createState() => _ConfigTabelaState();
+  State<ConfigTabela> createState() => ConfigTabelaState();
 }
 
-class _ConfigTabelaState extends State<_ConfigTabela> {
+class ConfigTabelaState extends State<ConfigTabela> {
   late final TextEditingController _nome;
   late int _horaInicial;
   late int _intervalo;
@@ -418,6 +424,10 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
       // acabou de virar o foco. `adicionarTabela` só ativa sozinha quando é
       // a primeira de todas.
       await state.definirTabelaAtiva(nova.id);
+      if (widget.aoCriar != null) {
+        widget.aoCriar!(nova);
+        return;
+      }
       navigator.pop();
       // Cria e já entra: é pra montar o horário dela que a pessoa acabou de
       // criar a tabela, não pra olhar de novo a lista.
@@ -452,8 +462,8 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 20,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+        top: widget.embutido ? 0 : 20,
+        bottom: (widget.embutido ? 0 : MediaQuery.viewInsetsOf(context).bottom) + 24,
       ),
       // Rolável: dias configuráveis somaram uma seção a mais, e o conteúdo
       // já não cabe sempre inteiro na altura disponível (tela menor, ou
@@ -463,14 +473,16 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            novo ? 'Nova tabela' : 'Horários de ${widget.original!.nome}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
+          if (!widget.embutido) ...[
+            Text(
+              novo ? 'Nova tabela' : 'Horários de ${widget.original!.nome}',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+          ],
           TextField(
             controller: _nome,
-            autofocus: novo,
+            autofocus: novo && !widget.embutido,
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
               labelText: 'Nome',
@@ -576,14 +588,16 @@ class _ConfigTabelaState extends State<_ConfigTabela> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-              const SizedBox(width: 8),
+              if (!widget.embutido) ...[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                const SizedBox(width: 8),
+              ],
               FilledButton(
                 onPressed: _salvar,
-                child: Text(novo ? 'Criar' : 'Salvar'),
+                child: Text(widget.embutido ? 'Criar tabela' : novo ? 'Criar' : 'Salvar'),
               ),
             ],
           ),

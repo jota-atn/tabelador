@@ -17,40 +17,39 @@ import 'widgets/largura_maxima.dart';
 /// que não tem por que digitar um número exato aqui.
 const List<int> kOpcoesAntecedencia = [5, 10, 15, 20, 30, 45, 60];
 
+/// Pede a permissão de notificação (Android 13+) só quando o usuário liga
+/// o interruptor — não no início do app, sem contexto do porquê.
+Future<void> alternarNotificacoes(BuildContext context, bool ativar) async {
+  final state = context.read<AppState>();
+
+  if (!ativar) {
+    await state.definirNotificacoesAtivas(false);
+    return;
+  }
+
+  final plugin = context.read<FlutterLocalNotificationsPlugin?>();
+  final concedida = await plugin
+      ?.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+
+  if (concedida == false) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sem permissão de notificação, o Android não deixa avisar.')),
+    );
+    return;
+  }
+
+  await state.definirNotificacoesAtivas(true);
+}
+
 /// Escolha da densidade de cor, notificações e exportar/importar backup.
 ///
 /// A escolha de densidade é feita por miniatura da própria grade, não por
 /// lista de texto: o ponto de ser opção é ver o resultado antes de aplicar.
 class AparenciaScreen extends StatelessWidget {
   const AparenciaScreen({super.key});
-
-  /// Pede a permissão de notificação (Android 13+) só quando o usuário liga
-  /// o interruptor — não no início do app, sem contexto do porquê.
-  Future<void> _alternarNotificacoes(BuildContext context, bool ativar) async {
-    final state = context.read<AppState>();
-
-    if (!ativar) {
-      await state.definirNotificacoesAtivas(false);
-      return;
-    }
-
-    final plugin = context.read<FlutterLocalNotificationsPlugin?>();
-    final concedida = await plugin
-        ?.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-
-    if (concedida == false) {
-      if (!context.mounted) return;
-      _avisar(
-        context,
-        'Sem permissão de notificação, o Android não deixa avisar.',
-      );
-      return;
-    }
-
-    await state.definirNotificacoesAtivas(true);
-  }
 
   /// Junta tudo num JSON e abre o "salvar como" nativo (SAF) — o usuário
   /// escolhe onde salvar (Drive, Arquivos, qualquer pasta). Evita pedir
@@ -185,7 +184,7 @@ class AparenciaScreen extends StatelessWidget {
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
             value: state.notificacoesAtivas,
-            onChanged: (ativar) => _alternarNotificacoes(context, ativar),
+            onChanged: (ativar) => alternarNotificacoes(context, ativar),
           ),
           if (state.notificacoesAtivas) ...[
             const SizedBox(height: 4),

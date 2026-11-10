@@ -16,6 +16,7 @@ void semear({
   String? ativa,
 }) {
   SharedPreferences.setMockInitialValues({
+    'onboarding_seen': true,
     'items_json': jsonEncode([for (final i in itens) i.toJson()]),
     'tables_json': jsonEncode([for (final t in tabelas) t.toJson()]),
     'active_table_id': ?ativa,
@@ -34,7 +35,7 @@ Future<void> abrirAba(WidgetTester tester, String nome) async {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({'onboarding_seen': true}));
 
   group('biblioteca de itens', () {
     testWidgets('cadastra um item e ele aparece na lista', (tester) async {

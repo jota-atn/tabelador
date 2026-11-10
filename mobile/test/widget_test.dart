@@ -8,7 +8,7 @@ import 'package:tabelador/theme/color_density.dart';
 void main() {
   // O app carrega do disco ao subir. Sem o mock, o plugin lança dentro de um
   // Future que ninguém observa e o teste passa sem exercitar nada.
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({'onboarding_seen': true}));
 
   testWidgets('abre na semana, sem tabela ativa', (tester) async {
     await tester.pumpWidget(const TabeladorApp());

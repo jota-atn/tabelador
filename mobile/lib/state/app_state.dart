@@ -111,6 +111,19 @@ class AppState extends ChangeNotifier {
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
     _semanaAberta = dados.semanaAberta;
+    _cartaoGoogle = dados.cartaoGooglePendente;
+    if (dados.onboardingVisto != null) {
+      _onboardingVisto = dados.onboardingVisto!;
+    } else if (_tabelas.isNotEmpty) {
+      // Já usava o app antes do onboarding existir: nada de boas-vindas,
+      // só o cartão avisando do Google (se ainda não conectou).
+      _onboardingVisto = true;
+      _cartaoGoogle = !dados.agendasConfiguradas;
+      unawaited(_store.salvarOnboardingVisto(true));
+      unawaited(_store.salvarCartaoGooglePendente(_cartaoGoogle));
+    } else {
+      _onboardingVisto = false;
+    }
 
     // Id ativo apontando pra tabela que não existe mais: cai na primeira, ou em
     // nada se não houver tabela nenhuma.
@@ -548,6 +561,43 @@ class AppState extends ChangeNotifier {
 
   bool _semanaAberta = false;
   bool get semanaAberta => _semanaAberta;
+
+  // ------------------------------------------------------------ onboarding
+
+  bool _onboardingVisto = true;
+
+  /// Flag gravada, não inferida de "não tem tabela": quem apagou todas as
+  /// tabelas não vê as boas-vindas de novo.
+  bool get onboardingVisto => _onboardingVisto;
+
+  Future<void> concluirOnboarding() async {
+    _onboardingVisto = true;
+    notifyListeners();
+    await _store.salvarOnboardingVisto(true);
+  }
+
+  bool _cartaoGoogle = false;
+
+  /// Cartão "Novo: conecte o Google Agenda": só pra quem já usava o app,
+  /// some ao fechar ou ao conectar e não volta.
+  bool get mostrarCartaoGoogle => _cartaoGoogle && !_agendasConfiguradas;
+
+  Future<void> fecharCartaoGoogle() async {
+    if (!_cartaoGoogle) return;
+    _cartaoGoogle = false;
+    notifyListeners();
+    await _store.salvarCartaoGooglePendente(false);
+  }
+
+  /// Onde eventos novos são salvos por padrão (nulo = só no app).
+  Future<void> definirAgendaDestinoPadrao(String? agendaId) async {
+    if (agendaId == null) {
+      await esquecerDestino();
+    } else {
+      await _lembrarDestino(agendaId);
+    }
+    notifyListeners();
+  }
 
   Future<void> alternarSemanaAberta() async {
     _semanaAberta = !_semanaAberta;

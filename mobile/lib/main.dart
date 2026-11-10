@@ -10,6 +10,7 @@ import 'notifications/notification_scheduler.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'ui/app_shell.dart';
+import 'ui/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -118,7 +119,15 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
             locale: const Locale('pt', 'BR'),
             supportedLocales: const [Locale('pt', 'BR')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
-            home: AppShell(onToggleBrightness: _toggleBrightness),
+            // Primeira abertura: onboarding até concluir ou pular. Enquanto
+            // carrega, tela vazia em vez de piscar a errada.
+            home: Consumer<AppState>(
+              builder: (context, state, _) => !state.carregado
+                  ? const Scaffold()
+                  : state.onboardingVisto
+                      ? AppShell(onToggleBrightness: _toggleBrightness)
+                      : const OnboardingScreen(),
+            ),
           );
         },
       ),

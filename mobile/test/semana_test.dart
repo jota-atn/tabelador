@@ -16,6 +16,7 @@ void semear({
   String? ativa,
 }) {
   SharedPreferences.setMockInitialValues({
+    'onboarding_seen': true,
     'items_json': jsonEncode([for (final i in itens) i.toJson()]),
     'tables_json': jsonEncode([for (final t in tabelas) t.toJson()]),
     'active_table_id': ?ativa,
@@ -39,7 +40,7 @@ final _calc = Item(
 );
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({'onboarding_seen': true}));
 
   group('visão semana', () {
     testWidgets('mostra as siglas da tabela ativa', (tester) async {

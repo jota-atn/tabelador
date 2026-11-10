@@ -654,7 +654,7 @@ semana, link "Próxima semana · N" pro calendário.
 3. ~~Gravar no Google~~ (feito).
 4. ~~Eventos no widget, notificação de evento~~ (feito).
 
-## Onboarding (planejado, não implementado)
+## Onboarding (implementado, 2026-11-10)
 
 Hoje o app abre direto em "Nenhuma tabela ativa", sem explicar nada. O que
 mais pede explicação é o Google Agenda — principalmente que turma do
@@ -683,7 +683,15 @@ fechável, e não volta depois de fechado ou de conectar.
 Flag persistida (`onboarding_visto`), não inferida de "não tem tabela" —
 quem apagou todas as tabelas não deveria ver as boas-vindas de novo.
 
-Fica pra depois da gravação no Google, pra o passo 3 já sair completo.
+Como ficou: `OnboardingScreen` (4 páginas num `PageView`, pontinhos de
+progresso, "Voltar"/"Continuar", "Pular" no topo menos na última, que tem
+"Começar"). Passo 2 embute o mesmo `ConfigTabela` da aba Tabelas (com
+`aoCriar`, sem título nem "Cancelar") e vira "✓ criada" depois. Passo 3 abre
+a `AgendasScreen` e, conectado, deixa escolher onde eventos novos são salvos.
+Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
+suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
+ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
+Google (`google_card_pending`) se ainda não configurou agendas.
 
 ## Pontos em aberto
 

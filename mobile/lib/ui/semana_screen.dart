@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
+import 'agendas_screen.dart';
 import 'aparencia_screen.dart';
 import 'calendario_screen.dart';
 import 'dia_editor.dart';
@@ -19,9 +20,9 @@ class SemanaScreen extends StatelessWidget {
   final VoidCallback onToggleBrightness;
 
   void _abrirDia(BuildContext context, String dia) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => DiaEditor(diaInicial: dia)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => DiaEditor(diaInicial: dia)));
   }
 
   /// Troca pra próxima/anterior tabela na lista — o mesmo swipe horizontal
@@ -120,7 +121,10 @@ class SemanaScreen extends StatelessWidget {
                   slot: slot,
                   dataDoSlot: _proximaDataDoSlot(tabela, dia, slot, segunda),
                 ),
-                rodape: const ProximosEventos(),
+                rodape: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [_CartaoGoogle(), ProximosEventos()],
+                ),
                 eventos: eventos,
               ),
             ),
@@ -197,6 +201,69 @@ class _SemTabela extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Novo: conecte o Google Agenda" — só pra quem já usava o app antes do
+/// onboarding (quem é novo viu isso nele). Some ao fechar ou ao conectar.
+class _CartaoGoogle extends StatelessWidget {
+  const _CartaoGoogle();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    if (!state.mostrarCartaoGoogle) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 12, 4, 8),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.event_note, color: scheme.onTertiaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Novo: conecte o Google Agenda. Seus eventos — e as atividades '
+                  'do Classroom — aparecem aqui.',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.35,
+                    color: scheme.onTertiaryContainer,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: state.fecharCartaoGoogle,
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: scheme.onTertiaryContainer,
+                ),
+                tooltip: 'Fechar',
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const AgendasScreen()),
+              ),
+              child: const Text('Conectar'),
+            ),
+          ),
+        ],
       ),
     );
   }

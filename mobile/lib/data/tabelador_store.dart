@@ -24,7 +24,17 @@ class DadosSalvos {
     this.agendasConfiguradas = false,
     this.agendaDestino,
     this.semanaAberta = false,
+    this.onboardingVisto,
+    this.cartaoGooglePendente = false,
   });
+
+  /// Nulo = chave nunca gravada (instalação nova, ou versão de antes do
+  /// onboarding) — o AppState decide qual dos dois pelas tabelas.
+  final bool? onboardingVisto;
+
+  /// Cartão "Novo: conecte o Google Agenda" pra quem já usava o app antes
+  /// do onboarding existir.
+  final bool cartaoGooglePendente;
 
   final List<Item> itens;
   final List<Tabela> tabelas;
@@ -116,6 +126,8 @@ class TabeladorStore {
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
   static const _kSemanaAberta = 'week_list_open';
+  static const _kOnboarding = 'onboarding_seen';
+  static const _kCartaoGoogle = 'google_card_pending';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -133,6 +145,8 @@ class TabeladorStore {
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
       semanaAberta: prefs.getBool(_kSemanaAberta) ?? false,
+      onboardingVisto: prefs.getBool(_kOnboarding),
+      cartaoGooglePendente: prefs.getBool(_kCartaoGoogle) ?? false,
     );
   }
 
@@ -195,6 +209,16 @@ class TabeladorStore {
       _kAgendas,
       jsonEncode({for (final e in agendas.entries) e.key: e.value.toJson()}),
     );
+  }
+
+  Future<void> salvarOnboardingVisto(bool visto) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kOnboarding, visto);
+  }
+
+  Future<void> salvarCartaoGooglePendente(bool pendente) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kCartaoGoogle, pendente);
   }
 
   Future<void> salvarSemanaAberta(bool aberta) async {
