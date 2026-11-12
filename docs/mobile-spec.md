@@ -37,6 +37,7 @@
 | **v1.1** ✅ (2026-11-11) | 9 tipos de evento (cor e ícone próprios) + Tarefa (feito, data opcional, aviso de manhã) + página de Tarefas |
 | **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
 | **v1.3** ✅ (2026-11-12) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
+| **v1.4** | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -752,6 +753,35 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Navegar entre semanas (v1.4, decidido 2026-11-12)
+
+Motivo: no teste da v1.3 não dava pra ver o feriado da sexta seguinte — a
+grade só mostrava a semana atual.
+
+**Decisões do usuário**:
+- **Barra com setas** acima da grade: `‹  16 – 22 de novembro  ›` e um
+  botão **Hoje** só quando a semana mostrada não é a atual. **Arrastar a
+  grade continua trocando de tabela** (nada do que já existe muda).
+- A lista **"Esta semana" acompanha** a semana mostrada.
+- No **calendário do mês**, o dia escolhido ganha **"Ver na grade"**, que
+  pula pra semana daquele dia na tela inicial.
+
+**Como fica numa semana que não é a atual**:
+- Grade: datas nas colunas, eventos e feriados daquela semana, aulas
+  esmaecidas na folga. Destaque de hoje e linha do "agora" só na semana
+  atual.
+- Barra: mês por extenso; semana que atravessa mês fica `30 nov – 6 dez`;
+  ano só quando não é o atual.
+- Lista: título "Semana que vem", "Semana passada" ou "Semana de 23/11";
+  mostra todos os eventos da semana (inclusive os que já passaram, numa
+  semana passada); atrasadas e a prévia de fim de semana só na atual.
+- Segurar uma célula pra criar evento usa a data daquela semana (na atual
+  continua "este horário ou o da semana que vem, se já passou").
+- A semana mostrada não é salva: abrir o app de novo volta pra atual.
+  Fica no `AppState` só em memória, pra o calendário (que também abre pela
+  aba Eventos) conseguir mandar a tela inicial pra uma semana.
+- Widget não muda (sempre hoje).
 
 ## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
 
