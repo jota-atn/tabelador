@@ -4,6 +4,35 @@
 >
 > Revisão **v2** (2026-08-10): o modelo de dados mudou. O v1 previa cores hardcoded e a grade como matriz de strings cruas. Agora cada célula referencia uma **entidade cadastrada** (disciplina/atividade), com cor própria, e a edição é por arrastar.
 
+## Versões do app
+
+(Não confundir com a "Revisão v2" acima, que é revisão do modelo na spec.)
+
+**Convenção** (`version:` no `mobile/pubspec.yaml`, `X.Y.Z+N`):
+- **Major (v2, v3…)**: muda o jeito de usar o app ou o modelo de dados —
+  tela principal diferente, migração de dados.
+- **Minor (v1.1, v1.2…)**: funcionalidade nova que não mexe no que existe.
+- **Patch (v1.0.1…)**: só correção e ajuste pequeno de interface.
+- **`+N` (versionCode)** sobe a **cada APK instalado** em algum aparelho,
+  mesmo sem mudar a versão — senão o Android recusa a atualização e só
+  desinstalando (perde os dados). Com `--split-per-abi` o arm64 vira
+  2000 + N.
+- **Tag no git** `vX.Y.Z` em cada versão lançada; APK distribuído com a
+  versão no nome (`tabelador-v1.1.0-arm64.apk`).
+
+**Plano**:
+
+| Versão | Conteúdo |
+|---|---|
+| **v1.0.0** ✅ (tag em `ac25e8b`, 2026-11-11) | grade, widget, notificações, backup, eventos, Google Agenda (ler e gravar), onboarding, card de detalhes |
+| **v1.1** | 9 tipos de evento + Tarefa (feito, data opcional, aviso de manhã) |
+| **v1.2** | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
+| **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
+| **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
+| **v2.2** | Classroom nível 1 |
+| **v2.x** | Demais itens tipados, integração com o Wellio |
+| **v3?** | Reservado pra próxima virada grande (Alexa, se exigir skill com servidor) |
+
 ## Ideia
 
 Portar a ideia do `tabelador.py` (script CLI que gera e colore tabelas de horário no terminal) pra um app Android **moderno e limpo**, com um widget de tela inicial pra ver o horário do dia sem abrir o app.
