@@ -52,6 +52,10 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _aba = 0;
 
+  /// Último pedido de "ir pra Semana" já atendido (ver
+  /// [AppState.pedidosDeSemana]).
+  int _pedidoAtendido = 0;
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -60,6 +64,13 @@ class _AppShellState extends State<AppShell> {
     // piscaria "nenhuma tabela ainda" antes de mostrar as tabelas existentes.
     if (!state.carregado) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // O calendário pediu a tela inicial numa semana: troca de aba. Mexe no
+    // campo antes de usá-lo neste mesmo build, sem setState.
+    if (state.pedidosDeSemana != _pedidoAtendido) {
+      _pedidoAtendido = state.pedidosDeSemana;
+      _aba = 0;
     }
 
     final telas = IndexedStack(

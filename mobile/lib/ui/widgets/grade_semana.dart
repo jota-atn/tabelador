@@ -87,8 +87,11 @@ class GradeSemana extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final agora = DateTime.now();
-    final hoje = indiceDeHoje(tabela.dias, agora);
-    final slotAgora = _slotCorrente(agora);
+    // Hoje e "agora" só existem na semana atual (ou na grade de molde, sem
+    // datas); noutra semana nenhuma coluna é hoje.
+    final semanaAtual = eventos == null || eventos!.segunda == segundaDaSemana(agora);
+    final hoje = semanaAtual ? indiceDeHoje(tabela.dias, agora) : -1;
+    final slotAgora = semanaAtual ? _slotCorrente(agora) : -1;
     final topoLinhaDoAgora = _topoLinhaDoAgora(agora, hoje);
 
     return Stack(

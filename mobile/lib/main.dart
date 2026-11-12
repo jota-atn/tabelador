@@ -67,8 +67,20 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
     super.dispose();
   }
 
+  /// Quando o app saiu do primeiro plano — pra decidir se a tela inicial
+  /// volta pra semana de hoje.
+  DateTime? _saiuEm;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) _saiuEm = DateTime.now();
+    // Mais de meia hora fora: volta pra semana atual (uma espiada rápida em
+    // outro app não perde a semana que estava aberta).
+    if (state == AppLifecycleState.resumed &&
+        _saiuEm != null &&
+        DateTime.now().difference(_saiuEm!) > const Duration(minutes: 30)) {
+      _appState.mostrarSemana(DateTime.now());
+    }
     // O Android não garante refresh de widget em background, e alarme
     // inexato pode ter sido perdido (reinício do aparelho, Doze) — os dois
     // se reforçam sempre que o app volta pro primeiro plano.

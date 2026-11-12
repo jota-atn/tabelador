@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabelador/main.dart';
@@ -115,6 +116,28 @@ void main() {
       await tester.pumpAndSettle();
 
       expect((await lerDoDisco()).tabelaAtiva?.nome, 'Segunda');
+    });
+
+    testWidgets('setas trocam de semana; lista acompanha; Hoje volta', (tester) async {
+      final tabela = Tabela.nova(nome: '2026.1');
+      semear(tabelas: [tabela], ativa: tabela.id);
+
+      await tester.pumpWidget(const TabeladorApp());
+      await tester.pumpAndSettle();
+
+      final hoje = find.widgetWithText(TextButton, 'Hoje');
+      expect(find.text('Esta semana'), findsOneWidget);
+      expect(hoje, findsNothing);
+
+      await tester.tap(find.byTooltip('Próxima semana'));
+      await tester.pumpAndSettle();
+      expect(find.text('Semana que vem'), findsOneWidget);
+      expect(hoje, findsOneWidget);
+
+      await tester.tap(hoje);
+      await tester.pumpAndSettle();
+      expect(find.text('Esta semana'), findsOneWidget);
+      expect(hoje, findsNothing);
     });
 
     testWidgets('destaca hoje só quando é um dos dias da tabela',

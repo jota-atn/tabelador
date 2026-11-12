@@ -24,6 +24,7 @@ class SemanaCorpo extends StatelessWidget {
     this.aoEditarCelula,
     this.rodape,
     this.eventos,
+    this.cabecalho,
   });
 
   final Tabela tabela;
@@ -38,6 +39,9 @@ class SemanaCorpo extends StatelessWidget {
   /// Ver [GradeSemana.eventos].
   final EventosDaSemana? eventos;
 
+  /// Acima da grade — a barra de semanas na tela inicial.
+  final Widget? cabecalho;
+
   // Com rodapé (tela inicial) há um FAB por cima — o fundo extra impede que
   // ele cubra a última linha da lista.
   EdgeInsets get _padding => EdgeInsets.fromLTRB(10, 6, 10, rodape == null ? 24 : 88);
@@ -49,6 +53,7 @@ class SemanaCorpo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (cabecalho != null) ...[cabecalho!, const SizedBox(height: 4)],
         GradeSemana(
           tabela: tabela,
           densidade: densidade,

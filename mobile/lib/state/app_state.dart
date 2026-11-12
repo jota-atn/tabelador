@@ -57,6 +57,14 @@ class AppState extends ChangeNotifier {
   bool _notificarEventos = true;
   bool _carregado = false;
 
+  /// Segunda-feira da semana que a tela inicial mostra; nulo = a atual. Só
+  /// em memória: abrir o app de novo volta pra semana de hoje.
+  DateTime? _segundaMostrada;
+
+  /// Sobe a cada pedido de "ir pra tela inicial" (o "Ver na grade" do
+  /// calendário, que também abre pela aba Eventos).
+  int _pedidosDeSemana = 0;
+
   List<Item> get itens => List.unmodifiable(_itens);
   List<Tabela> get tabelas => List.unmodifiable(_tabelas);
   /// Só os criados no app. Os do Google ficam em [eventosExternos].
@@ -69,6 +77,33 @@ class AppState extends ChangeNotifier {
   int get antecedenciaMinutos => _antecedenciaMinutos;
   bool get notificarEventos => _notificarEventos;
   bool get carregado => _carregado;
+  int get pedidosDeSemana => _pedidosDeSemana;
+
+  /// Segunda (meia-noite) da semana mostrada na tela inicial.
+  DateTime segundaMostrada([DateTime? agora]) =>
+      _segundaMostrada ?? _segundaDe(agora ?? DateTime.now());
+
+  bool mostrandoSemanaAtual([DateTime? agora]) {
+    final a = agora ?? DateTime.now();
+    return segundaMostrada(a) == _segundaDe(a);
+  }
+
+  static DateTime _segundaDe(DateTime d) => DateTime(d.year, d.month, d.day - (d.weekday - 1));
+
+  /// Mostra a semana de [dia] na tela inicial. [irPraTela] também pede
+  /// pra navegação trocar pra aba Semana.
+  void mostrarSemana(DateTime dia, {bool irPraTela = false}) {
+    final s = _segundaDe(dia);
+    _segundaMostrada = s == _segundaDe(DateTime.now()) ? null : s;
+    if (irPraTela) _pedidosDeSemana++;
+    notifyListeners();
+  }
+
+  /// Anda [semanas] pra frente (negativo = pra trás).
+  void andarSemanas(int semanas) {
+    final s = segundaMostrada();
+    mostrarSemana(DateTime(s.year, s.month, s.day + 7 * semanas));
+  }
 
   String? get tabelaAtivaId => _tabelaAtivaId;
 
