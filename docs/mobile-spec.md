@@ -35,7 +35,7 @@
 |---|---|
 | **v1.0.0** ✅ (tag em `ac25e8b`, 2026-11-11) | grade, widget, notificações, backup, eventos, Google Agenda (ler e gravar), onboarding, card de detalhes |
 | **v1.1** ✅ (2026-11-11) | 9 tipos de evento (cor e ícone próprios) + Tarefa (feito, data opcional, aviso de manhã) + página de Tarefas |
-| **v1.2** | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
+| **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
 | **v1.3** | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
@@ -754,6 +754,49 @@ ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
 ## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
+
+### v1.2 implementado (2026-11-11, branch `v1.2-aba-eventos`)
+
+- **Tipo por agenda do Google**: a ponte Kotlin passou a ler
+  `OWNER_ACCOUNT` (`AgendaDoAparelho.dono`). `tipoSugeridoPeloDono`:
+  `classroom…`/`c_classroom…@group.calendar.google.com` → Tarefa,
+  `…#holiday@group.v.calendar.google.com` → Feriado, resto → Outro. Na
+  tela Agendas, cada agenda marcada ganha um chip "Eventos como X" pra
+  trocar (escolher o sugerido volta pro automático). Guardado em
+  `AgendaEscolhida.tipo`.
+- **Externos decorados**: `AppState` guarda os eventos como vieram
+  (`_externosBrutos`) e deriva `_externos` com tipo da agenda, "feito"
+  local e sem os ocultos — mudar o tipo ou concluir não relê o Android.
+  **Feriado repetido** (mesma data + título, uma agenda "Feriados no
+  Brasil" por conta) aparece uma vez.
+- **Tarefa do Classroom**: concluir guarda o id no app
+  (`external_done_ids`); arrastar ← **esconde** (`external_hidden_ids`,
+  com Desfazer). Some de todas as telas. Página de Tarefas ganha filtro
+  **Origem** (Todas / Do app / Do Google) quando há tarefa externa.
+- **Aba Eventos** (2ª da navegação: Semana, Eventos, Itens, Tabelas):
+  card largo de Tarefas (pendentes, atrasadas, 3 próximas marcáveis, "Ver
+  todas"); grade 2 colunas (4 em tela larga) com os outros 8 tipos em ordem
+  fixa: ícone, "N próximos" e o próximo. Tipo vazio fica apagado ("Nada
+  marcado"). Evento sem tipo conta como Outro. Atalho pro calendário no
+  topo.
+  - **Feriados**: "N até o fim do ano" conta só folga (criado no app, ou
+    do Google com descrição começando por "Feriado"); "Hoje: X" quando é
+    feriado. Embutidos ficam pro v1.3.
+  - **Aniversários**: os do mês atual; na última semana do mês, adianta o
+    próximo do mês seguinte.
+- **Página do tipo** (`eventos_do_tipo_screen.dart`, redesenhada após o
+  usuário achar a lista "sem vida"): destaque do próximo com contagem
+  regressiva grande e degradê na cor do tipo; **mini calendário** do mês
+  com bolinhas na cor do tipo (tocar no dia abre o painel do dia); **"Se
+  repetem"** — série recorrente vira uma linha ("Toda qui 16:00 · 53×"),
+  e na linha do tempo só aparece nesta semana; **linha do tempo** (Esta
+  semana, Próxima semana, por mês) com bolinha + fio; toques por tipo
+  (contagem em Prova/Viagem/Aniversário, folgas no topo de Feriados).
+  Lógica pura em `util/eventos_do_tipo.dart`.
+- **Eventos de exemplo**: segurar o título da aba Eventos → adicionar/
+  recriar/remover (ids `exemplo:`; remover nunca toca nos do usuário).
+- Ficaram de fora: enfeites/animações de data, "É folga" no card de
+  feriado do Google, widget de tarefas.
 
 ### v1.1 implementado (2026-11-11)
 

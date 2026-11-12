@@ -29,26 +29,38 @@ Future<void> marcarTarefa(BuildContext context, Ocorrencia o, bool feita) async 
 }
 
 /// Apaga e oferece "Desfazer" (que restaura igual, inclusive a cópia no
-/// Google).
+/// Google). Tarefa externa (Classroom) não dá pra apagar lá: é escondida
+/// do app.
 Future<void> apagarTarefas(BuildContext context, List<Evento> eventos) async {
   if (eventos.isEmpty) return;
   final state = context.read<AppState>();
   final messenger = ScaffoldMessenger.of(context);
   for (final e in eventos) {
-    await state.removerEvento(e.id);
+    if (e.externo) {
+      await state.ocultarExterno(e.id);
+    } else {
+      await state.removerEvento(e.id);
+    }
   }
+  final soExternas = eventos.every((e) => e.externo);
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
         content: Text(
-          eventos.length == 1 ? '${eventos.first.titulo} apagada' : '${eventos.length} tarefas apagadas',
+          eventos.length == 1
+              ? '${eventos.first.titulo} ${soExternas ? 'escondida' : 'apagada'}'
+              : '${eventos.length} tarefas ${soExternas ? 'escondidas' : 'apagadas'}',
         ),
         action: SnackBarAction(
           label: 'Desfazer',
           onPressed: () async {
             for (final e in eventos) {
-              await state.restaurarEvento(e);
+              if (e.externo) {
+                await state.reexibirExterno(e.id);
+              } else {
+                await state.restaurarEvento(e);
+              }
             }
           },
         ),

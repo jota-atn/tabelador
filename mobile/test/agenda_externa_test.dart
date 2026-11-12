@@ -40,6 +40,29 @@ class _FonteFalsa implements FonteDeEventosExternos {
           nivelAcesso: 200,
           visivel: true,
           sincroniza: true,
+          dono: 'pt-br.brazilian#holiday@group.v.calendar.google.com',
+        ),
+        AgendaDoAparelho(
+          id: 'feriados2',
+          nome: 'Feriados no Brasil',
+          conta: 'outra@gmail.com',
+          tipoConta: 'com.google',
+          cor: null,
+          nivelAcesso: 200,
+          visivel: true,
+          sincroniza: true,
+          dono: 'pt.brazilian#holiday@group.v.calendar.google.com',
+        ),
+        AgendaDoAparelho(
+          id: 'turma',
+          nome: '2025.2 Teoria da Computação',
+          conta: 'eu@gmail.com',
+          tipoConta: 'com.google',
+          cor: null,
+          nivelAcesso: 200,
+          visivel: false,
+          sincroniza: true,
+          dono: 'classroom112233@group.calendar.google.com',
         ),
       ];
 
@@ -255,5 +278,60 @@ void main() {
     await state.carregar();
     await state.definirAgendas({'feriados': const AgendaEscolhida(nome: 'F')});
     expect(state.eventosExternos, isEmpty);
+  });
+
+  group('tipo por agenda (v1.2)', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test('dono sugere o tipo', () {
+      expect(tipoSugeridoPeloDono('classroom1@group.calendar.google.com'), TipoEvento.tarefa);
+      expect(tipoSugeridoPeloDono('c_classroom9@group.calendar.google.com'), TipoEvento.tarefa);
+      expect(tipoSugeridoPeloDono('pt-br.brazilian#holiday@group.v.calendar.google.com'),
+          TipoEvento.feriado);
+      expect(tipoSugeridoPeloDono('eu@gmail.com'), TipoEvento.outro);
+    });
+
+    test('Classroom vira tarefa concluível e ocultável; feriado repetido aparece uma vez',
+        () async {
+      final hoje = DateTime.now();
+      final daqui3 = DateTime(hoje.year, hoje.month, hoje.day + 3);
+      final fonte = _FonteFalsa([
+        _externo('Lista 3', daqui3, 'turma'),
+        _externo('Natal', daqui3, 'feriados'),
+        _externo('Natal', daqui3, 'feriados2'),
+      ]);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({
+        'turma': const AgendaEscolhida(nome: 'turma'),
+        'feriados': const AgendaEscolhida(nome: 'f'),
+        'feriados2': const AgendaEscolhida(nome: 'f2'),
+      });
+
+      expect(state.eventosExternos.map((e) => '${e.titulo}:${e.tipo}'),
+          ['Lista 3:Tarefa', 'Natal:Feriado']);
+      final lista = state.tarefas.single;
+      expect(lista.externo, isTrue);
+
+      await state.marcarFeita(Ocorrencia(lista, lista.inicio, lista.fim ?? lista.inicio), true);
+      expect(state.tarefas.single.feito, isTrue);
+
+      // Persistido: outra instância lê o "feito" de volta.
+      final outro = AppState(fonteExterna: fonte);
+      await outro.carregar();
+      // carregar() já dispara a leitura do Google sem esperar; dá a vez.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(outro.tarefas.single.feito, isTrue);
+
+      await state.ocultarExterno(lista.id);
+      expect(state.tarefas, isEmpty);
+      await state.reexibirExterno(lista.id);
+      expect(state.tarefas, hasLength(1));
+
+      // Mudar o tipo da agenda vale na hora, sem reler.
+      await state.definirTipoDaAgenda('turma', TipoEvento.prova);
+      expect(state.tarefas, isEmpty);
+      expect(state.agendas['turma']!.tipo, 'Prova');
+    });
   });
 }

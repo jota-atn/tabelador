@@ -33,6 +33,23 @@ enum PeriodoTarefas {
       };
 }
 
+/// De onde a tarefa vem: criada no app ou de uma agenda do Google com tipo
+/// Tarefa (turma do Classroom).
+enum OrigemTarefas {
+  todas('Todas'),
+  app('Do app'),
+  google('Do Google');
+
+  const OrigemTarefas(this.rotulo);
+  final String rotulo;
+
+  bool aceita(Evento e) => switch (this) {
+        OrigemTarefas.todas => true,
+        OrigemTarefas.app => !e.externo,
+        OrigemTarefas.google => e.externo,
+      };
+}
+
 /// Todas as tarefas, por seção (atrasadas, hoje, semana, mais tarde, sem
 /// data, concluídas).
 ///
@@ -52,6 +69,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
   PeriodoTarefas _periodo = PeriodoTarefas.todas;
   String? _itemId;
+  OrigemTarefas _origem = OrigemTarefas.todas;
   bool _mostrarConcluidas = false;
   bool _buscando = false;
   final _busca = TextEditingController();
@@ -73,7 +91,8 @@ class _TarefasScreenState extends State<TarefasScreen> {
     super.dispose();
   }
 
-  bool get _filtrando => _periodo != PeriodoTarefas.todas || _itemId != null;
+  bool get _filtrando =>
+      _periodo != PeriodoTarefas.todas || _itemId != null || _origem != OrigemTarefas.todas;
 
   // ----------------------------------------------------------- ações
 
@@ -133,7 +152,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
     await apagarTarefas(context, eventos);
   }
 
-  Future<void> _abrirOpcoes(List<Item> itens) async {
+  Future<void> _abrirOpcoes(List<Item> itens, {required bool temExternas}) async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -165,6 +184,23 @@ class _TarefasScreenState extends State<TarefasScreen> {
                         ),
                     ],
                   ),
+                  if (temExternas || _origem != OrigemTarefas.todas) ...[
+                    const SizedBox(height: 16),
+                    const Text('Origem', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final o in OrigemTarefas.values)
+                          ChoiceChip(
+                            label: Text(o.rotulo),
+                            selected: _origem == o,
+                            onSelected: (_) => mudar(() => _origem = o),
+                          ),
+                      ],
+                    ),
+                  ],
                   if (itens.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     const Text('Item', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -235,6 +271,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
         if ((l.secao != SecaoTarefa.concluidas || _mostrarConcluidas) &&
             (l.secao == SecaoTarefa.concluidas || _periodo.aceita(l.secao)) &&
             (_itemId == null || l.ocorrencia.evento.itemId == _itemId) &&
+            _origem.aceita(l.ocorrencia.evento) &&
             (termo.isEmpty || l.ocorrencia.evento.titulo.toLowerCase().contains(termo)))
           l,
     ]..sort((a, b) => a.secao.index.compareTo(b.secao.index));
@@ -304,7 +341,10 @@ class _TarefasScreenState extends State<TarefasScreen> {
                       child: const Icon(Icons.filter_list),
                     ),
                     tooltip: 'Opções de listagem',
-                    onPressed: () => _abrirOpcoes(itensUsados),
+                    onPressed: () => _abrirOpcoes(
+                      itensUsados,
+                      temExternas: tarefas.any((t) => t.externo),
+                    ),
                   ),
                 ],
               ),
@@ -392,8 +432,8 @@ class _TarefasScreenState extends State<TarefasScreen> {
       ),
       secondaryBackground: _FundoDoArraste(
         cor: scheme.error,
-        icone: Icons.delete_outline,
-        texto: 'Apagar',
+        icone: e.externo ? Icons.visibility_off_outlined : Icons.delete_outline,
+        texto: e.externo ? 'Esconder' : 'Apagar',
         alinhamento: Alignment.centerRight,
       ),
       confirmDismiss: (direcao) async {

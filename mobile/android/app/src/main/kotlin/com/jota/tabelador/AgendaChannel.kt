@@ -85,6 +85,7 @@ object AgendaChannel {
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
             CalendarContract.Calendars.VISIBLE,
             CalendarContract.Calendars.SYNC_EVENTS,
+            CalendarContract.Calendars.OWNER_ACCOUNT,
         )
         val resultado = mutableListOf<Map<String, Any?>>()
         context.contentResolver.query(
@@ -101,6 +102,7 @@ object AgendaChannel {
                         "nivelAcesso" to cur.getInt(5),
                         "visivel" to (cur.getInt(6) == 1),
                         "sincroniza" to (cur.getInt(7) == 1),
+                        "dono" to (cur.getString(8) ?: ""),
                     ),
                 )
             }

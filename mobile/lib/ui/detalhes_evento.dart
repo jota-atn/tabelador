@@ -88,7 +88,7 @@ class DetalhesDoEvento extends StatelessWidget {
     final original = this.ocorrencia;
     final e = state.eventoPorId(original.evento.id) ?? original.evento;
     final ocorrencia = Ocorrencia(e, original.inicio, original.fim);
-    final tarefa = e.ehTarefa && !e.externo;
+    final tarefa = e.ehTarefa;
     final feita = tarefa && ocorrencia.feita;
     final item = state.itemPorId(e.itemId);
     final tipo = TipoEvento.doTexto(e.tipo);

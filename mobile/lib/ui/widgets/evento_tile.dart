@@ -56,7 +56,7 @@ class EventoTile extends StatelessWidget {
     final evento = ocorrencia.evento;
     final item = state.itemPorId(evento.itemId);
     final agora = DateTime.now();
-    final tarefa = evento.ehTarefa && !evento.externo;
+    final tarefa = evento.ehTarefa;
     final feita = tarefa && ocorrencia.feita;
     final atrasada = tarefa &&
         !feita &&

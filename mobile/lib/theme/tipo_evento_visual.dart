@@ -33,3 +33,16 @@ Color corDoTipo(TipoEvento t, Brightness brilho) {
   };
   return Color(brilho == Brightness.dark ? escuro : claro);
 }
+
+/// Nome do tipo no plural, pra títulos ("Provas", "Reuniões").
+String pluralDoTipo(TipoEvento t) => switch (t) {
+      TipoEvento.tarefa => 'Tarefas',
+      TipoEvento.prova => 'Provas',
+      TipoEvento.compromisso => 'Compromissos',
+      TipoEvento.consulta => 'Consultas',
+      TipoEvento.reuniao => 'Reuniões',
+      TipoEvento.viagem => 'Viagens',
+      TipoEvento.aniversario => 'Aniversários',
+      TipoEvento.feriado => 'Feriados',
+      TipoEvento.outro => 'Outros',
+    };

@@ -28,7 +28,16 @@ class AppState extends ChangeNotifier {
   List<Item> _itens = [];
   List<Tabela> _tabelas = [];
   List<Evento> _eventos = [];
+  /// Eventos externos já prontos pra usar: com o tipo da agenda, o "feito"
+  /// guardado no app, sem os ocultos e sem feriado repetido. Saem de
+  /// [_externosBrutos] por [_decorarExternos].
   List<Evento> _externos = [];
+
+  /// Como vieram do Android, antes de [_decorarExternos]. Guardado pra
+  /// re-decorar (mudou o tipo de uma agenda, concluiu uma tarefa) sem reler.
+  List<Evento> _externosBrutos = [];
+  Set<String> _feitasExternas = {};
+  Set<String> _ocultasExternas = {};
   Map<String, AgendaEscolhida> _agendas = {};
   bool _agendasConfiguradas = false;
   String? _tabelaAtivaId;
@@ -112,6 +121,8 @@ class AppState extends ChangeNotifier {
     _antecedenciaMinutos = dados.antecedenciaMinutos;
     _notificarEventos = dados.notificarEventos;
     _agendas = {...dados.agendas};
+    _feitasExternas = {...dados.feitasExternas};
+    _ocultasExternas = {...dados.ocultasExternas};
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
     _semanaAberta = dados.semanaAberta;
@@ -363,8 +374,21 @@ class AppState extends ChangeNotifier {
 
   // -------------------------------------------------------------- tarefas
 
-  /// Tarefas do app (com e sem data), na ordem em que foram salvas.
-  List<Evento> get tarefas => List.unmodifiable(_eventos.where((e) => e.ehTarefa));
+  /// Tarefas do app (com e sem data) e as externas com tipo Tarefa (turma
+  /// do Classroom).
+  List<Evento> get tarefas => List.unmodifiable([
+        ..._eventos.where((e) => e.ehTarefa),
+        ..._externosVisiveis.where((e) => e.ehTarefa),
+      ]);
+
+  /// Externos sem os que o app já tem (gravados pelo próprio app).
+  Iterable<Evento> get _externosVisiveis {
+    final espelhados = {
+      for (final e in _eventos)
+        if (e.idNoAparelho != null) e.idNoAparelho,
+    };
+    return _externos.where((e) => !espelhados.contains(e.idNoAparelho));
+  }
 
   /// Tarefas atrasadas: não concluídas, com data, e com o prazo já
   /// passado (sem hora: o dia acabou). Só as que não repetem — ocorrência
@@ -372,7 +396,7 @@ class AppState extends ChangeNotifier {
   List<Ocorrencia> tarefasAtrasadas(DateTime agora) {
     final hoje = DateTime(agora.year, agora.month, agora.day);
     return [
-      for (final e in _eventos)
+      for (final e in [..._eventos, ..._externosVisiveis])
         if (e.ehTarefa &&
             !e.semData &&
             !e.feito &&
@@ -385,12 +409,48 @@ class AppState extends ChangeNotifier {
   /// Conclui (ou reabre) a ocorrência [o] — em tarefa que repete, só ela.
   Future<void> marcarFeita(Ocorrencia o, bool feita) async {
     final e = o.evento;
-    if (e.externo) return;
+    if (e.externo) {
+      final mudou = feita ? _feitasExternas.add(e.id) : _feitasExternas.remove(e.id);
+      if (!mudou) return;
+      _redecorar();
+      await _store.salvarFeitasExternas(_feitasExternas);
+      return;
+    }
     final novo = e.marcandoFeita(o.inicio, feita);
     if (novo == e) return;
     _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+  }
+
+  /// Adiciona vários de uma vez (eventos de exemplo): um aviso e uma
+  /// gravação só. Não espelha no Google.
+  Future<void> adicionarEventos(List<Evento> novos) async {
+    final ids = {for (final e in novos) e.id};
+    _eventos = [
+      for (final e in _eventos)
+        if (!ids.contains(e.id)) e,
+      ...novos,
+    ];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  /// Remove todos os eventos do app que satisfazem [teste] (só os do app,
+  /// sem mexer em cópia no Google — usado pros de exemplo, que não vão pra
+  /// lá). Devolve quantos saíram.
+  Future<int> removerEventosOnde(bool Function(Evento) teste) async {
+    final antes = _eventos.length;
+    _eventos = [
+      for (final e in _eventos)
+        if (!teste(e)) e,
+    ];
+    final removidos = antes - _eventos.length;
+    if (removidos > 0) {
+      notifyListeners();
+      await _store.salvarEventos(_eventos);
+    }
+    return removidos;
   }
 
   /// Desfaz um [removerEvento]: o evento volta igual, e a cópia no Google
@@ -558,14 +618,64 @@ class AppState extends ChangeNotifier {
             novos = const [];
           }
         }
-        if (!listEquals(novos, _externos)) {
-          _externos = novos;
-          notifyListeners();
+        if (!listEquals(novos, _externosBrutos)) {
+          _externosBrutos = novos;
+          _redecorar();
         }
       } while (_recarregarDeNovo);
     } finally {
       _recarregando = false;
     }
+  }
+
+  void _redecorar() {
+    final novos = _decorarExternos(_externosBrutos);
+    if (listEquals(novos, _externos)) return;
+    _externos = novos;
+    notifyListeners();
+  }
+
+  /// Tipo vem da agenda ([AgendaEscolhida.tipoEfetivo]); "feito" e "oculto"
+  /// são do app. Feriado igual (mesma data e título) vindo de mais de uma
+  /// agenda "Feriados no Brasil" — uma por conta — aparece uma vez só.
+  List<Evento> _decorarExternos(List<Evento> brutos) {
+    final feriadosVistos = <String>{};
+    final resultado = <Evento>[];
+    for (final e in brutos) {
+      if (_ocultasExternas.contains(e.id)) continue;
+      final tipo = _agendas[e.agendaId]?.tipoEfetivo ?? TipoEvento.outro;
+      if (tipo == TipoEvento.feriado) {
+        final chave =
+            '${e.inicio.year}-${e.inicio.month}-${e.inicio.day}|${e.titulo.trim().toLowerCase()}';
+        if (!feriadosVistos.add(chave)) continue;
+      }
+      resultado.add(e.decorado(tipo: tipo.rotulo, feito: _feitasExternas.contains(e.id)));
+    }
+    return resultado;
+  }
+
+  /// Muda o tipo dos eventos de uma agenda (nulo = volta ao sugerido).
+  Future<void> definirTipoDaAgenda(String agendaId, TipoEvento? tipo) async {
+    final a = _agendas[agendaId];
+    if (a == null) return;
+    _agendas = {..._agendas, agendaId: a.comTipo(tipo?.rotulo)};
+    await _store.salvarAgendas(_agendas);
+    _redecorar();
+    notifyListeners();
+  }
+
+  /// Esconde um evento externo do app (não dá pra apagar tarefa do
+  /// Classroom). [reexibirExterno] desfaz.
+  Future<void> ocultarExterno(String id) async {
+    if (!_ocultasExternas.add(id)) return;
+    _redecorar();
+    await _store.salvarOcultasExternas(_ocultasExternas);
+  }
+
+  Future<void> reexibirExterno(String id) async {
+    if (!_ocultasExternas.remove(id)) return;
+    _redecorar();
+    await _store.salvarOcultasExternas(_ocultasExternas);
   }
 
   /// Nome, cor e "dá pra gravar" das agendas escolhidas podem mudar no
@@ -577,12 +687,13 @@ class AppState extends ChangeNotifier {
       final atualizado = {
         for (final a in lista)
           if (_agendas.containsKey(a.id))
-            a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
+            a.id: AgendaEscolhida.de(a, tipo: _agendas[a.id]!.tipo),
       };
       final igual = atualizado.length == _agendas.length &&
           atualizado.entries.every((e) => _agendas[e.key] == e.value);
       if (!igual) {
         _agendas = atualizado;
+        _redecorar();
         notifyListeners();
         await _store.salvarAgendas(_agendas);
       }
@@ -594,6 +705,7 @@ class AppState extends ChangeNotifier {
   Future<void> definirAgendas(Map<String, AgendaEscolhida> agendas) async {
     _agendas = {...agendas};
     _agendasConfiguradas = true;
+    _redecorar();
     notifyListeners();
     await _store.salvarAgendas(_agendas);
     await recarregarEventosExternos();
