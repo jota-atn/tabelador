@@ -474,6 +474,13 @@ class _Detalhes extends StatelessWidget {
         menu: menuLocal.length > 1 ? menuLocal : null,
         aoTocar: f.digitarLocal,
       ),
+      if (f.tipo == TipoEvento.feriado)
+        OpcaoChip(
+          rotulo: f.folga ? 'É folga' : 'Comemorativa',
+          icone: f.folga ? Icons.beach_access_outlined : Icons.celebration_outlined,
+          selecionado: f.folga,
+          aoTocar: f.alternarFolga,
+        ),
       if (!(f.ehTarefa && f.semData))
       OpcaoChip(
         rotulo: f.repeticao.rotulo,

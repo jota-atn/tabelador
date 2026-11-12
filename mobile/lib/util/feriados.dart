@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../model/evento.dart';
 import '../model/tabela.dart';
 
 /// O que um feriado embutido faz com o dia.
@@ -10,7 +11,15 @@ import '../model/tabela.dart';
 ///   pessoa estuda/trabalha, então cada tabela decide
 ///   ([Tabela.pontoFacultativoFolga]).
 /// - [comemorativa]: Dia das Mães, Namorados… aparece, não esmaece nada.
-enum NaturezaFeriado { folga, pontoFacultativo, comemorativa }
+enum NaturezaFeriado {
+  folga('Feriado nacional'),
+  pontoFacultativo('Ponto facultativo'),
+  comemorativa('Data comemorativa');
+
+  const NaturezaFeriado(this.rotulo);
+
+  final String rotulo;
+}
 
 /// Uma data calculada pelo app, não guardada em lugar nenhum — vale pra
 /// qualquer ano sem depender do Google.
@@ -30,6 +39,19 @@ class FeriadoEmbutido {
         NaturezaFeriado.pontoFacultativo => tabela?.pontoFacultativoFolga ?? false,
         NaturezaFeriado.comemorativa => false,
       };
+
+  /// Como ele entra nas listas, no calendário e na grade: um evento de dia
+  /// todo, tipo Feriado, só leitura ([Evento.embutido]).
+  Evento comoEvento() => Evento(
+        id: 'feriado:${dia.year}-${dia.month}-${dia.day}:$nome',
+        titulo: nome,
+        inicio: dia,
+        diaInteiro: true,
+        tipo: TipoEvento.feriado.rotulo,
+        notas: natureza.rotulo,
+        agendaId: kAgendaEmbutidos,
+        comemorativa: natureza == NaturezaFeriado.comemorativa,
+      );
 
   @override
   bool operator ==(Object other) =>
@@ -132,6 +154,15 @@ List<FeriadoEmbutido> feriadosNoDia(DateTime quando) {
 FeriadoEmbutido? folgaEmbutida(DateTime quando, Tabela? tabela) {
   for (final f in feriadosNoDia(quando)) {
     if (f.ehFolgaPara(tabela)) return f;
+  }
+  return null;
+}
+
+/// O [FeriadoEmbutido] por trás de um evento de [FeriadoEmbutido.comoEvento].
+FeriadoEmbutido? feriadoEmbutidoDe(Evento e) {
+  if (!e.embutido) return null;
+  for (final f in feriadosNoDia(e.inicio)) {
+    if (f.nome == e.titulo) return f;
   }
   return null;
 }

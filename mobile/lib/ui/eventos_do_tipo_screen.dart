@@ -6,17 +6,13 @@ import '../model/item.dart';
 import '../state/app_state.dart';
 import '../theme/tipo_evento_visual.dart';
 import '../util/eventos_do_tipo.dart';
+import '../util/eventos_na_grade.dart';
 import '../util/formato_data.dart';
 import 'detalhes_evento.dart';
 import 'widgets/item_swatch.dart';
 
 /// Tipo de uma ocorrência: evento sem tipo conta como Outro.
 TipoEvento _tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
-
-/// Feriado que é folga: criado no app, ou do Google com a descrição
-/// começando por "Feriado".
-bool ehFolga(Evento e) =>
-    !e.externo || (e.notas ?? '').trimLeft().toLowerCase().startsWith('feriado');
 
 /// Tipos em que "quanto falta" é o que importa — a contagem aparece em cada
 /// linha, não só no destaque.
@@ -171,7 +167,7 @@ class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
     ];
     if (widget.tipo == TipoEvento.feriado) {
       final hoje = inicioDoDia(agora);
-      final folgas = _doTipo(state, hoje, DateTime(agora.year + 1)).where((o) => ehFolga(o.evento)).length;
+      final folgas = _doTipo(state, hoje, DateTime(agora.year + 1)).where((o) => ehFolga(o.evento, state.tabelaAtiva)).length;
       return folgas == 1 ? '1 de folga até o fim do ano' : '$folgas de folga até o fim do ano';
     }
     if (widget.tipo == TipoEvento.aniversario) {

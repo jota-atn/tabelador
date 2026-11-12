@@ -1,5 +1,6 @@
 import '../model/evento.dart';
 import '../model/tabela.dart';
+import 'feriados.dart';
 import 'formato_data.dart';
 
 /// Se [evento] aparece em [tabela] (grade e widget): sempre quando é de um
@@ -8,6 +9,32 @@ bool eventoVisivelNaTabela(Tabela tabela, Evento evento) {
   if (tabela.mostrarEventos) return true;
   final itemId = evento.itemId;
   return itemId != null && tabela.usosDe(itemId) > 0;
+}
+
+/// [e] é um feriado que dá folga em [tabela] (sem tabela: só a folga de
+/// lei)? Embutido segue a natureza dele (ponto facultativo, a escolha da
+/// tabela); criado à mão, folga a não ser que seja comemorativa. O do
+/// Google não esmaece nada: a agenda dele mistura Dia dos Namorados com
+/// feriado de verdade.
+bool ehFolga(Evento e, Tabela? tabela) {
+  if (!e.ehFeriado) return false;
+  if (e.embutido) return feriadoEmbutidoDe(e)?.ehFolgaPara(tabela) ?? false;
+  if (e.externo || e.comemorativa) return false;
+  return tabela == null || eventoVisivelNaTabela(tabela, e);
+}
+
+/// O nome do feriado que dá folga em [tabela] no dia de [quando], ou null.
+/// [ocorrencias] são as do período (com os embutidos já dentro, como sai de
+/// `AppState.ocorrenciasEntre`); o embutido também é checado direto, pra
+/// quem chama sem eles.
+String? folgaNoDia(DateTime quando, Tabela? tabela, Iterable<Ocorrencia> ocorrencias) {
+  final embutido = folgaEmbutida(quando, tabela);
+  if (embutido != null) return embutido.nome;
+  final dia = inicioDoDia(quando);
+  for (final o in ocorrencias) {
+    if (inicioDoDia(o.inicio) == dia && ehFolga(o.evento, tabela)) return o.evento.titulo;
+  }
+  return null;
 }
 
 /// Segunda-feira (meia-noite) da semana de [d].
@@ -26,10 +53,15 @@ DateTime dataDaColuna(DateTime segunda, String dia) =>
 /// em cima, faixa "fora do horário" embaixo, e nenhum (dia que a tabela não
 /// tem — esse só aparece na lista "Próximos").
 class EventosDaSemana {
-  EventosDaSemana._(this.segunda, this._celulas, this._diaTodo, this._fora);
+  EventosDaSemana._(this.segunda, this._celulas, this._diaTodo, this._fora,
+      [this._folgas = const {}]);
 
   static final EventosDaSemana vazio =
       EventosDaSemana._(DateTime(2000), const {}, const {}, const {});
+
+  /// Dia -> nome do feriado que dá folga nele (aulas esmaecidas).
+  final Map<String, String> _folgas;
+  String? folga(String dia) => _folgas[dia];
 
   final DateTime segunda;
   final Map<String, List<Ocorrencia>> _celulas;
@@ -103,7 +135,12 @@ EventosDaSemana distribuirEventos({
     if (!caiuEmAlgum) (fora[dia] ??= []).add(o);
   }
 
-  return EventosDaSemana._(segunda, celulas, diaTodo, fora);
+  final folgas = <String, String>{
+    for (final dia in tabela.dias)
+      dia: ?folgaNoDia(dataDaColuna(segunda, dia), tabela, ocorrencias),
+  };
+
+  return EventosDaSemana._(segunda, celulas, diaTodo, fora, folgas);
 }
 
 /// Próximo horário (a partir de [agora]) em que [itemId] ocupa uma célula de

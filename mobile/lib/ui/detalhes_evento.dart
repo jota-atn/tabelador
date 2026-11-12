@@ -252,14 +252,20 @@ class DetalhesDoEvento extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  e.externo || e.gravadoNoGoogle ? Icons.cloud_outlined : Icons.phone_android,
+                  e.embutido
+                      ? Icons.auto_awesome_outlined
+                      : e.externo || e.gravadoNoGoogle
+                          ? Icons.cloud_outlined
+                          : Icons.phone_android,
                   size: 16,
                   color: scheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    e.externo
+                    e.embutido
+                        ? 'Calendário nacional, calculado pelo app'
+                        : e.externo
                         ? 'Do Google Agenda${agendaOrigem == null ? '' : ' · $agendaOrigem'} — editar por lá, por enquanto'
                         : e.gravadoNoGoogle
                             ? 'Também no Google Agenda${agendaDestino == null ? '' : ' · $agendaDestino'}'

@@ -200,6 +200,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.widgetWithText(TextField, 'Nome'), '2026.1');
+      await tester.ensureVisible(find.text('Criar'));
       await tester.tap(find.text('Criar'));
       await tester.pumpAndSettle();
 
@@ -232,6 +233,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, 'SÁB'));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Criar'));
       await tester.tap(find.text('Criar'));
       await tester.pumpAndSettle();
 
@@ -263,6 +265,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, 'TER'));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Criar'));
       await tester.tap(find.text('Criar'));
       await tester.pumpAndSettle();
 

@@ -233,7 +233,7 @@ void main() {
 
     testWidgets('aba Eventos: card de tarefas, tipo vazio apagado, abre lista do tipo',
         (tester) async {
-      final state = AppState();
+      final state = AppState(feriadosEmbutidos: false);
       await state.carregar();
       final amanha = DateTime.now().add(const Duration(days: 1));
       await state.adicionarEvento(tarefa('Renovar RG', semData: true));

@@ -8,18 +8,27 @@ import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
+import '../util/feriados.dart';
 
 /// Estado do app: a biblioteca de itens, as tabelas e as preferências.
 ///
 /// Grava a cada mudança em vez de ter botão de salvar. São poucos kilobytes de
 /// JSON e o usuário não deveria pensar em salvar um horário.
 class AppState extends ChangeNotifier {
-  AppState({TabeladorStore? store, FonteDeEventosExternos? fonteExterna})
-      : _store = store ?? TabeladorStore(),
+  AppState({
+    TabeladorStore? store,
+    FonteDeEventosExternos? fonteExterna,
+    this.feriadosEmbutidos = true,
+  })  : _store = store ?? TabeladorStore(),
         // ignore: prefer_initializing_formals
         _fonteExterna = fonteExterna;
 
   final TabeladorStore _store;
+
+  /// Feriados nacionais calculados pelo app em [ocorrenciasEntre]. Sempre
+  /// ligado no app; testes que montam a semana de hoje desligam, senão o
+  /// resultado mudaria conforme a data em que rodam.
+  final bool feriadosEmbutidos;
 
   /// Nula nos testes (sem canal de plataforma): o app funciona só com os
   /// eventos locais.
@@ -348,12 +357,31 @@ class AppState extends ChangeNotifier {
     for (final e in _externos) {
       if (e.id == id) return e;
     }
+    // Embutido: "feriado:2026-11-20:Nome" — recalcula pela data.
+    final partes = id.split(':');
+    if (partes.length >= 3 && partes.first == 'feriado') {
+      final data = partes[1].split('-').map(int.tryParse).toList();
+      if (data.length == 3 && !data.contains(null)) {
+        final nome = partes.sublist(2).join(':');
+        for (final f in feriadosNoDia(DateTime(data[0]!, data[1]!, data[2]!))) {
+          if (f.nome == nome) return f.comoEvento();
+        }
+      }
+    }
     return null;
   }
 
   /// Todas as ocorrências que começam em `[de, ate)`, de todos os eventos,
-  /// em ordem cronológica.
+  /// em ordem cronológica — os feriados embutidos incluídos.
+  ///
+  /// Feriado do Google que cai num dia que já tem embutido some (por data,
+  /// não por nome: "Dia de Tiradentes" e "Tiradentes" são o mesmo).
   List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
+    final embutidos = feriadosEmbutidos ? feriadosEntre(de, ate) : const <FeriadoEmbutido>[];
+    final diasComEmbutido = {for (final f in embutidos) f.dia};
+    bool repetido(Evento e) =>
+        e.ehFeriado &&
+        diasComEmbutido.contains(DateTime(e.inicio.year, e.inicio.month, e.inicio.day));
     // Evento do app gravado no Google volta na leitura como externo — fica
     // só a versão do app, que tem vínculo com item e é editável.
     final espelhados = {
@@ -363,7 +391,8 @@ class AppState extends ChangeNotifier {
     final todas = [
       for (final e in _eventos) ...e.ocorrenciasEntre(de, ate),
       for (final e in _externos)
-        if (!espelhados.contains(e.idNoAparelho)) ...e.ocorrenciasEntre(de, ate),
+        if (!espelhados.contains(e.idNoAparelho) && !repetido(e)) ...e.ocorrenciasEntre(de, ate),
+      for (final f in embutidos) ...f.comoEvento().ocorrenciasEntre(de, ate),
     ]..sort((a, b) => a.inicio.compareTo(b.inicio));
     return todas;
   }

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabelador/model/evento.dart';
 import 'package:tabelador/model/tabela.dart';
+import 'package:tabelador/util/eventos_na_grade.dart';
 import 'package:tabelador/util/feriados.dart';
 
 void main() {
@@ -107,6 +109,64 @@ void main() {
       final volta = Tabela.fromJson(desligada.toJson());
       expect(volta.pontoFacultativoFolga, isFalse);
       expect(Tabela.fromJson(t.toJson()).pontoFacultativoFolga, isTrue);
+    });
+  });
+
+  group('folga na grade', () {
+    final tabela = Tabela.nova(nome: '2026.2');
+    final segunda = DateTime(2026, 11, 16);
+    Ocorrencia oc(Evento e) => Ocorrencia(e, e.inicio, e.inicio);
+
+    test('embutido esmaece o dia mesmo sem ocorrências', () {
+      final semana = distribuirEventos(tabela: tabela, segunda: segunda, ocorrencias: const []);
+      expect(semana.folga('SEXTA'), 'Dia da Consciência Negra');
+      expect(semana.folga('SEGUNDA'), isNull);
+    });
+
+    test('feriado criado à mão: folga, a não ser que seja comemorativa', () {
+      final recesso = Evento.novo(
+        titulo: 'Recesso',
+        inicio: DateTime(2026, 11, 17),
+        diaInteiro: true,
+        tipo: 'Feriado',
+      );
+      final festa = Evento.novo(
+        titulo: 'Aniversário da cidade',
+        inicio: DateTime(2026, 11, 18),
+        diaInteiro: true,
+        tipo: 'Feriado',
+      );
+      final comemorativa = Evento.fromJson({...festa.toJson(), 'comemorativa': true});
+      final semana = distribuirEventos(
+        tabela: tabela,
+        segunda: segunda,
+        ocorrencias: [oc(recesso), oc(comemorativa)],
+      );
+      expect(semana.folga('TERÇA'), 'Recesso');
+      expect(semana.folga('QUARTA'), isNull);
+      expect(Evento.fromJson(comemorativa.toJson()).comemorativa, isTrue);
+    });
+
+    test('feriado do Google não esmaece', () {
+      final google = Evento(
+        id: 'g',
+        titulo: 'Dia de algo',
+        inicio: DateTime(2026, 11, 19),
+        diaInteiro: true,
+        tipo: 'Feriado',
+        agendaId: 'feriados',
+      );
+      expect(folgaNoDia(DateTime(2026, 11, 19), tabela, [oc(google)]), isNull);
+    });
+
+    test('embutido vira evento só leitura com a natureza nas notas', () {
+      final e = feriadosNoDia(DateTime(2026, 2, 16)).single.comoEvento();
+      expect(e.embutido, isTrue);
+      expect(e.externo, isTrue);
+      expect(e.notas, 'Ponto facultativo');
+      expect(ehFolga(e, tabela), isTrue);
+      expect(ehFolga(e, tabela.copyWith(pontoFacultativoFolga: false)), isFalse);
+      expect(feriadoEmbutidoDe(e)?.nome, 'Carnaval');
     });
   });
 }

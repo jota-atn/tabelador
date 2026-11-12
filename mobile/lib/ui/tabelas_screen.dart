@@ -370,6 +370,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
   late int _qtdHorarios;
   late Set<String> _dias;
   late bool _mostrarEventos;
+  late bool _pontoFacultativoFolga;
 
   @override
   void initState() {
@@ -381,6 +382,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
     _qtdHorarios = o?.qtdHorarios ?? 6;
     _dias = (o?.dias ?? kDiasPadrao).toSet();
     _mostrarEventos = o?.mostrarEventos ?? true;
+    _pontoFacultativoFolga = o?.pontoFacultativoFolga ?? true;
   }
 
   @override
@@ -418,7 +420,10 @@ class ConfigTabelaState extends State<ConfigTabela> {
         intervalo: _intervalo,
         qtdHorarios: _qtdHorarios,
         dias: _diasSelecionados,
-      ).copyWith(mostrarEventos: _mostrarEventos);
+      ).copyWith(
+        mostrarEventos: _mostrarEventos,
+        pontoFacultativoFolga: _pontoFacultativoFolga,
+      );
       await state.adicionarTabela(nova);
       // Tabela recém-criada vira a ativa mesmo já havendo outra — é a que
       // acabou de virar o foco. `adicionarTabela` só ativa sozinha quando é
@@ -447,6 +452,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
         qtdHorarios: _qtdHorarios,
         dias: _diasSelecionados,
         mostrarEventos: _mostrarEventos,
+        pontoFacultativoFolga: _pontoFacultativoFolga,
       ),
     );
     navigator.pop();
@@ -552,6 +558,16 @@ class ConfigTabelaState extends State<ConfigTabela> {
             ),
             value: _mostrarEventos,
             onChanged: (v) => setState(() => _mostrarEventos = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Ponto facultativo é folga'),
+            subtitle: Text(
+              'Carnaval e Corpus Christi esmaecem as aulas, como feriado.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            value: _pontoFacultativoFolga,
+            onChanged: (v) => setState(() => _pontoFacultativoFolga = v),
           ),
           if (_perdidas > 0) ...[
             const SizedBox(height: 14),

@@ -32,6 +32,11 @@ enum DuracaoPadrao { diaTodo, prazo, umaHora, horarioDoItem }
 /// 7:00, cedo o bastante pra dar tempo de fazer no dia.
 const int kAvisoDiaTodoPadrao = 7 * 60;
 
+/// [Evento.agendaId] dos feriados embutidos (calculados pelo app, ver
+/// `util/feriados.dart`). Contam como externos: só leitura, nunca
+/// persistidos nem no backup.
+const String kAgendaEmbutidos = 'tabelador:feriados';
+
 /// Tipos fixos de evento. O valor real não é a categoria, é o padrão que
 /// cada um preenche (duração, repetição) — tocar em "Aniversário" já deixa
 /// dia todo e anual.
@@ -96,6 +101,7 @@ class Evento {
     this.feito = false,
     this.feitas = const {},
     this.avisoMin,
+    this.comemorativa = false,
   });
 
   Evento.novo({
@@ -110,6 +116,7 @@ class Evento {
     this.notas,
     this.semData = false,
     this.avisoMin,
+    this.comemorativa = false,
   })  : id = gerarId(),
         feito = false,
         feitas = const {},
@@ -168,7 +175,14 @@ class Evento {
   /// Nulo = padrão ([kAvisoDiaTodoPadrao]).
   final int? avisoMin;
 
+  /// Feriado que é só data comemorativa (não é folga): aparece, mas não
+  /// esmaece as aulas nem conta em "N feriados até o fim do ano". Falso =
+  /// folga, que é o caso de quem cria um feriado à mão.
+  final bool comemorativa;
+
   bool get externo => agendaId != null;
+  bool get embutido => agendaId == kAgendaEmbutidos;
+  bool get ehFeriado => TipoEvento.doTexto(tipo) == TipoEvento.feriado;
   bool get ehTarefa => TipoEvento.doTexto(tipo) == TipoEvento.tarefa;
 
   /// A ocorrência que começa em [inicioDaOcorrencia] está concluída?
@@ -293,6 +307,7 @@ class Evento {
         if (feitas.isNotEmpty)
           'feitas': [for (final d in feitas.toList()..sort()) _diaIso(d)],
         if (avisoMin != null) 'avisoMin': avisoMin,
+        if (comemorativa) 'comemorativa': true,
       };
 
   static String _diaIso(DateTime d) =>
@@ -321,6 +336,7 @@ class Evento {
           if (d is String && DateTime.tryParse(d) != null) _dia(DateTime.parse(d)),
       },
       avisoMin: (json['avisoMin'] as num?)?.toInt(),
+      comemorativa: json['comemorativa'] as bool? ?? false,
     );
   }
 
@@ -363,6 +379,7 @@ class Evento {
         feito: feito ?? this.feito,
         feitas: feitas ?? this.feitas,
         avisoMin: avisoMin,
+        comemorativa: comemorativa,
       );
 
   /// Evento externo com o tipo da agenda e o "feito" guardado no app.
@@ -398,7 +415,8 @@ class Evento {
       other.semData == semData &&
       other.feito == feito &&
       setEquals(other.feitas, feitas) &&
-      other.avisoMin == avisoMin;
+      other.avisoMin == avisoMin &&
+      other.comemorativa == comemorativa;
 
   @override
   int get hashCode => Object.hash(
@@ -420,6 +438,7 @@ class Evento {
         feito,
         Object.hashAllUnordered(feitas),
         avisoMin,
+        comemorativa,
       );
 
   @override

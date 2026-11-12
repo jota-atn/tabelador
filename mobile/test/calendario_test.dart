@@ -15,7 +15,7 @@ void main() {
     tester.view.devicePixelRatio = 2.5;
     addTearDown(tester.view.reset);
 
-    final state = AppState();
+    final state = AppState(feriadosEmbutidos: false);
     await state.carregar();
     final hoje = DateTime.now();
     // Dia 20 do mês atual: sempre existe e sempre está na grade.
