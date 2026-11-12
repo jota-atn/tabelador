@@ -167,10 +167,7 @@ class _ItemEditorState extends State<ItemEditor> {
               controller: _sigla,
               textCapitalization: TextCapitalization.characters,
               maxLength: 10,
-              decoration: const InputDecoration(
-                labelText: 'Sigla',
-                helperText: 'É ela que aparece na grade e no widget',
-              ),
+              decoration: const InputDecoration(labelText: 'Sigla'),
               validator: _naoVazio,
               onChanged: (_) => _siglaAutomatica = false,
             ),

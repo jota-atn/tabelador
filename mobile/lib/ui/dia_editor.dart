@@ -495,7 +495,7 @@ class _Paleta extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ITENS — TOQUE PRA ARMAR OU ARRASTE',
+          'ITENS',
           style: TextStyle(
             fontSize: 9,
             letterSpacing: 1,

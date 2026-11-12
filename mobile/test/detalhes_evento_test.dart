@@ -68,7 +68,7 @@ void main() {
       expect(find.text('Bloco C'), findsOneWidget);
       expect(find.text('Capítulos 1 a 4'), findsOneWidget);
       expect(find.text('Sistemas Operacionais'), findsOneWidget);
-      expect(find.text('Só neste aparelho'), findsOneWidget);
+      expect(find.text('Só neste aparelho'), findsNothing); // rodapé só pra evento do Google
     });
 
     testWidgets('o lápis troca o card pela folha de edição', (tester) async {

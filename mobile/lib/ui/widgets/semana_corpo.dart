@@ -57,12 +57,15 @@ class SemanaCorpo extends StatelessWidget {
           aoEditarCelula: aoEditarCelula,
           eventos: eventos,
         ),
-        const SizedBox(height: 18),
-        Text(
-          'Toque num dia pra montar o horário',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-        ),
+        // A dica só serve enquanto não há nada montado.
+        if (tabela.celulas.values.every((l) => l.every((c) => c == null))) ...[
+          const SizedBox(height: 18),
+          Text(
+            'Toque num dia pra montar o horário',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+          ),
+        ],
         if (rodape != null) ...[
           const SizedBox(height: 24),
           rodape!,

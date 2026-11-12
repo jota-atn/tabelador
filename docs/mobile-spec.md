@@ -796,6 +796,12 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   do ano". A grade só mostra a semana atual — 20/11 só aparece a partir de
   segunda (navegar semanas segue como ideia).
 - 1.3.0+7 testado no aparelho e aprovado (seletor, chave nova).
+- **Limpeza de texto** (PR `fix/rodape-feriado`, 1.3.0+8): regra nova —
+  nada de texto que só explica o funcionamento interno ou a origem. Rodapé
+  do card só pra evento no Google; dica "Toque num dia" só com tabela
+  vazia; sem explicações fixas em Aparência/Agendas/Sigla. Corrigidos dois
+  textos errados (aviso de dia todo é 7h; desinstalar, não reinstalar,
+  apaga os dados).
 
 ### v1.2 implementado (2026-11-11, branch `v1.2-aba-eventos`)
 
