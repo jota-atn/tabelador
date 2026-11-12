@@ -36,7 +36,7 @@
 | **v1.0.0** ✅ (tag em `ac25e8b`, 2026-11-11) | grade, widget, notificações, backup, eventos, Google Agenda (ler e gravar), onboarding, card de detalhes |
 | **v1.1** ✅ (2026-11-11) | 9 tipos de evento (cor e ícone próprios) + Tarefa (feito, data opcional, aviso de manhã) + página de Tarefas |
 | **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
-| **v1.3** | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
+| **v1.3** (em andamento) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -754,6 +754,35 @@ ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
 ## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
+
+### v1.3 em andamento (2026-11-12, branch `v1.3-feriados`)
+
+- **`util/feriados.dart`**: `pascoa(ano)` (Meeus/Jones/Butcher) e
+  `feriadosDoAno(ano)` com natureza **folga** (9 fixos federais +
+  Sexta-feira Santa; Consciência Negra só a partir de 2024),
+  **ponto facultativo** (Carnaval seg/ter, Corpus Christi) e
+  **comemorativa** (Páscoa, Mães, Namorados, Pais, Crianças, vésperas de
+  Natal e Ano Novo). Quarta de Cinzas fica de fora (meio expediente).
+- Embutido vira `Evento` só leitura (`agendaId = kAgendaEmbutidos`, id
+  `feriado:AAAA-M-D:Nome`, natureza nas notas) e entra em
+  `AppState.ocorrenciasEntre` — aparece em "Esta semana", aba Eventos,
+  calendário, faixa "dia todo" da grade e widget. **Sem aviso** (é
+  calendário, não compromisso). Feriado do Google no mesmo dia de um
+  embutido some (por data).
+- **Regra de folga única** (`ehFolga`/`folgaNoDia` em
+  `eventos_na_grade.dart`): embutido pela natureza (ponto facultativo pela
+  tabela); criado à mão = folga salvo `Evento.comemorativa`; Google nunca.
+- **Grade**: aulas do dia de folga com opacidade 0,3. **Aviso de aula**:
+  o recorrente semanal não aceita pular data, então o primeiro disparo
+  vai pra semana seguinte quando a aula cai em folga (olha 8 semanas;
+  vale a cada ressincronização).
+- **Tabela**: `pontoFacultativoFolga` (ligado por padrão), chave "Ponto
+  facultativo é folga". Duplicar tabela agora mantém dias e essa chave.
+- **Folha de evento**: tipo Feriado mostra o chip "É folga"/"Comemorativa".
+- Testes: `AppState(feriadosEmbutidos: false)` só pra testes que dependem
+  da data de hoje.
+- **Falta**: botão "É folga" em feriado do Google; widget esmaecer aulas
+  na folga; testar no aparelho.
 
 ### v1.2 implementado (2026-11-11, branch `v1.2-aba-eventos`)
 
