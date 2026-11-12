@@ -784,8 +784,17 @@ Google (`google_card_pending`) se ainda não configurou agendas.
     feriado. Embutidos ficam pro v1.3.
   - **Aniversários**: os do mês atual; na última semana do mês, adianta o
     próximo do mês seguinte.
-- **Lista do tipo** (`EventosDoTipoScreen`): próximos 12 meses agrupados
-  por mês; últimos 30 dias atrás de um botão, esmaecidos.
+- **Página do tipo** (`eventos_do_tipo_screen.dart`, redesenhada após o
+  usuário achar a lista "sem vida"): destaque do próximo com contagem
+  regressiva grande e degradê na cor do tipo; **mini calendário** do mês
+  com bolinhas na cor do tipo (tocar no dia abre o painel do dia); **"Se
+  repetem"** — série recorrente vira uma linha ("Toda qui 16:00 · 53×"),
+  e na linha do tempo só aparece nesta semana; **linha do tempo** (Esta
+  semana, Próxima semana, por mês) com bolinha + fio; toques por tipo
+  (contagem em Prova/Viagem/Aniversário, folgas no topo de Feriados).
+  Lógica pura em `util/eventos_do_tipo.dart`.
+- **Eventos de exemplo**: segurar o título da aba Eventos → adicionar/
+  recriar/remover (ids `exemplo:`; remover nunca toca nos do usuário).
 - Ficaram de fora: enfeites/animações de data, "É folga" no card de
   feriado do Google, widget de tarefas.
 
