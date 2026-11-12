@@ -29,6 +29,7 @@ class DadosSalvos {
     this.cartaoGooglePendente = false,
     this.feitasExternas = const {},
     this.ocultasExternas = const {},
+    this.folgasExternas = const {},
   });
 
   /// Ids de evento externo (tarefa do Classroom) marcados como feitos no
@@ -38,6 +39,11 @@ class DadosSalvos {
   /// Ids de evento externo escondidos do app (arrastar ← numa tarefa do
   /// Classroom: não dá pra apagar lá).
   final Set<String> ocultasExternas;
+
+  /// Ids de feriado do Google que a pessoa marcou como folga (o Google
+  /// mistura feriado de verdade com data comemorativa; por padrão nenhum
+  /// esmaece aula).
+  final Set<String> folgasExternas;
 
   /// Nulo = chave nunca gravada (instalação nova, ou versão de antes do
   /// onboarding) — o AppState decide qual dos dois pelas tabelas.
@@ -177,6 +183,7 @@ class TabeladorStore {
   static const _kCartaoGoogle = 'google_card_pending';
   static const _kFeitasExternas = 'external_done_ids';
   static const _kOcultasExternas = 'external_hidden_ids';
+  static const _kFolgasExternas = 'external_day_off_ids';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -198,6 +205,7 @@ class TabeladorStore {
       cartaoGooglePendente: prefs.getBool(_kCartaoGoogle) ?? false,
       feitasExternas: {...?prefs.getStringList(_kFeitasExternas)},
       ocultasExternas: {...?prefs.getStringList(_kOcultasExternas)},
+      folgasExternas: {...?prefs.getStringList(_kFolgasExternas)},
     );
   }
 
@@ -275,6 +283,11 @@ class TabeladorStore {
   Future<void> salvarFeitasExternas(Set<String> ids) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_kFeitasExternas, ids.toList()..sort());
+  }
+
+  Future<void> salvarFolgasExternas(Set<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kFolgasExternas, ids.toList()..sort());
   }
 
   Future<void> salvarOcultasExternas(Set<String> ids) async {

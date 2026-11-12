@@ -133,5 +133,23 @@ void main() {
         expect(json['week'][dia], isEmpty);
       }
     });
+  
+    test('manda as datas de folga da janela, por data', () {
+      final json = jsonDecode(
+        construirSnapshotJson(
+          tabelaAtiva: Tabela.nova(nome: '2026.2'),
+          itemPorId: _itemPorId,
+          densidade: ColorDensity.suave,
+          claro: _claro,
+          escuro: _escuro,
+          hoje: DateTime(2026, 11, 14),
+          dias: 8,
+        ),
+      ) as Map<String, dynamic>;
+      expect(json['folgas'], {
+        '2026-11-15': 'Proclamação da República',
+        '2026-11-20': 'Dia da Consciência Negra',
+      });
+    });
   });
 }

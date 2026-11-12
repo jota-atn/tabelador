@@ -132,7 +132,7 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     Future<AppState> montar(WidgetTester tester, Widget filho) async {
-      final state = AppState();
+      final state = AppState(feriadosEmbutidos: false);
       await state.carregar();
       await tester.pumpWidget(
         ChangeNotifierProvider.value(

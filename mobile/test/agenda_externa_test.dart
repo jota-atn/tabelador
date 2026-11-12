@@ -157,7 +157,7 @@ void main() {
       _externo('Feriado', daqui3, 'feriados'),
       _externo('Da turma', daqui3, 'turma'),
     ]);
-    final state = AppState(fonteExterna: fonte);
+    final state = AppState(fonteExterna: fonte, feriadosEmbutidos: false);
     await state.carregar();
     expect(state.eventosExternos, isEmpty); // nada escolhido ainda
 
@@ -332,6 +332,48 @@ void main() {
       await state.definirTipoDaAgenda('turma', TipoEvento.prova);
       expect(state.tarefas, isEmpty);
       expect(state.agendas['turma']!.tipo, 'Prova');
+    });
+
+    test('feriado do Google no dia de um embutido some; os outros ficam', () async {
+      final fonte = _FonteFalsa([
+        _externo('Dia de Tiradentes', DateTime(2027, 4, 21), 'feriados'),
+        _externo('Dia da Mulher', DateTime(2027, 3, 8), 'feriados'),
+      ]);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({'feriados': const AgendaEscolhida(nome: 'f')});
+
+      final nomes = state
+          .ocorrenciasEntre(DateTime(2027, 3, 1), DateTime(2027, 5, 1))
+          .map((o) => o.evento.titulo)
+          .toList();
+      expect(nomes, ['Dia da Mulher', 'Sexta-feira Santa', 'Páscoa', 'Tiradentes']);
+      final tiradentes = state
+          .ocorrenciasEntre(DateTime(2027, 4, 21), DateTime(2027, 4, 22))
+          .single
+          .evento;
+      expect(tiradentes.embutido, isTrue);
+      expect(state.eventoPorId(tiradentes.id), tiradentes);
+    });
+
+    test('feriado do Google chega comemorativo; marcar como folga persiste', () async {
+      final fonte = _FonteFalsa([
+        _externo('Aniversário da cidade', DateTime(2027, 3, 10), 'feriados'),
+      ]);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({'feriados': const AgendaEscolhida(nome: 'f')});
+
+      final e = state.eventosExternos.single;
+      expect(e.comemorativa, isTrue);
+
+      await state.definirFolgaExterna(e.id, true);
+      expect(state.eventosExternos.single.comemorativa, isFalse);
+
+      final outro = AppState(fonteExterna: fonte);
+      await outro.carregar();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(outro.eventosExternos.single.comemorativa, isFalse);
     });
   });
 }

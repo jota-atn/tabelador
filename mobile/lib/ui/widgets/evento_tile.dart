@@ -154,12 +154,10 @@ class EventoTile extends StatelessWidget {
       // A cor do item vinculado, na densidade do app — o mesmo sinal visual
       // que liga o evento à disciplina na grade.
       trailing: item == null
-          ? (evento.externo
+          ? (evento.externo && evento.corExterna != null
               ? CircleAvatar(
                   radius: 5,
-                  backgroundColor: evento.corExterna == null
-                      ? scheme.outline
-                      : Color(evento.corExterna!),
+                  backgroundColor: Color(evento.corExterna!),
                 )
               : tipo == null || tarefa
                   ? null

@@ -142,6 +142,20 @@ void main() {
     expect(aindaOrigem.celula('TERÇA', 2), 'item-x');
   });
 
+  test('duplicar mantém os dias e a escolha de ponto facultativo', () async {
+    final state = await novoEstado();
+    final origem = Tabela.nova(nome: 'Academia', dias: ['TERÇA', 'SÁBADO'])
+        .copyWith(pontoFacultativoFolga: false);
+    await state.adicionarTabela(origem);
+    await state.definirCelula(origem.id, 'SÁBADO', 0, 'item-x');
+
+    final copia = (await state.duplicarTabela(origem.id, 'Academia 2'))!;
+
+    expect(copia.dias, ['TERÇA', 'SÁBADO']);
+    expect(copia.celula('SÁBADO', 0), 'item-x');
+    expect(copia.pontoFacultativoFolga, isFalse);
+  });
+
   test('id ativo apontando pra tabela inexistente cai na primeira', () async {
     final state = await novoEstado();
     final t = Tabela.nova(nome: 'Única');

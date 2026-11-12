@@ -30,6 +30,8 @@ String construirSnapshotJson({
   required ColorScheme claro,
   required ColorScheme escuro,
   List<Ocorrencia> ocorrencias = const [],
+  DateTime? hoje,
+  int dias = 8,
 }) {
   final week = <String, dynamic>{};
   if (tabelaAtiva != null) {
@@ -78,14 +80,29 @@ String construirSnapshotJson({
         _evento(o, itemPorId(o.evento.itemId), claro, escuro),
   ];
 
+  // Dias de folga (feriado) na mesma janela, por data: o nativo esmaece os
+  // horários quando hoje é um deles.
+  final folgas = <String, String>{};
+  if (tabelaAtiva != null) {
+    final base = hoje ?? DateTime.now();
+    for (var d = 0; d < dias; d++) {
+      final dia = DateTime(base.year, base.month, base.day + d);
+      final nome = folgaNoDia(dia, tabelaAtiva, ocorrencias);
+      if (nome != null) folgas[_iso(dia)] = nome;
+    }
+  }
+
   return jsonEncode({
     'tableName': tabelaAtiva?.nome ?? '',
     'week': week,
     'events': events,
+    if (folgas.isNotEmpty) 'folgas': folgas,
   });
 }
 
 String _doisDigitos(int n) => n.toString().padLeft(2, '0');
+
+String _iso(DateTime d) => '${d.year}-${_doisDigitos(d.month)}-${_doisDigitos(d.day)}';
 
 Map<String, dynamic> _evento(
   Ocorrencia o,

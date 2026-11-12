@@ -75,6 +75,7 @@ class HomeWidgetSync {
           claro: claro,
           escuro: escuro,
           ocorrencias: _ocorrenciasDaJanela(),
+          dias: _diasAFrente + 1,
         );
         if (json != _ultimoJson) {
           _ultimoJson = json;
@@ -93,10 +94,10 @@ class HomeWidgetSync {
     }
   }
 
-  /// Hoje e os próximos [_diasDeFolga] dias. A janela começa na meia-noite
+  /// Hoje e os próximos [_diasAFrente] dias. A janela começa na meia-noite
   /// de hoje, então o JSON muda uma vez por dia — o suficiente pra
   /// [sincronizarAgora] mandar de novo ao abrir o app no dia seguinte.
-  static const _diasDeFolga = 7;
+  static const _diasAFrente = 7;
 
   List<Ocorrencia> _ocorrenciasDaJanela() {
     final agora = DateTime.now();
@@ -105,7 +106,7 @@ class HomeWidgetSync {
     return _appState
         .ocorrenciasEntre(
           hoje,
-          DateTime(hoje.year, hoje.month, hoje.day + _diasDeFolga + 1),
+          DateTime(hoje.year, hoje.month, hoje.day + _diasAFrente + 1),
         )
         .where((o) => !o.feita)
         .toList();

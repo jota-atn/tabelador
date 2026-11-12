@@ -10,6 +10,7 @@ import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
+import '../util/eventos_na_grade.dart';
 
 const AndroidNotificationChannel kCanalHorarios = AndroidNotificationChannel(
   'horarios_proximos',
@@ -119,6 +120,8 @@ class NotificationScheduler {
             tabela,
             _appState.antecedenciaMinutos,
             _appState.itemPorId,
+            DateTime.now(),
+            _folgasDaTabela(_appState, tabela),
           );
     final avisosDeEvento =
         !_appState.notificacoesAtivas || !_appState.notificarEventos
@@ -131,7 +134,7 @@ class NotificationScheduler {
 
     final assinatura = jsonEncode([
       for (final a in agendamentos)
-        [a.id, a.titulo, a.corpo, a.diaSemana, a.hora, a.minuto],
+        [a.id, a.titulo, a.corpo, a.primeira.toIso8601String()],
       for (final a in avisosDeEvento)
         [a.id, a.titulo, a.corpo, a.quando.toIso8601String()],
     ]);
@@ -144,7 +147,14 @@ class NotificationScheduler {
         a.id,
         a.titulo,
         a.corpo,
-        _proximaOcorrencia(a.diaSemana, a.hora, a.minuto),
+        tz.TZDateTime(
+          tz.local,
+          a.primeira.year,
+          a.primeira.month,
+          a.primeira.day,
+          a.primeira.hour,
+          a.primeira.minute,
+        ),
         NotificationDetails(
           android: AndroidNotificationDetails(
             kCanalHorarios.id,
@@ -192,19 +202,32 @@ class _Agendamento {
     required this.id,
     required this.titulo,
     required this.corpo,
-    required this.diaSemana,
-    required this.hora,
-    required this.minuto,
+    required this.primeira,
   });
 
   final int id;
   final String titulo;
   final String corpo;
 
-  /// 1=segunda..7=domingo, igual `DateTime.weekday`.
-  final int diaSemana;
-  final int hora;
-  final int minuto;
+  /// Primeiro disparo; dali repete toda semana no mesmo dia e hora. Pula
+  /// a semana em que a aula cai em folga (o Android não deixa tirar uma
+  /// data de um aviso recorrente — então ele só começa depois dela).
+  final DateTime primeira;
+}
+
+/// Quantas semanas à frente procurar folga pra adiar o começo dos avisos
+/// de aula. Feriado mais longe que isso é resolvido quando o app abrir de
+/// novo.
+const int _kSemanasFolga = 8;
+
+/// "O dia de [quando] é folga na tabela?" pras próximas [_kSemanasFolga]
+/// semanas, calculado uma vez.
+String? Function(DateTime) _folgasDaTabela(AppState state, Tabela tabela) {
+  final agora = DateTime.now();
+  final hoje = DateTime(agora.year, agora.month, agora.day);
+  final ocorrencias =
+      state.ocorrenciasEntre(hoje, DateTime(hoje.year, hoje.month, hoje.day + 7 * _kSemanasFolga + 1));
+  return (quando) => folgaNoDia(quando, tabela, ocorrencias);
 }
 
 class _AvisoUnico {
@@ -243,8 +266,9 @@ List<_AvisoUnico> _construirAvisosDeEvento(
   final resultado = <_AvisoUnico>[];
   for (final o in ocorrencias) {
     final e = o.evento;
-    // Tarefa já feita não precisa de lembrete.
-    if (o.feita) continue;
+    // Tarefa já feita não precisa de lembrete; feriado embutido não é
+    // compromisso, é calendário.
+    if (o.feita || e.embutido) continue;
     final aviso = e.avisoMin ?? kAvisoDiaTodoPadrao;
     final quando = e.diaInteiro
         ? DateTime(o.inicio.year, o.inicio.month, o.inicio.day, aviso ~/ 60, aviso % 60)
@@ -278,6 +302,8 @@ List<_Agendamento> _construirAgendamentos(
   Tabela tabela,
   int antecedenciaMinutos,
   Item? Function(String? id) itemPorId,
+  DateTime agora,
+  String? Function(DateTime dia) folgaEm,
 ) {
   final resultado = <_Agendamento>[];
   for (final dia in tabela.dias) {
@@ -288,6 +314,14 @@ List<_Agendamento> _construirAgendamentos(
 
       final horaDoSlot = tabela.horaInicial + slot * tabela.intervalo;
       final aviso = _comAntecedencia(diaSemana, horaDoSlot, antecedenciaMinutos);
+      var primeira = _proximaOcorrencia(aviso.diaSemana, aviso.hora, aviso.minuto, agora);
+      for (var i = 0;
+          i < _kSemanasFolga &&
+              folgaEm(primeira.add(Duration(minutes: antecedenciaMinutos))) != null;
+          i++) {
+        primeira = DateTime(primeira.year, primeira.month, primeira.day + 7,
+            primeira.hour, primeira.minute);
+      }
 
       resultado.add(
         _Agendamento(
@@ -297,9 +331,7 @@ List<_Agendamento> _construirAgendamentos(
             'Começa às $horaDoSlot:00',
             if (item.local != null) item.local!,
           ].join(' · '),
-          diaSemana: aviso.diaSemana,
-          hora: aviso.hora,
-          minuto: aviso.minuto,
+          primeira: primeira,
         ),
       );
     }
@@ -325,14 +357,13 @@ List<_Agendamento> _construirAgendamentos(
   );
 }
 
-/// Próxima data/hora (a partir de agora) em que [diaSemana] e o horário
+/// Próxima data/hora (a partir de [agora]) em que [diaSemana] e o horário
 /// batem — `zonedSchedule` exige uma âncora inicial mesmo pra um agendamento
 /// recorrente (`matchDateTimeComponents`).
-tz.TZDateTime _proximaOcorrencia(int diaSemana, int hora, int minuto) {
-  final agora = tz.TZDateTime.now(tz.local);
-  var data = tz.TZDateTime(tz.local, agora.year, agora.month, agora.day, hora, minuto);
+DateTime _proximaOcorrencia(int diaSemana, int hora, int minuto, DateTime agora) {
+  var data = DateTime(agora.year, agora.month, agora.day, hora, minuto);
   while (data.weekday != diaSemana || data.isBefore(agora)) {
-    data = data.add(const Duration(days: 1));
+    data = DateTime(data.year, data.month, data.day + 1, hora, minuto);
   }
   return data;
 }

@@ -5,6 +5,7 @@ import '../dev/exemplos.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../theme/tipo_evento_visual.dart';
+import '../util/eventos_na_grade.dart';
 import '../util/formato_data.dart';
 import '../util/tarefas.dart';
 import 'calendario_screen.dart';
@@ -250,7 +251,7 @@ class _CardTipo extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final cor = corDoTipo(tipo, scheme.brightness);
     final (destaque, linha) = switch (tipo) {
-      TipoEvento.feriado => _feriados(),
+      TipoEvento.feriado => _feriados(context),
       TipoEvento.aniversario => _aniversarios(context),
       _ => _padrao(),
     };
@@ -314,11 +315,11 @@ class _CardTipo extends StatelessWidget {
   }
 
   /// Hoje é feriado? Senão o próximo; e quantos (folga) até o fim do ano.
-  (String?, String?) _feriados() {
+  (String?, String?) _feriados(BuildContext context) {
     if (proximas.isEmpty) return (null, null);
     final hoje = inicioDoDia(agora);
     final fimDoAno = DateTime(agora.year + 1);
-    final folgas = proximas.where((o) => ehFolga(o.evento) && o.inicio.isBefore(fimDoAno)).length;
+    final folgas = proximas.where((o) => ehFolga(o.evento, context.read<AppState>().tabelaAtiva) && o.inicio.isBefore(fimDoAno)).length;
     final deHoje = proximas.where((o) => inicioDoDia(o.inicio) == hoje).toList();
     final contagem = folgas == 0
         ? 'Nenhum até o fim do ano'

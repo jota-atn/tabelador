@@ -224,6 +224,16 @@ class DetalhesDoEvento extends StatelessWidget {
                     ),
                   ),
                 if (e.notas != null) _Linha(icone: Icons.notes, texto: e.notas!, multilinha: true),
+                // Feriado do Google: o app não sabe se é folga (a agenda
+                // mistura feriado com data comemorativa) — a pessoa diz.
+                if (e.ehFeriado && e.externo && !e.embutido)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: SeletorFolga(
+                      folga: !e.comemorativa,
+                      aoMudar: (v) => state.definirFolgaExterna(e.id, v),
+                    ),
+                  ),
                 if (tarefa)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -252,14 +262,20 @@ class DetalhesDoEvento extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  e.externo || e.gravadoNoGoogle ? Icons.cloud_outlined : Icons.phone_android,
+                  e.embutido
+                      ? Icons.auto_awesome_outlined
+                      : e.externo || e.gravadoNoGoogle
+                          ? Icons.cloud_outlined
+                          : Icons.phone_android,
                   size: 16,
                   color: scheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    e.externo
+                    e.embutido
+                        ? 'Calendário nacional, calculado pelo app'
+                        : e.externo
                         ? 'Do Google Agenda${agendaOrigem == null ? '' : ' · $agendaOrigem'} — editar por lá, por enquanto'
                         : e.gravadoNoGoogle
                             ? 'Também no Google Agenda${agendaDestino == null ? '' : ' · $agendaDestino'}'
@@ -276,6 +292,47 @@ class DetalhesDoEvento extends StatelessWidget {
   }
 
   static String _capitalizar(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+/// Folga ou data comemorativa — duas opções lado a lado, uma marcada. Usado
+/// no card de detalhes do feriado do Google e na folha de criar feriado.
+class SeletorFolga extends StatelessWidget {
+  const SeletorFolga({super.key, required this.folga, required this.aoMudar});
+
+  final bool folga;
+  final ValueChanged<bool> aoMudar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(
+              value: true,
+              label: Text('Folga'),
+              icon: Icon(Icons.beach_access_outlined),
+            ),
+            ButtonSegment(
+              value: false,
+              label: Text('Comemorativa'),
+              icon: Icon(Icons.celebration_outlined),
+            ),
+          ],
+          selected: {folga},
+          onSelectionChanged: (s) => aoMudar(s.first),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          folga
+              ? 'Sem aula nesse dia: os horários ficam apagados e sem aviso.'
+              : 'Só uma data pra lembrar: as aulas seguem normais.',
+          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
 }
 
 class _Linha extends StatelessWidget {

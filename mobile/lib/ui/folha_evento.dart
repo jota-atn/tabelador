@@ -89,6 +89,10 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   /// Tarefa sem data (só Tarefa oferece).
   bool semData = false;
 
+  /// Feriado que dá folga (só Feriado oferece). Desligado = data
+  /// comemorativa, que não esmaece as aulas.
+  bool folga = true;
+
   /// Hora do aviso quando é dia todo, em minutos desde a meia-noite.
   int avisoMin = kAvisoDiaTodoPadrao;
 
@@ -122,6 +126,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       horaInicio = TimeOfDay.fromDateTime(o.inicio);
       diaTodo = o.diaInteiro;
       semData = o.semData;
+      folga = !o.comemorativa;
       avisoMin = o.avisoMin ?? kAvisoDiaTodoPadrao;
       if (semData) data = inicioDoDia(DateTime.now());
       minutos = o.duracao.inMinutes;
@@ -376,6 +381,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
     if (m > 0) escolherDuracao(min: m);
   }
 
+  void escolherFolga(bool v) => setState(() => folga = v);
+
   void escolherRepeticao(Repeticao r) => setState(() {
         repeticao = r;
         _repeticaoAuto = false;
@@ -456,6 +463,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       feito: widget.original?.feito ?? false,
       feitas: widget.original?.feitas ?? const {},
       avisoMin: diaTodoFinal && !semDataFinal && avisoMin != kAvisoDiaTodoPadrao ? avisoMin : null,
+      comemorativa: tipo == TipoEvento.feriado && !folga,
     );
 
     final state = _state;

@@ -44,6 +44,8 @@ data class TodayScheduleSnapshot(
     val week: Map<String, List<ScheduleSlot>>,
     /** Eventos dos próximos dias; o widget filtra os de hoje ao desenhar. */
     val events: List<ScheduleEvent> = emptyList(),
+    /** Data (`yyyy-MM-dd`) -> nome do feriado que dá folga nela. */
+    val folgas: Map<String, String> = emptyMap(),
 ) {
     companion object {
         val vazio = TodayScheduleSnapshot(tableName = "", week = emptyMap())
@@ -66,6 +68,10 @@ data class TodayScheduleSnapshot(
                     tableName = obj.optString("tableName"),
                     week = week,
                     events = parseEvents(obj.optJSONArray("events")),
+                    folgas = buildMap {
+                        val f = obj.optJSONObject("folgas")
+                        if (f != null) for (k in f.keys()) put(k, f.optString(k))
+                    },
                 )
             } catch (e: Exception) {
                 vazio

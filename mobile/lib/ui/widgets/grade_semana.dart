@@ -215,16 +215,21 @@ class GradeSemana extends StatelessWidget {
                               height: alturaLinha,
                               child: Padding(
                                 padding: const EdgeInsets.all(2),
-                                child: _Celula(
-                                  item: itemPorId(
-                                    tabela.celula(tabela.dias[dia], slot),
+                                // Feriado de folga: as aulas do dia ficam
+                                // esmaecidas — estão lá, mas não acontecem.
+                                child: Opacity(
+                                  opacity: eventos?.folga(tabela.dias[dia]) == null ? 1 : 0.3,
+                                  child: _Celula(
+                                    item: itemPorId(
+                                      tabela.celula(tabela.dias[dia], slot),
+                                    ),
+                                    densidade: densidade,
+                                    ocorrencias: eventos?.naCelula(
+                                          tabela.dias[dia],
+                                          slot,
+                                        ) ??
+                                        const [],
                                   ),
-                                  densidade: densidade,
-                                  ocorrencias: eventos?.naCelula(
-                                        tabela.dias[dia],
-                                        slot,
-                                      ) ??
-                                      const [],
                                 ),
                               ),
                             ),

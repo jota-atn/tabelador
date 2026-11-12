@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../theme/color_density.dart';
 import '../theme/tipo_evento_visual.dart';
 import '../util/formato_data.dart';
+import 'detalhes_evento.dart';
 import 'folha_evento.dart';
 import 'widgets/chip_deslizavel.dart';
 import 'widgets/folha_evento_partes.dart';
@@ -139,6 +140,10 @@ class CorpoDaFolha extends StatelessWidget {
                   icone: Icons.tune,
                   titulo: 'Detalhes',
                   filhos: [
+                    if (f.tipo == TipoEvento.feriado) ...[
+                      SeletorFolga(folga: f.folga, aoMudar: f.escolherFolga),
+                      const SizedBox(height: 12),
+                    ],
                     _Detalhes(f: f),
                     const SizedBox(height: 10),
                     TextField(

@@ -59,6 +59,7 @@ class Tabela {
     List<String>? dias,
     Map<String, List<String?>>? celulas,
     this.mostrarEventos = true,
+    this.pontoFacultativoFolga = true,
     required this.criadaEm,
     required this.atualizadaEm,
   })  : dias = ordenarDias(dias ?? kDiasPadrao),
@@ -105,6 +106,11 @@ class Tabela {
   /// aparecem na grade dela. Aniversário não precisa aparecer na tabela da
   /// academia; evento vinculado a item desta tabela aparece sempre.
   final bool mostrarEventos;
+
+  /// Ponto facultativo (Carnaval, Corpus Christi) é folga nesta tabela?
+  /// Ligado por padrão — universidade costuma parar —, mas a do estágio
+  /// pode desligar.
+  final bool pontoFacultativoFolga;
 
   final DateTime criadaEm;
   final DateTime atualizadaEm;
@@ -207,6 +213,7 @@ class Tabela {
     List<String>? dias,
     Map<String, List<String?>>? celulas,
     bool? mostrarEventos,
+    bool? pontoFacultativoFolga,
     DateTime? atualizadaEm,
   }) {
     return Tabela(
@@ -218,6 +225,7 @@ class Tabela {
       dias: dias ?? this.dias,
       celulas: celulas ?? this.celulas,
       mostrarEventos: mostrarEventos ?? this.mostrarEventos,
+      pontoFacultativoFolga: pontoFacultativoFolga ?? this.pontoFacultativoFolga,
       criadaEm: criadaEm,
       atualizadaEm: atualizadaEm ?? DateTime.now(),
     );
@@ -232,6 +240,7 @@ class Tabela {
         'dias': dias,
         'celulas': celulas,
         if (!mostrarEventos) 'mostrarEventos': false,
+        if (!pontoFacultativoFolga) 'pontoFacultativoFolga': false,
         'criadaEm': criadaEm.toIso8601String(),
         'atualizadaEm': atualizadaEm.toIso8601String(),
       };
@@ -260,6 +269,7 @@ class Tabela {
           ],
       },
       mostrarEventos: json['mostrarEventos'] as bool? ?? true,
+      pontoFacultativoFolga: json['pontoFacultativoFolga'] as bool? ?? true,
       criadaEm: DateTime.tryParse(json['criadaEm'] as String? ?? '') ?? agora,
       atualizadaEm:
           DateTime.tryParse(json['atualizadaEm'] as String? ?? '') ?? agora,
