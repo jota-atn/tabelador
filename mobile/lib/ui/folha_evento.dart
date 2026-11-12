@@ -381,7 +381,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
     if (m > 0) escolherDuracao(min: m);
   }
 
-  void alternarFolga() => setState(() => folga = !folga);
+  void escolherFolga(bool v) => setState(() => folga = v);
 
   void escolherRepeticao(Repeticao r) => setState(() {
         repeticao = r;

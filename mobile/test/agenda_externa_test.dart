@@ -355,5 +355,25 @@ void main() {
       expect(tiradentes.embutido, isTrue);
       expect(state.eventoPorId(tiradentes.id), tiradentes);
     });
+
+    test('feriado do Google chega comemorativo; marcar como folga persiste', () async {
+      final fonte = _FonteFalsa([
+        _externo('Aniversário da cidade', DateTime(2027, 3, 10), 'feriados'),
+      ]);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({'feriados': const AgendaEscolhida(nome: 'f')});
+
+      final e = state.eventosExternos.single;
+      expect(e.comemorativa, isTrue);
+
+      await state.definirFolgaExterna(e.id, true);
+      expect(state.eventosExternos.single.comemorativa, isFalse);
+
+      final outro = AppState(fonteExterna: fonte);
+      await outro.carregar();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(outro.eventosExternos.single.comemorativa, isFalse);
+    });
   });
 }

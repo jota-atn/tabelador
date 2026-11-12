@@ -80,6 +80,9 @@ class TodayScheduleWidget : GlanceAppWidget() {
         val slotsDeHoje = snapshot.week[dayLabel] ?: emptyList()
         val hojeIso = dataIso(agora)
         val linhas = linhasDoDia(slotsDeHoje, snapshot.events.filter { it.date == hojeIso })
+        // Feriado de folga: os horários continuam listados, mas apagados
+        // (Glance não tem opacidade — vira fundo neutro e texto secundário).
+        val folga = snapshot.folgas[hojeIso] != null
 
         // A largura decide só o nível de detalhe agora: alargar o widget
         // (2x2 -> 3x2, por exemplo) libera uma segunda linha de detalhe
@@ -129,9 +132,10 @@ class TodayScheduleWidget : GlanceAppWidget() {
                             is Linha.DeSlot -> SlotRow(
                                 context,
                                 linha.slot,
-                                estaNoSlotAgora(linha.slot.time, agora),
+                                !folga && estaNoSlotAgora(linha.slot.time, agora),
                                 mostrarDetalhe,
                                 alturaLinha,
+                                folga,
                             )
                             is Linha.DeEvento -> EventoRow(context, linha.evento, mostrarDetalhe, alturaLinha)
                         }
@@ -203,19 +207,22 @@ class TodayScheduleWidget : GlanceAppWidget() {
         agora: Boolean,
         mostrarDetalhe: Boolean,
         alturaLinha: Int,
+        apagado: Boolean,
     ) {
+        val fundo = if (apagado) neutralSurfaceVariant(context) else corTema(slot.bgLight, slot.bgDark)
+        val texto = if (apagado) neutralOnSurfaceVariant(context) else corTema(slot.fgLight, slot.fgDark)
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(alturaLinha.dp)
-                .background(corTema(slot.bgLight, slot.bgDark))
+                .background(fundo)
                 // Item dentro de um LazyColumn precisa do próprio clique —
                 // a lista consome o gesto de arrastar, então o clickable do
                 // container só cobre header/margens, não as linhas.
                 .clickable(actionStartActivity<MainActivity>(context)),
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
-            if (slot.barWidthDp > 0) {
+            if (slot.barWidthDp > 0 && !apagado) {
                 Spacer(
                     modifier = GlanceModifier
                         .width(slot.barWidthDp.dp)
@@ -230,7 +237,7 @@ class TodayScheduleWidget : GlanceAppWidget() {
                     style = TextStyle(
                         fontSize = 9.sp,
                         fontWeight = if (agora) FontWeight.Bold else FontWeight.Normal,
-                        color = corTema(slot.fgLight, slot.fgDark),
+                        color = texto,
                     ),
                 )
                 Text(
@@ -238,14 +245,14 @@ class TodayScheduleWidget : GlanceAppWidget() {
                     style = TextStyle(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = corTema(slot.fgLight, slot.fgDark),
+                        color = texto,
                     ),
                 )
                 val detalhe = if (mostrarDetalhe) detalheDoSlot(slot) else null
                 if (detalhe != null) {
                     Text(
                         text = detalhe,
-                        style = TextStyle(fontSize = 9.sp, color = corTema(slot.fgLight, slot.fgDark)),
+                        style = TextStyle(fontSize = 9.sp, color = texto),
                     )
                 }
             }
@@ -338,6 +345,16 @@ private fun neutralBackground(context: Context): ColorProvider =
         )
     } else {
         DiaNoite(day = Color(0xFFFAFAFA), night = Color(0xFF1C1C1C))
+    }
+
+private fun neutralSurfaceVariant(context: Context): ColorProvider =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        DiaNoite(
+            day = Color(context.getColor(android.R.color.system_neutral1_50)),
+            night = Color(context.getColor(android.R.color.system_neutral1_800)),
+        )
+    } else {
+        DiaNoite(day = Color(0xFFF0F0F0), night = Color(0xFF2A2A2A))
     }
 
 private fun neutralOnSurface(context: Context): ColorProvider =

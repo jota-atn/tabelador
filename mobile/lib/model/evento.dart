@@ -354,6 +354,7 @@ class Evento {
   /// pra dar pra trocar por null.
   Evento _copiar({
     String? tipo,
+    bool? comemorativa,
     String? Function()? itemId,
     String? Function()? idNoAparelho,
     String? Function()? agendaDestinoId,
@@ -379,12 +380,12 @@ class Evento {
         feito: feito ?? this.feito,
         feitas: feitas ?? this.feitas,
         avisoMin: avisoMin,
-        comemorativa: comemorativa,
+        comemorativa: comemorativa ?? this.comemorativa,
       );
 
   /// Evento externo com o tipo da agenda e o "feito" guardado no app.
-  Evento decorado({required String tipo, required bool feito}) =>
-      _copiar(tipo: tipo, feito: feito);
+  Evento decorado({required String tipo, required bool feito, bool comemorativa = false}) =>
+      _copiar(tipo: tipo, feito: feito, comemorativa: comemorativa);
 
   /// Tipos que saíram da lista: "Entrega" vira Tarefa — e a que já passou
   /// conta como entregue, pra não chegar tudo como atrasada. Devolve o

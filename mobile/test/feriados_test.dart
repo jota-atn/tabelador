@@ -147,16 +147,19 @@ void main() {
       expect(Evento.fromJson(comemorativa.toJson()).comemorativa, isTrue);
     });
 
-    test('feriado do Google não esmaece', () {
-      final google = Evento(
+    test('feriado do Google: só esmaece se marcado como folga', () {
+      final bruto = Evento(
         id: 'g',
-        titulo: 'Dia de algo',
+        titulo: 'Aniversário da cidade',
         inicio: DateTime(2026, 11, 19),
         diaInteiro: true,
-        tipo: 'Feriado',
         agendaId: 'feriados',
       );
-      expect(folgaNoDia(DateTime(2026, 11, 19), tabela, [oc(google)]), isNull);
+      final comemorativo = bruto.decorado(tipo: 'Feriado', feito: false, comemorativa: true);
+      final folga = bruto.decorado(tipo: 'Feriado', feito: false);
+      final dia = DateTime(2026, 11, 19);
+      expect(folgaNoDia(dia, tabela, [oc(comemorativo)]), isNull);
+      expect(folgaNoDia(dia, tabela, [oc(folga)]), 'Aniversário da cidade');
     });
 
     test('embutido vira evento só leitura com a natureza nas notas', () {

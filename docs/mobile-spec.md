@@ -778,11 +778,24 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   vale a cada ressincronização).
 - **Tabela**: `pontoFacultativoFolga` (ligado por padrão), chave "Ponto
   facultativo é folga". Duplicar tabela agora mantém dias e essa chave.
-- **Folha de evento**: tipo Feriado mostra o chip "É folga"/"Comemorativa".
+- **Folga ou comemorativa** (`SeletorFolga`, duas opções lado a lado com
+  uma frase explicando): na folha de criar Feriado e no card de detalhes
+  de **feriado do Google** — que chega comemorativo e vira folga quando a
+  pessoa marca (ids guardados em `external_day_off_ids`). Primeira versão
+  era um chip só que alternava; no aparelho ficou confuso ("Comemorativa"
+  desligado, toca e vira "É folga").
+- **Widget**: snapshot leva `folgas` (data → nome) da janela de 8 dias; no
+  dia de folga os horários ficam com fundo neutro e texto secundário (Glance
+  não tem opacidade), sem destaque de "agora".
+- Chave da tabela reescrita: "Sem aula no Carnaval e Corpus Christi"
+  (o "Ponto facultativo é folga" não foi entendido no teste).
 - Testes: `AppState(feriadosEmbutidos: false)` só pra testes que dependem
   da data de hoje.
-- **Falta**: botão "É folga" em feriado do Google; widget esmaecer aulas
-  na folga; testar no aparelho.
+- Testado no aparelho (1.3.0+6): Proclamação no domingo 15 com card de
+  detalhes certo; feriado do Google sem duplicata; "3 de folga até o fim
+  do ano". A grade só mostra a semana atual — 20/11 só aparece a partir de
+  segunda (navegar semanas segue como ideia).
+- **Falta**: testar 1.3.0+7 (seletor, chave nova, widget no dia 15).
 
 ### v1.2 implementado (2026-11-11, branch `v1.2-aba-eventos`)
 

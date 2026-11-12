@@ -47,6 +47,7 @@ class AppState extends ChangeNotifier {
   List<Evento> _externosBrutos = [];
   Set<String> _feitasExternas = {};
   Set<String> _ocultasExternas = {};
+  Set<String> _folgasExternas = {};
   Map<String, AgendaEscolhida> _agendas = {};
   bool _agendasConfiguradas = false;
   String? _tabelaAtivaId;
@@ -132,6 +133,7 @@ class AppState extends ChangeNotifier {
     _agendas = {...dados.agendas};
     _feitasExternas = {...dados.feitasExternas};
     _ocultasExternas = {...dados.ocultasExternas};
+    _folgasExternas = {...dados.folgasExternas};
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
     _semanaAberta = dados.semanaAberta;
@@ -683,7 +685,12 @@ class AppState extends ChangeNotifier {
             '${e.inicio.year}-${e.inicio.month}-${e.inicio.day}|${e.titulo.trim().toLowerCase()}';
         if (!feriadosVistos.add(chave)) continue;
       }
-      resultado.add(e.decorado(tipo: tipo.rotulo, feito: _feitasExternas.contains(e.id)));
+      resultado.add(e.decorado(
+        tipo: tipo.rotulo,
+        feito: _feitasExternas.contains(e.id),
+        // Feriado do Google é comemorativo até a pessoa dizer que é folga.
+        comemorativa: tipo == TipoEvento.feriado && !_folgasExternas.contains(e.id),
+      ));
     }
     return resultado;
   }
@@ -696,6 +703,15 @@ class AppState extends ChangeNotifier {
     await _store.salvarAgendas(_agendas);
     _redecorar();
     notifyListeners();
+  }
+
+  /// Marca (ou desmarca) um feriado do Google como folga: aí ele esmaece as
+  /// aulas e conta em "N de folga", como um criado no app.
+  Future<void> definirFolgaExterna(String id, bool folga) async {
+    final mudou = folga ? _folgasExternas.add(id) : _folgasExternas.remove(id);
+    if (!mudou) return;
+    _redecorar();
+    await _store.salvarFolgasExternas(_folgasExternas);
   }
 
   /// Esconde um evento externo do app (não dá pra apagar tarefa do

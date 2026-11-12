@@ -14,12 +14,12 @@ bool eventoVisivelNaTabela(Tabela tabela, Evento evento) {
 /// [e] é um feriado que dá folga em [tabela] (sem tabela: só a folga de
 /// lei)? Embutido segue a natureza dele (ponto facultativo, a escolha da
 /// tabela); criado à mão, folga a não ser que seja comemorativa. O do
-/// Google não esmaece nada: a agenda dele mistura Dia dos Namorados com
-/// feriado de verdade.
+/// Google chega comemorativo (a agenda dele mistura Dia dos Namorados com
+/// feriado de verdade) até a pessoa marcar como folga.
 bool ehFolga(Evento e, Tabela? tabela) {
   if (!e.ehFeriado) return false;
   if (e.embutido) return feriadoEmbutidoDe(e)?.ehFolgaPara(tabela) ?? false;
-  if (e.externo || e.comemorativa) return false;
+  if (e.comemorativa) return false;
   return tabela == null || eventoVisivelNaTabela(tabela, e);
 }
 

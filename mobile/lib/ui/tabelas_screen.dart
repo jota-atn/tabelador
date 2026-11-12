@@ -561,9 +561,11 @@ class ConfigTabelaState extends State<ConfigTabela> {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Ponto facultativo é folga'),
+            title: const Text('Sem aula no Carnaval e Corpus Christi'),
             subtitle: Text(
-              'Carnaval e Corpus Christi esmaecem as aulas, como feriado.',
+              'Não são feriado nacional, são ponto facultativo: cada lugar '
+              'decide se para. Ligado, as aulas desses dias ficam apagadas, '
+              'como num feriado.',
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
             value: _pontoFacultativoFolga,
