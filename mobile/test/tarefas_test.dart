@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabelador/model/evento.dart';
 import 'package:tabelador/state/app_state.dart';
+import 'package:tabelador/ui/eventos_screen.dart';
 import 'package:tabelador/ui/folha_evento.dart';
 import 'package:tabelador/ui/tarefas_screen.dart';
 import 'package:tabelador/util/tarefas.dart';
@@ -215,6 +216,33 @@ void main() {
       await tester.tap(find.text('Desfazer'));
       await tester.pumpAndSettle();
       expect(state.eventoPorId('Renovar RG'), isNotNull);
+    });
+
+    testWidgets('aba Eventos: card de tarefas, tipo vazio apagado, abre lista do tipo',
+        (tester) async {
+      final state = AppState();
+      await state.carregar();
+      final amanha = DateTime.now().add(const Duration(days: 1));
+      await state.adicionarEvento(tarefa('Renovar RG', semData: true));
+      await state.adicionarEvento(Evento(
+        id: 'p',
+        titulo: 'Prova de SO',
+        inicio: DateTime(amanha.year, amanha.month, amanha.day, 10),
+        fim: DateTime(amanha.year, amanha.month, amanha.day, 12),
+        tipo: 'Prova',
+      ));
+      await montar(tester, state, const EventosScreen());
+      await tester.pump();
+
+      expect(find.text('1 pendente'), findsOneWidget);
+      expect(find.text('Renovar RG'), findsOneWidget);
+      expect(find.text('1 próxima'), findsOneWidget);
+      expect(find.text('Amanhã · Prova de SO'), findsOneWidget);
+      expect(find.text('Nada marcado'), findsNWidgets(7));
+
+      await tester.tap(find.text('Provas'));
+      await tester.pumpAndSettle();
+      expect(find.text('Prova de SO'), findsOneWidget);
     });
   });
 }

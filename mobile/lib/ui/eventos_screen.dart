@@ -1,0 +1,430 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../model/evento.dart';
+import '../state/app_state.dart';
+import '../theme/tipo_evento_visual.dart';
+import '../util/formato_data.dart';
+import '../util/tarefas.dart';
+import 'calendario_screen.dart';
+import 'tarefas_screen.dart';
+import 'widgets/evento_tile.dart';
+
+/// Quanto à frente a aba conta "próximos" (o Google é lido até ~400 dias).
+const _kJanela = Duration(days: 365);
+
+/// Tipo de uma ocorrência pra aba: evento sem tipo conta como Outro.
+TipoEvento tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
+
+/// Feriado que é folga: criado no app, ou da agenda de feriados do Google
+/// com a descrição começando por "Feriado" (o Google marca "Data
+/// comemorativa" nas outras). Embutidos e o botão "É folga" ficam pro v1.3.
+bool ehFolga(Evento e) =>
+    !e.externo || (e.notas ?? '').trimLeft().toLowerCase().startsWith('feriado');
+
+/// A aba Eventos: card largo de Tarefas no topo (3 próximas pendentes,
+/// marcáveis) e um card por tipo em grade de 2 colunas, ordem fixa; tipo sem
+/// nada aparece apagado. Tocar abre a lista do tipo. Sem botão de criar:
+/// criar continua pela tela Semana.
+class EventosScreen extends StatelessWidget {
+  const EventosScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final agora = DateTime.now();
+    final hoje = inicioDoDia(agora);
+    final proximas = state
+        .ocorrenciasEntre(hoje, hoje.add(_kJanela))
+        .where((o) => !o.feita && _naoPassou(o, agora))
+        .toList();
+
+    final porTipo = <TipoEvento, List<Ocorrencia>>{};
+    for (final o in proximas) {
+      (porTipo[tipoDe(o.evento)] ??= []).add(o);
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Eventos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Calendário do mês',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
+            ),
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, c) {
+          final colunas = c.maxWidth >= 720 ? 4 : 2;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              const _CardTarefas(),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: colunas,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.0,
+                children: [
+                  for (final t in TipoEvento.values)
+                    if (t != TipoEvento.tarefa)
+                      _CardTipo(tipo: t, proximas: porTipo[t] ?? const [], agora: agora),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static bool _naoPassou(Ocorrencia o, DateTime agora) =>
+      o.evento.diaInteiro ||
+      (o.fim.isAfter(o.inicio) ? o.fim.isAfter(agora) : !o.inicio.isBefore(agora));
+}
+
+/// Fundo do card: o tom do tipo bem diluído sobre a superfície.
+Color _fundo(Color cor, ColorScheme scheme) => Color.alphaBlend(
+      cor.withValues(alpha: scheme.brightness == Brightness.dark ? 0.20 : 0.12),
+      scheme.surfaceContainerLow,
+    );
+
+class _Icone extends StatelessWidget {
+  const _Icone({required this.tipo, required this.cor});
+
+  final TipoEvento tipo;
+  final Color cor;
+
+  @override
+  Widget build(BuildContext context) {
+    final sobre = ThemeData.estimateBrightnessForColor(cor) == Brightness.dark ? Colors.white : Colors.black;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(12)),
+      child: Icon(iconeDoTipo(tipo), color: sobre, size: 22),
+    );
+  }
+}
+
+class _CardTarefas extends StatelessWidget {
+  const _CardTarefas();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final scheme = Theme.of(context).colorScheme;
+    final cor = corDoTipo(TipoEvento.tarefa, scheme.brightness);
+    final agora = DateTime.now();
+    final pendentes = [
+      for (final l in organizarTarefas(state.tarefas, agora))
+        if (l.secao != SecaoTarefa.concluidas) l,
+    ];
+    final atrasadas = pendentes.where((l) => l.secao == SecaoTarefa.atrasadas).length;
+
+    void abrir() => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const TarefasScreen()),
+        );
+
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: _fundo(cor, scheme),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: InkWell(
+        onTap: abrir,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  _Icone(tipo: TipoEvento.tarefa, cor: cor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Tarefas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        Text(
+                          [
+                            pendentes.isEmpty
+                                ? 'Nada pendente'
+                                : pendentes.length == 1
+                                    ? '1 pendente'
+                                    : '${pendentes.length} pendentes',
+                            if (atrasadas > 0) atrasadas == 1 ? '1 atrasada' : '$atrasadas atrasadas',
+                          ].join(' · '),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: atrasadas > 0 ? scheme.error : scheme.onSurfaceVariant,
+                            fontWeight: atrasadas > 0 ? FontWeight.w600 : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+                ],
+              ),
+              const SizedBox(height: 4),
+              for (final l in pendentes.take(3)) EventoTile(ocorrencia: l.ocorrencia),
+              if (pendentes.length > 3)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: abrir,
+                    child: Text('Ver todas (${pendentes.length})'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CardTipo extends StatelessWidget {
+  const _CardTipo({required this.tipo, required this.proximas, required this.agora});
+
+  final TipoEvento tipo;
+  final List<Ocorrencia> proximas;
+  final DateTime agora;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final cor = corDoTipo(tipo, scheme.brightness);
+    final (destaque, linha) = switch (tipo) {
+      TipoEvento.feriado => _feriados(),
+      TipoEvento.aniversario => _aniversarios(context),
+      _ => _padrao(),
+    };
+    final vazio = destaque == null;
+
+    return Opacity(
+      opacity: vazio ? 0.55 : 1,
+      child: Card.filled(
+        margin: EdgeInsets.zero,
+        color: vazio ? scheme.surfaceContainerLow : _fundo(cor, scheme),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Icone(tipo: tipo, cor: vazio ? scheme.outline : cor),
+                const Spacer(),
+                Text(
+                  _plural(tipo),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  destaque ?? 'Nada marcado',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                ),
+                if (linha != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    linha,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// "3 próximas" + "qui 13/11 · Prova de SO".
+  (String?, String?) _padrao() {
+    if (proximas.isEmpty) return (null, null);
+    final n = proximas.length;
+    final femininos = {TipoEvento.prova, TipoEvento.consulta, TipoEvento.reuniao, TipoEvento.viagem};
+    final palavra = femininos.contains(tipo)
+        ? (n == 1 ? 'próxima' : 'próximas')
+        : (n == 1 ? 'próximo' : 'próximos');
+    final p = proximas.first;
+    return ('$n $palavra', '${rotuloDoDia(p.inicio, agora)} · ${p.evento.titulo}');
+  }
+
+  /// Hoje é feriado? Senão o próximo; e quantos (folga) até o fim do ano.
+  (String?, String?) _feriados() {
+    if (proximas.isEmpty) return (null, null);
+    final hoje = inicioDoDia(agora);
+    final fimDoAno = DateTime(agora.year + 1);
+    final folgas = proximas.where((o) => ehFolga(o.evento) && o.inicio.isBefore(fimDoAno)).length;
+    final deHoje = proximas.where((o) => inicioDoDia(o.inicio) == hoje).toList();
+    final contagem = folgas == 0
+        ? 'Nenhum até o fim do ano'
+        : folgas == 1
+            ? '1 até o fim do ano'
+            : '$folgas até o fim do ano';
+    if (deHoje.isNotEmpty) return (contagem, 'Hoje: ${deHoje.first.evento.titulo}');
+    final p = proximas.first;
+    return (contagem, '${rotuloDoDia(p.inicio, agora)} · ${p.evento.titulo}');
+  }
+
+  /// Os do mês atual (os que já passaram também contam); nos últimos dias
+  /// do mês, adianta o primeiro do mês seguinte.
+  (String?, String?) _aniversarios(BuildContext context) {
+    final state = context.read<AppState>();
+    final mes = DateTime(agora.year, agora.month);
+    final proximoMes = DateTime(agora.year, agora.month + 1);
+    final doMes = state
+        .ocorrenciasEntre(mes, proximoMes)
+        .where((o) => tipoDe(o.evento) == TipoEvento.aniversario)
+        .toList();
+    final hoje = inicioDoDia(agora);
+    final restantes = doMes.where((o) => !inicioDoDia(o.inicio).isBefore(hoje)).toList();
+    final contagem = doMes.isEmpty
+        ? null
+        : doMes.length == 1
+            ? '1 este mês'
+            : '${doMes.length} este mês';
+    if (restantes.isNotEmpty) {
+      final p = restantes.first;
+      return (contagem, '${rotuloDoDia(p.inicio, agora)} · ${p.evento.titulo}');
+    }
+    final fimDoMes = proximoMes.difference(hoje).inDays <= 7;
+    final seguinte = proximas.where((o) => !o.inicio.isBefore(proximoMes)).firstOrNull;
+    if (fimDoMes && seguinte != null) {
+      return (contagem ?? 'Nenhum este mês', '${rotuloDoDia(seguinte.inicio, agora)} · ${seguinte.evento.titulo}');
+    }
+    return (contagem, null);
+  }
+}
+
+String _plural(TipoEvento t) => switch (t) {
+      TipoEvento.tarefa => 'Tarefas',
+      TipoEvento.prova => 'Provas',
+      TipoEvento.compromisso => 'Compromissos',
+      TipoEvento.consulta => 'Consultas',
+      TipoEvento.reuniao => 'Reuniões',
+      TipoEvento.viagem => 'Viagens',
+      TipoEvento.aniversario => 'Aniversários',
+      TipoEvento.feriado => 'Feriados',
+      TipoEvento.outro => 'Outros',
+    };
+
+const _kMeses = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+/// Todos os eventos de um tipo: próximos (um ano) agrupados por mês, e os
+/// dos últimos 30 dias escondidos atrás de um botão.
+class EventosDoTipoScreen extends StatefulWidget {
+  const EventosDoTipoScreen({super.key, required this.tipo});
+
+  final TipoEvento tipo;
+
+  @override
+  State<EventosDoTipoScreen> createState() => _EventosDoTipoScreenState();
+}
+
+class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
+  bool _passados = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final scheme = Theme.of(context).colorScheme;
+    final agora = DateTime.now();
+    final hoje = inicioDoDia(agora);
+    final todas = state
+        .ocorrenciasEntre(hoje.subtract(const Duration(days: 30)), hoje.add(_kJanela))
+        .where((o) => tipoDe(o.evento) == widget.tipo)
+        .toList();
+    final passados = todas.where((o) => inicioDoDia(o.inicio).isBefore(hoje)).toList().reversed.toList();
+    final proximos = todas.where((o) => !inicioDoDia(o.inicio).isBefore(hoje)).toList();
+
+    final porMes = <DateTime, List<Ocorrencia>>{};
+    for (final o in proximos) {
+      (porMes[DateTime(o.inicio.year, o.inicio.month)] ??= []).add(o);
+    }
+
+    String rotuloMes(DateTime m) =>
+        m.year == agora.year ? _kMeses[m.month - 1] : '${_kMeses[m.month - 1]} de ${m.year}';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(iconeDoTipo(widget.tipo), color: corDoTipo(widget.tipo, scheme.brightness)),
+            const SizedBox(width: 12),
+            Text(_plural(widget.tipo)),
+          ],
+        ),
+      ),
+      body: todas.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Nada marcado. Crie pelo botão da tela Semana, ou escolha este '
+                  'tipo pra uma agenda do Google em Aparência → Agendas.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+              children: [
+                for (final m in porMes.entries) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 14, 8, 2),
+                    child: Text(
+                      '${rotuloMes(m.key)} · ${m.value.length}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  for (final o in m.value) EventoTile(ocorrencia: o),
+                ],
+                if (proximos.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Nada pela frente.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                  ),
+                if (passados.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _passados = !_passados),
+                      icon: Icon(_passados ? Icons.expand_less : Icons.expand_more),
+                      label: Text(_passados ? 'Esconder os passados' : 'Últimos 30 dias (${passados.length})'),
+                    ),
+                  ),
+                if (_passados)
+                  for (final o in passados) EventoTile(ocorrencia: o, esmaecido: true),
+              ],
+            ),
+    );
+  }
+}
+

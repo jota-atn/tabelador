@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import 'eventos_screen.dart';
 import 'itens_screen.dart';
 import 'semana_screen.dart';
 import 'tabelas_screen.dart';
@@ -15,6 +16,11 @@ const List<_Destino> _kDestinos = [
     icone: Icons.grid_view_outlined,
     selecionado: Icons.grid_view,
     rotulo: 'Semana',
+  ),
+  (
+    icone: Icons.event_note_outlined,
+    selecionado: Icons.event_note,
+    rotulo: 'Eventos',
   ),
   (
     icone: Icons.category_outlined,
@@ -60,6 +66,7 @@ class _AppShellState extends State<AppShell> {
       index: _aba,
       children: [
         SemanaScreen(onToggleBrightness: widget.onToggleBrightness),
+        const EventosScreen(),
         const ItensScreen(),
         const TabelasScreen(),
       ],
