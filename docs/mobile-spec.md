@@ -36,7 +36,7 @@
 | **v1.0.0** ✅ (tag em `ac25e8b`, 2026-11-11) | grade, widget, notificações, backup, eventos, Google Agenda (ler e gravar), onboarding, card de detalhes |
 | **v1.1** ✅ (2026-11-11) | 9 tipos de evento (cor e ícone próprios) + Tarefa (feito, data opcional, aviso de manhã) + página de Tarefas |
 | **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
-| **v1.3** (em andamento) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
+| **v1.3** ✅ (2026-11-12) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -755,7 +755,7 @@ Google (`google_card_pending`) se ainda não configurou agendas.
 
 ## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
 
-### v1.3 em andamento (2026-11-12, branch `v1.3-feriados`)
+### v1.3 implementado (2026-11-12, branch `v1.3-feriados`, PR #2)
 
 - **`util/feriados.dart`**: `pascoa(ano)` (Meeus/Jones/Butcher) e
   `feriadosDoAno(ano)` com natureza **folga** (9 fixos federais +
@@ -795,7 +795,7 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   detalhes certo; feriado do Google sem duplicata; "3 de folga até o fim
   do ano". A grade só mostra a semana atual — 20/11 só aparece a partir de
   segunda (navegar semanas segue como ideia).
-- **Falta**: testar 1.3.0+7 (seletor, chave nova, widget no dia 15).
+- 1.3.0+7 testado no aparelho e aprovado (seletor, chave nova).
 
 ### v1.2 implementado (2026-11-11, branch `v1.2-aba-eventos`)
 
