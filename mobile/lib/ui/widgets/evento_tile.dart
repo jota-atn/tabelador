@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import '../../model/evento.dart';
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
-import '../folha_evento.dart';
+import '../detalhes_evento.dart';
 import 'item_swatch.dart';
 
 /// Uma ocorrência de evento numa lista: bloco de data à esquerda, título e
 /// "horário · tipo · item" embaixo. Usado em "Próximos" e na seção de
-/// eventos do item. Tocar abre o editor.
+/// eventos do item. Tocar abre o card de detalhes.
 class EventoTile extends StatelessWidget {
   const EventoTile({
     super.key,
@@ -115,66 +115,9 @@ class EventoTile extends StatelessWidget {
               altura: 32,
               raio: 4,
             ),
-      // Evento do Google é só leitura por enquanto: detalhes numa folha em
-      // vez do formulário.
-      onTap: evento.externo
-          ? () => _detalhesExterno(context, ocorrencia, state)
-          : () => abrirFolhaDeEvento(context, original: evento),
+      // Tocar mostra o card; editar é o lápis dentro dele.
+      onTap: () => abrirDetalhesDoEvento(context, ocorrencia),
     );
   }
 }
 
-void _detalhesExterno(BuildContext context, Ocorrencia o, AppState state) {
-  final e = o.evento;
-  final scheme = Theme.of(context).colorScheme;
-  final agenda = state.agendas[e.agendaId]?.nome;
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-        children: [
-          Text(e.titulo, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Text(
-            '${rotuloDoDia(o.inicio, DateTime.now())} · ${dataCompleta(o.inicio)} · ${faixaHorario(o)}',
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
-          if (e.local != null) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.place_outlined, size: 18, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Expanded(child: Text(e.local!)),
-              ],
-            ),
-          ],
-          if (e.notas != null) ...[
-            const SizedBox(height: 12),
-            Text(e.notas!, maxLines: 12, overflow: TextOverflow.ellipsis),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 5,
-                backgroundColor:
-                    e.corExterna == null ? scheme.outline : Color(e.corExterna!),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Do Google Agenda${agenda == null ? '' : ' · $agenda'} — editar por lá, por enquanto',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}

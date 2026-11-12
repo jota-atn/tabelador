@@ -10,6 +10,20 @@ import 'widgets/chip_deslizavel.dart';
 import 'widgets/folha_evento_partes.dart';
 import 'widgets/grade_de_chips.dart';
 
+/// Ícone de cada tipo fixo — o mesmo na folha de criação e no card de
+/// detalhes.
+IconData iconeDoTipo(TipoEvento t) => switch (t) {
+      TipoEvento.prova => Icons.quiz_outlined,
+      TipoEvento.entrega => Icons.assignment_turned_in_outlined,
+      TipoEvento.lembrete => Icons.notifications_none,
+      TipoEvento.compromisso => Icons.handshake_outlined,
+      TipoEvento.consulta => Icons.medical_services_outlined,
+      TipoEvento.reuniao => Icons.groups_outlined,
+      TipoEvento.viagem => Icons.flight_takeoff,
+      TipoEvento.aniversario => Icons.cake_outlined,
+      TipoEvento.outro => Icons.more_horiz,
+    };
+
 /// 120 → "2h", 90 → "1h30", 45 → "45 min".
 String _duracaoCurta(int min) => min < 60
     ? '$min min'
@@ -99,7 +113,7 @@ class CorpoDaFolha extends StatelessWidget {
                       for (final t in TipoEvento.values)
                         OpcaoChip(
                           rotulo: t.rotulo,
-                          icone: _iconeDoTipo(t),
+                          icone: iconeDoTipo(t),
                           selecionado: f.tipo == t,
                           aoTocar: () => f.escolherTipo(t),
                         ),
@@ -181,18 +195,6 @@ class CorpoDaFolha extends StatelessWidget {
       ],
     );
   }
-
-  static IconData _iconeDoTipo(TipoEvento t) => switch (t) {
-        TipoEvento.prova => Icons.quiz_outlined,
-        TipoEvento.entrega => Icons.assignment_turned_in_outlined,
-        TipoEvento.lembrete => Icons.notifications_none,
-        TipoEvento.compromisso => Icons.handshake_outlined,
-        TipoEvento.consulta => Icons.medical_services_outlined,
-        TipoEvento.reuniao => Icons.groups_outlined,
-        TipoEvento.viagem => Icons.flight_takeoff,
-        TipoEvento.aniversario => Icons.cake_outlined,
-        TipoEvento.outro => Icons.more_horiz,
-      };
 
   /// "qui 12/11 · 10:00–12:00", "sáb 14/11 · dia todo", "seg 16/11 · 23:59".
   static String _resumoQuando(FolhaDeEventoState f) {
