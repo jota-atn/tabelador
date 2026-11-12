@@ -18,6 +18,7 @@ class AgendaDoAparelho {
     required this.nivelAcesso,
     required this.visivel,
     required this.sincroniza,
+    this.dono = '',
   });
 
   factory AgendaDoAparelho.fromMap(Map<Object?, Object?> m) => AgendaDoAparelho(
@@ -31,6 +32,7 @@ class AgendaDoAparelho {
         nivelAcesso: (m['nivelAcesso'] as int?) ?? 0,
         visivel: (m['visivel'] as bool?) ?? false,
         sincroniza: (m['sincroniza'] as bool?) ?? false,
+        dono: (m['dono'] as String?) ?? '',
       );
 
   final String id;
@@ -58,6 +60,13 @@ class AgendaDoAparelho {
   /// costuma vir desligada — aí a agenda existe mas fica vazia no aparelho.
   final bool sincroniza;
 
+  /// `OWNER_ACCOUNT`: identifica turma do Classroom
+  /// (`classroom…@group.calendar.google.com`) e agenda de feriados
+  /// (`…#holiday@group.v.calendar.google.com`).
+  final String dono;
+
+  TipoEvento get tipoSugerido => tipoSugeridoPeloDono(dono);
+
   bool get somenteLeitura => nivelAcesso < 500;
   bool get doGoogle => tipoConta == 'com.google';
 
@@ -65,6 +74,19 @@ class AgendaDoAparelho {
   /// usa — do Google, visíveis e sincronizando (a principal de cada conta e
   /// os feriados, tipicamente). Turmas ficam pra ele escolher.
   bool get selecionadaPorPadrao => doGoogle && visivel && sincroniza;
+}
+
+/// Tipo padrão dos eventos de uma agenda, pelo dono dela: turma do
+/// Classroom → Tarefa (cada atividade tem prazo); feriados → Feriado;
+/// qualquer outra → Outro.
+TipoEvento tipoSugeridoPeloDono(String dono) {
+  final d = dono.toLowerCase();
+  if (d.endsWith('#holiday@group.v.calendar.google.com')) return TipoEvento.feriado;
+  if (d.endsWith('@group.calendar.google.com') &&
+      (d.startsWith('classroom') || d.startsWith('c_classroom'))) {
+    return TipoEvento.tarefa;
+  }
+  return TipoEvento.outro;
 }
 
 /// De onde o [AppState] lê eventos externos. Interface pra os testes

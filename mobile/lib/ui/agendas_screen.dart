@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../model/evento.dart';
+import '../theme/tipo_evento_visual.dart';
+
 import '../agenda/agendas_do_aparelho.dart';
 import '../data/tabelador_store.dart';
 import '../state/app_state.dart';
@@ -62,14 +65,14 @@ class _AgendasScreenState extends State<AgendasScreen> {
       if (!state.agendasConfiguradas) {
         await state.definirAgendas({
           for (final a in lista)
-            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
+            if (a.selecionadaPorPadrao) a.id: AgendaEscolhida.de(a),
         });
       } else {
         // Nome/cor podem ter mudado no Google desde a última vez.
         final atual = state.agendas;
         final atualizado = {
           for (final a in lista)
-            if (atual.containsKey(a.id)) a.id: AgendaEscolhida(nome: a.nome, cor: a.cor, gravavel: !a.somenteLeitura, conta: a.conta),
+            if (atual.containsKey(a.id)) a.id: AgendaEscolhida.de(a, tipo: atual[a.id]!.tipo),
         };
         if (!_mapasIguais(atual, atualizado)) await state.definirAgendas(atualizado);
       }
@@ -98,7 +101,7 @@ class _AgendasScreenState extends State<AgendasScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final novo = {...state.agendas};
     if (marcar) {
-      novo[agenda.id] = AgendaEscolhida(nome: agenda.nome, cor: agenda.cor, gravavel: !agenda.somenteLeitura, conta: agenda.conta);
+      novo[agenda.id] = AgendaEscolhida.de(agenda, tipo: state.agendas[agenda.id]?.tipo);
     } else {
       novo.remove(agenda.id);
     }
@@ -119,6 +122,7 @@ class _AgendasScreenState extends State<AgendasScreen> {
                       nivelAcesso: a.nivelAcesso,
                       visivel: a.visivel,
                       sincroniza: true,
+                      dono: a.dono,
                     )
                   : a,
           ];
@@ -182,6 +186,9 @@ class _AgendasScreenState extends State<AgendasScreen> {
           _Fase.pronta => _Lista(
               agendas: _lista,
               selecionadas: state.agendas.keys.toSet(),
+              tipos: {for (final e in state.agendas.entries) e.key: e.value.tipoEfetivo},
+              aoMudarTipo: (a, t) =>
+                  state.definirTipoDaAgenda(a.id, t == a.tipoSugerido ? null : t),
               qtdEventos: _contarEventos(state),
               aoAlternar: _alternar,
             ),
@@ -242,10 +249,16 @@ class _Lista extends StatelessWidget {
     required this.selecionadas,
     required this.qtdEventos,
     required this.aoAlternar,
+    required this.tipos,
+    required this.aoMudarTipo,
   });
 
   final List<AgendaDoAparelho> agendas;
   final Set<String> selecionadas;
+
+  /// Tipo dos eventos de cada agenda marcada.
+  final Map<String, TipoEvento> tipos;
+  final void Function(AgendaDoAparelho, TipoEvento) aoMudarTipo;
   final Map<String, int> qtdEventos;
   final void Function(AgendaDoAparelho, bool) aoAlternar;
 
@@ -267,7 +280,9 @@ class _Lista extends StatelessWidget {
         child: Text(
           'Marque as agendas que devem aparecer no app. Eventos criados no app '
           'podem ser salvos numa delas (escolha no próprio formulário) e vão '
-          'pro Google Agenda.',
+          'pro Google Agenda. Cada agenda marcada tem um tipo pros eventos '
+          'dela — turmas do Classroom viram Tarefa e feriados, Feriado, '
+          'sozinhos.',
           style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
         ),
       ),
@@ -315,6 +330,40 @@ class _Lista extends StatelessWidget {
               : Text(subtitulo, style: const TextStyle(fontSize: 12)),
         ),
       );
+      final tipo = tipos[a.id];
+      if (marcada && tipo != null) {
+        filhos.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: PopupMenuButton<TipoEvento>(
+                tooltip: 'Tipo dos eventos',
+                initialValue: tipo,
+                onSelected: (t) => aoMudarTipo(a, t),
+                itemBuilder: (_) => [
+                  for (final t in TipoEvento.values)
+                    PopupMenuItem(
+                      value: t,
+                      child: Row(
+                        children: [
+                          Icon(iconeDoTipo(t), size: 20, color: corDoTipo(t, scheme.brightness)),
+                          const SizedBox(width: 12),
+                          Text(t == a.tipoSugerido ? '${t.rotulo} (sugerido)' : t.rotulo),
+                        ],
+                      ),
+                    ),
+                ],
+                child: Chip(
+                  avatar: Icon(iconeDoTipo(tipo), size: 18, color: corDoTipo(tipo, scheme.brightness)),
+                  label: Text('Eventos como ${tipo.rotulo}'),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
     }
     filhos.add(const SizedBox(height: 32));
     return ListView(children: filhos);

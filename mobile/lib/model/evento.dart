@@ -365,6 +365,10 @@ class Evento {
         avisoMin: avisoMin,
       );
 
+  /// Evento externo com o tipo da agenda e o "feito" guardado no app.
+  Evento decorado({required String tipo, required bool feito}) =>
+      _copiar(tipo: tipo, feito: feito);
+
   /// Tipos que saíram da lista: "Entrega" vira Tarefa — e a que já passou
   /// conta como entregue, pra não chegar tudo como atrasada. Devolve o
   /// mesmo objeto quando não há o que mudar.

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../agenda/agendas_do_aparelho.dart';
 import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
@@ -26,7 +27,17 @@ class DadosSalvos {
     this.semanaAberta = false,
     this.onboardingVisto,
     this.cartaoGooglePendente = false,
+    this.feitasExternas = const {},
+    this.ocultasExternas = const {},
   });
+
+  /// Ids de evento externo (tarefa do Classroom) marcados como feitos no
+  /// app — o "entregue" não vem pela agenda.
+  final Set<String> feitasExternas;
+
+  /// Ids de evento externo escondidos do app (arrastar ← numa tarefa do
+  /// Classroom: não dá pra apagar lá).
+  final Set<String> ocultasExternas;
 
   /// Nulo = chave nunca gravada (instalação nova, ou versão de antes do
   /// onboarding) — o AppState decide qual dos dois pelas tabelas.
@@ -71,7 +82,14 @@ class DadosSalvos {
 
 @immutable
 class AgendaEscolhida {
-  const AgendaEscolhida({required this.nome, this.cor, this.gravavel = false, this.conta = ''});
+  const AgendaEscolhida({
+    required this.nome,
+    this.cor,
+    this.gravavel = false,
+    this.conta = '',
+    this.dono = '',
+    this.tipo,
+  });
 
   final String nome;
   final int? cor;
@@ -83,11 +101,36 @@ class AgendaEscolhida {
   /// Dá pra gravar evento nela (dono/colaborador; feriados e turmas não).
   final bool gravavel;
 
+  /// `OWNER_ACCOUNT` da agenda (ver [AgendaDoAparelho.dono]).
+  final String dono;
+
+  /// Tipo escolhido pelo usuário pros eventos dela. Nulo = o sugerido pelo
+  /// dono ([tipoEfetivo]).
+  final String? tipo;
+
+  TipoEvento get tipoEfetivo => TipoEvento.doTexto(tipo ?? '') ?? tipoSugeridoPeloDono(dono);
+
+  /// Escolha a partir da agenda lida do aparelho, mantendo o [tipo] que o
+  /// usuário já tinha escolhido.
+  factory AgendaEscolhida.de(AgendaDoAparelho a, {String? tipo}) => AgendaEscolhida(
+        nome: a.nome,
+        cor: a.cor,
+        gravavel: !a.somenteLeitura,
+        conta: a.conta,
+        dono: a.dono,
+        tipo: tipo,
+      );
+
+  AgendaEscolhida comTipo(String? tipo) =>
+      AgendaEscolhida(nome: nome, cor: cor, gravavel: gravavel, conta: conta, dono: dono, tipo: tipo);
+
   Map<String, dynamic> toJson() => {
         'nome': nome,
         if (cor != null) 'cor': cor,
         if (gravavel) 'gravavel': true,
         if (conta.isNotEmpty) 'conta': conta,
+        if (dono.isNotEmpty) 'dono': dono,
+        if (tipo != null) 'tipo': tipo,
       };
 
   factory AgendaEscolhida.fromJson(Map<String, dynamic> j) => AgendaEscolhida(
@@ -95,6 +138,8 @@ class AgendaEscolhida {
         cor: j['cor'] as int?,
         gravavel: j['gravavel'] as bool? ?? false,
         conta: j['conta'] as String? ?? '',
+        dono: j['dono'] as String? ?? '',
+        tipo: j['tipo'] as String?,
       );
 
   @override
@@ -103,10 +148,12 @@ class AgendaEscolhida {
       other.nome == nome &&
       other.cor == cor &&
       other.gravavel == gravavel &&
-      other.conta == conta;
+      other.conta == conta &&
+      other.dono == dono &&
+      other.tipo == tipo;
 
   @override
-  int get hashCode => Object.hash(nome, cor, gravavel, conta);
+  int get hashCode => Object.hash(nome, cor, gravavel, conta, dono, tipo);
 }
 
 /// Persistência em `SharedPreferences` + JSON.
@@ -128,6 +175,8 @@ class TabeladorStore {
   static const _kSemanaAberta = 'week_list_open';
   static const _kOnboarding = 'onboarding_seen';
   static const _kCartaoGoogle = 'google_card_pending';
+  static const _kFeitasExternas = 'external_done_ids';
+  static const _kOcultasExternas = 'external_hidden_ids';
 
   Future<DadosSalvos> carregar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -147,6 +196,8 @@ class TabeladorStore {
       semanaAberta: prefs.getBool(_kSemanaAberta) ?? false,
       onboardingVisto: prefs.getBool(_kOnboarding),
       cartaoGooglePendente: prefs.getBool(_kCartaoGoogle) ?? false,
+      feitasExternas: {...?prefs.getStringList(_kFeitasExternas)},
+      ocultasExternas: {...?prefs.getStringList(_kOcultasExternas)},
     );
   }
 
@@ -219,6 +270,16 @@ class TabeladorStore {
   Future<void> salvarCartaoGooglePendente(bool pendente) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kCartaoGoogle, pendente);
+  }
+
+  Future<void> salvarFeitasExternas(Set<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kFeitasExternas, ids.toList()..sort());
+  }
+
+  Future<void> salvarOcultasExternas(Set<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kOcultasExternas, ids.toList()..sort());
   }
 
   Future<void> salvarSemanaAberta(bool aberta) async {
