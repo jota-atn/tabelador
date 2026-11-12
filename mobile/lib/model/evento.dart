@@ -28,18 +28,25 @@ enum Repeticao {
 /// definem como padrão.
 enum DuracaoPadrao { diaTodo, prazo, umaHora, horarioDoItem }
 
+/// Hora padrão do aviso de evento de dia inteiro (e de tarefa sem hora):
+/// 7:00, cedo o bastante pra dar tempo de fazer no dia.
+const int kAvisoDiaTodoPadrao = 7 * 60;
+
 /// Tipos fixos de evento. O valor real não é a categoria, é o padrão que
 /// cada um preenche (duração, repetição) — tocar em "Aniversário" já deixa
 /// dia todo e anual.
+///
+/// Tarefa abre com "sem hora" (dia todo): o que importa é o dia, e o aviso
+/// sai de manhã ([Evento.avisoMin]).
 enum TipoEvento {
+  tarefa('Tarefa', DuracaoPadrao.diaTodo),
   prova('Prova', DuracaoPadrao.horarioDoItem),
-  entrega('Entrega', DuracaoPadrao.prazo),
-  lembrete('Lembrete', DuracaoPadrao.prazo),
   compromisso('Compromisso', DuracaoPadrao.umaHora),
   consulta('Consulta', DuracaoPadrao.umaHora),
   reuniao('Reunião', DuracaoPadrao.umaHora),
   viagem('Viagem', DuracaoPadrao.diaTodo),
   aniversario('Aniversário', DuracaoPadrao.diaTodo, repeticao: Repeticao.anual),
+  feriado('Feriado', DuracaoPadrao.diaTodo),
   outro('Outro', DuracaoPadrao.umaHora);
 
   const TipoEvento(this.rotulo, this.duracao, {this.repeticao = Repeticao.nenhuma});
@@ -85,6 +92,10 @@ class Evento {
     this.corExterna,
     this.idNoAparelho,
     this.agendaDestinoId,
+    this.semData = false,
+    this.feito = false,
+    this.feitas = const {},
+    this.avisoMin,
   });
 
   Evento.novo({
@@ -97,7 +108,11 @@ class Evento {
     this.itemId,
     this.local,
     this.notas,
+    this.semData = false,
+    this.avisoMin,
   })  : id = gerarId(),
+        feito = false,
+        feitas = const {},
         agendaId = null,
         corExterna = null,
         idNoAparelho = null,
@@ -137,7 +152,39 @@ class Evento {
   /// em"). Nulo = só no app.
   final String? agendaDestinoId;
 
+  /// Tarefa sem data: só lembrar que precisa ser feita. [inicio] fica com
+  /// a data de criação e é ignorado — não gera ocorrência, não vai pra
+  /// grade, calendário, aviso nem Google.
+  final bool semData;
+
+  /// Concluída — vale pra evento que não repete (com ou sem data).
+  final bool feito;
+
+  /// Dias (meia-noite) das ocorrências concluídas de uma tarefa que repete:
+  /// concluir marca só a ocorrência, não a série.
+  final Set<DateTime> feitas;
+
+  /// Hora do aviso de evento de dia inteiro, em minutos desde a meia-noite.
+  /// Nulo = padrão ([kAvisoDiaTodoPadrao]).
+  final int? avisoMin;
+
   bool get externo => agendaId != null;
+  bool get ehTarefa => TipoEvento.doTexto(tipo) == TipoEvento.tarefa;
+
+  /// A ocorrência que começa em [inicioDaOcorrencia] está concluída?
+  bool feitaEm(DateTime inicioDaOcorrencia) => repeticao == Repeticao.nenhuma
+      ? feito
+      : feitas.contains(_dia(inicioDaOcorrencia));
+
+  /// Marca (ou desmarca) a ocorrência de [inicioDaOcorrencia] — em evento
+  /// que não repete, o evento todo.
+  Evento marcandoFeita(DateTime inicioDaOcorrencia, bool valor) {
+    if (repeticao == Repeticao.nenhuma) return _copiar(feito: valor);
+    final dia = _dia(inicioDaOcorrencia);
+    return _copiar(feitas: valor ? {...feitas, dia} : ({...feitas}..remove(dia)));
+  }
+
+  static DateTime _dia(DateTime d) => DateTime(d.year, d.month, d.day);
   bool get gravadoNoGoogle => !externo && idNoAparelho != null;
 
   Duration get duracao =>
@@ -152,6 +199,7 @@ class Evento {
   /// pro dia seguinte.
   List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
     final resultado = <Ocorrencia>[];
+    if (semData) return resultado;
     void considerar(DateTime comeco) {
       if (!comeco.isBefore(de) && comeco.isBefore(ate)) {
         resultado.add(Ocorrencia(this, comeco, comeco.add(duracao)));
@@ -240,7 +288,15 @@ class Evento {
         if (notas != null) 'notas': notas,
         if (idNoAparelho != null) 'idNoAparelho': idNoAparelho,
         if (agendaDestinoId != null) 'agendaDestinoId': agendaDestinoId,
+        if (semData) 'semData': true,
+        if (feito) 'feito': true,
+        if (feitas.isNotEmpty)
+          'feitas': [for (final d in feitas.toList()..sort()) _diaIso(d)],
+        if (avisoMin != null) 'avisoMin': avisoMin,
       };
+
+  static String _diaIso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   /// Tolerante como [Item.fromJson]. Sem data de início válida não há o que
   /// mostrar, então cai em "agora" em vez de derrubar o carregamento inteiro.
@@ -258,40 +314,65 @@ class Evento {
       notas: json['notas'] as String?,
       idNoAparelho: json['idNoAparelho'] as String?,
       agendaDestinoId: json['agendaDestinoId'] as String?,
+      semData: json['semData'] as bool? ?? false,
+      feito: json['feito'] as bool? ?? false,
+      feitas: {
+        for (final d in (json['feitas'] as List<dynamic>? ?? const []))
+          if (d is String && DateTime.tryParse(d) != null) _dia(DateTime.parse(d)),
+      },
+      avisoMin: (json['avisoMin'] as num?)?.toInt(),
     );
   }
 
   /// Mesmo evento apontando (ou deixando de apontar, com nulos) pra uma
   /// cópia na agenda do aparelho.
-  Evento comEspelho(String? idNoAparelho, String? agendaDestinoId) => Evento(
-        id: id,
-        titulo: titulo,
-        inicio: inicio,
-        fim: fim,
-        diaInteiro: diaInteiro,
-        tipo: tipo,
-        repeticao: repeticao,
-        itemId: itemId,
-        local: local,
-        notas: notas,
-        idNoAparelho: idNoAparelho,
-        agendaDestinoId: agendaDestinoId,
+  Evento comEspelho(String? idNoAparelho, String? agendaDestinoId) => _copiar(
+        idNoAparelho: () => idNoAparelho,
+        agendaDestinoId: () => agendaDestinoId,
       );
 
   /// Mesmo evento com o vínculo removido — usado quando o item é apagado.
-  Evento semItem() => Evento(
+  Evento semItem() => _copiar(itemId: () => null);
+
+  /// Cópia com campos trocados. Os anuláveis vêm embrulhados numa função
+  /// pra dar pra trocar por null.
+  Evento _copiar({
+    String? tipo,
+    String? Function()? itemId,
+    String? Function()? idNoAparelho,
+    String? Function()? agendaDestinoId,
+    bool? feito,
+    Set<DateTime>? feitas,
+  }) =>
+      Evento(
         id: id,
         titulo: titulo,
         inicio: inicio,
         fim: fim,
         diaInteiro: diaInteiro,
-        tipo: tipo,
+        tipo: tipo ?? this.tipo,
         repeticao: repeticao,
+        itemId: itemId == null ? this.itemId : itemId(),
         local: local,
         notas: notas,
-        idNoAparelho: idNoAparelho,
-        agendaDestinoId: agendaDestinoId,
+        agendaId: agendaId,
+        corExterna: corExterna,
+        idNoAparelho: idNoAparelho == null ? this.idNoAparelho : idNoAparelho(),
+        agendaDestinoId: agendaDestinoId == null ? this.agendaDestinoId : agendaDestinoId(),
+        semData: semData,
+        feito: feito ?? this.feito,
+        feitas: feitas ?? this.feitas,
+        avisoMin: avisoMin,
       );
+
+  /// Tipos que saíram da lista: "Entrega" vira Tarefa — e a que já passou
+  /// conta como entregue, pra não chegar tudo como atrasada. Devolve o
+  /// mesmo objeto quando não há o que mudar.
+  Evento migrado(DateTime agora) {
+    if (tipo.trim().toLowerCase() != 'entrega') return this;
+    final passou = repeticao == Repeticao.nenhuma && inicio.isBefore(_dia(agora));
+    return _copiar(tipo: TipoEvento.tarefa.rotulo, feito: feito || passou);
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -309,7 +390,11 @@ class Evento {
       other.agendaId == agendaId &&
       other.corExterna == corExterna &&
       other.idNoAparelho == idNoAparelho &&
-      other.agendaDestinoId == agendaDestinoId;
+      other.agendaDestinoId == agendaDestinoId &&
+      other.semData == semData &&
+      other.feito == feito &&
+      setEquals(other.feitas, feitas) &&
+      other.avisoMin == avisoMin;
 
   @override
   int get hashCode => Object.hash(
@@ -327,6 +412,10 @@ class Evento {
         corExterna,
         idNoAparelho,
         agendaDestinoId,
+        semData,
+        feito,
+        Object.hashAllUnordered(feitas),
+        avisoMin,
       );
 
   @override
@@ -342,4 +431,10 @@ class Ocorrencia {
   final Evento evento;
   final DateTime inicio;
   final DateTime fim;
+
+  bool get feita => evento.feitaEm(inicio);
+
+  /// Tarefa sem data não tem ocorrência de verdade; esta é a "de mentira"
+  /// que as listas e o card de detalhes usam pra mostrar ela.
+  factory Ocorrencia.semData(Evento e) => Ocorrencia(e, e.inicio, e.inicio);
 }

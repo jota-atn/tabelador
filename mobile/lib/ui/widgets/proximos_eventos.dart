@@ -5,6 +5,7 @@ import '../../model/evento.dart';
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
 import '../calendario_screen.dart';
+import '../tarefas_screen.dart';
 import 'evento_tile.dart';
 
 /// "Esta semana" abaixo da grade: de agora até domingo. Fechada, mostra
@@ -12,6 +13,10 @@ import 'evento_tile.dart';
 /// eventos da semana" embaixo; aberta, tudo agrupado por dia e "Mostrar só
 /// o próximo". O estado é lembrado. "Mês" no cabeçalho abre o calendário —
 /// separado do abrir/fechar, que antes dividia a mesma linha e confundia.
+///
+/// Tarefas: as que vencem na semana entram como qualquer evento (com
+/// caixinha); concluída sai; atrasadas ficam sempre no topo, mesmo fechada.
+/// "Tarefas" no cabeçalho abre a página de tarefas.
 class ProximosEventos extends StatelessWidget {
   const ProximosEventos({super.key});
 
@@ -30,8 +35,9 @@ class ProximosEventos extends StatelessWidget {
     final fimDaSemana = DateTime(hoje.year, hoje.month, hoje.day + (8 - hoje.weekday));
     final ocorrencias = state
         .ocorrenciasEntre(hoje, fimDaSemana)
-        .where((o) => _naoPassou(o, agora))
+        .where((o) => _naoPassou(o, agora) && !o.feita)
         .toList();
+    final atrasadas = state.tarefasAtrasadas(agora);
     final aberta = state.semanaAberta;
 
     // Sábado e domingo: a semana está acabando, então vale apontar a próxima.
@@ -63,7 +69,7 @@ class ProximosEventos extends StatelessWidget {
                 'Esta semana',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.onSurface),
               ),
-              if (ocorrencias.isNotEmpty) ...[
+              if (ocorrencias.isNotEmpty || atrasadas.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -72,7 +78,7 @@ class ProximosEventos extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${ocorrencias.length}',
+                    '${ocorrencias.length + atrasadas.length}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -84,6 +90,13 @@ class ProximosEventos extends StatelessWidget {
               const Spacer(),
               TextButton.icon(
                 onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const TarefasScreen()),
+                ),
+                icon: const Icon(Icons.task_alt, size: 18),
+                label: const Text('Tarefas'),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
                 ),
                 icon: const Icon(Icons.calendar_month, size: 18),
@@ -92,7 +105,17 @@ class ProximosEventos extends StatelessWidget {
             ],
           ),
         ),
-        if (primeiro == null)
+        if (atrasadas.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+            child: Text(
+              atrasadas.length == 1 ? 'Atrasada' : 'Atrasadas',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.error),
+            ),
+          ),
+          for (final o in atrasadas) EventoTile(ocorrencia: o),
+        ],
+        if (primeiro == null && atrasadas.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
             child: Text(
@@ -100,6 +123,8 @@ class ProximosEventos extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
             ),
           )
+        else if (primeiro == null)
+          const SizedBox.shrink()
         // Fechada: só o próximo, como linha inteira da lista.
         else if (!aberta || escondidos == 0)
           EventoTile(ocorrencia: primeiro)

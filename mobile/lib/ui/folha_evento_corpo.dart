@@ -4,25 +4,12 @@ import 'package:provider/provider.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../theme/color_density.dart';
+import '../theme/tipo_evento_visual.dart';
 import '../util/formato_data.dart';
 import 'folha_evento.dart';
 import 'widgets/chip_deslizavel.dart';
 import 'widgets/folha_evento_partes.dart';
 import 'widgets/grade_de_chips.dart';
-
-/// Ícone de cada tipo fixo — o mesmo na folha de criação e no card de
-/// detalhes.
-IconData iconeDoTipo(TipoEvento t) => switch (t) {
-      TipoEvento.prova => Icons.quiz_outlined,
-      TipoEvento.entrega => Icons.assignment_turned_in_outlined,
-      TipoEvento.lembrete => Icons.notifications_none,
-      TipoEvento.compromisso => Icons.handshake_outlined,
-      TipoEvento.consulta => Icons.medical_services_outlined,
-      TipoEvento.reuniao => Icons.groups_outlined,
-      TipoEvento.viagem => Icons.flight_takeoff,
-      TipoEvento.aniversario => Icons.cake_outlined,
-      TipoEvento.outro => Icons.more_horiz,
-    };
 
 /// 120 → "2h", 90 → "1h30", 45 → "45 min".
 String _duracaoCurta(int min) => min < 60
@@ -132,12 +119,20 @@ class CorpoDaFolha extends StatelessWidget {
                   resumo: _resumoQuando(f),
                   filhos: [
                     _Quando(f: f),
-                    if (!f.diaTodo) ...[
-                      const RotuloLinha('Horário'),
-                      _Horario(f: f),
+                    if (!f.semData || !f.ehTarefa) ...[
+                      if (f.ehTarefa || !f.diaTodo) ...[
+                        const RotuloLinha('Horário'),
+                        _Horario(f: f),
+                      ],
+                      if (!f.ehTarefa) ...[
+                        const RotuloLinha('Duração'),
+                        _Duracao(f: f),
+                      ],
+                      if (f.diaTodo) ...[
+                        const RotuloLinha('Aviso'),
+                        _Aviso(f: f),
+                      ],
                     ],
-                    const RotuloLinha('Duração'),
-                    _Duracao(f: f),
                   ],
                 ),
                 SecaoDaFolha(
@@ -198,8 +193,9 @@ class CorpoDaFolha extends StatelessWidget {
 
   /// "qui 12/11 · 10:00–12:00", "sáb 14/11 · dia todo", "seg 16/11 · 23:59".
   static String _resumoQuando(FolhaDeEventoState f) {
+    if (f.ehTarefa && f.semData) return 'sem data';
     final dia = '${diaAbreviado(f.data).toLowerCase()} ${diaMes(f.data)}';
-    if (f.diaTodo) return '$dia · dia todo';
+    if (f.diaTodo) return '$dia · ${f.ehTarefa ? 'sem hora' : 'dia todo'}';
     if (f.minutos == 0) return '$dia · ${_hhmm(f.horaInicio)}';
     final fim = f.horaInicio.hour * 60 + f.horaInicio.minute + f.minutos;
     return '$dia · ${_hhmm(f.horaInicio)}–${_hhmm(TimeOfDay(hour: fim ~/ 60 % 24, minute: fim % 60))}';
@@ -283,26 +279,34 @@ class _Quando extends StatelessWidget {
     final ehProximo = proximo != null &&
         f.data == inicioDoDia(proximo.inicio) &&
         f.horaInicio == TimeOfDay.fromDateTime(proximo.inicio);
-    final dataLivre = !ehProximo && f.data != hoje && f.data != amanha;
+    final semData = f.ehTarefa && f.semData;
+    final dataLivre = !semData && !ehProximo && f.data != hoje && f.data != amanha;
 
     return GradeDeChips(opcoes: [
+      if (f.ehTarefa)
+        OpcaoChip(
+          rotulo: 'Sem data',
+          icone: Icons.inbox_outlined,
+          selecionado: semData,
+          aoTocar: f.escolherSemData,
+        ),
       if (proximo != null)
         OpcaoChip(
           rotulo: 'Próximo de ${f.item?.sigla} · '
               '${rotuloDoDia(proximo.inicio, agora).toLowerCase()} '
               '${_hhmm(TimeOfDay.fromDateTime(proximo.inicio))}',
           icone: Icons.event_repeat,
-          selecionado: ehProximo,
+          selecionado: !semData && ehProximo,
           aoTocar: f.usarProximoDoItem,
         ),
       OpcaoChip(
         rotulo: 'Hoje',
-        selecionado: !ehProximo && f.data == hoje,
+        selecionado: !semData && !ehProximo && f.data == hoje,
         aoTocar: () => f.escolherData(hoje),
       ),
       OpcaoChip(
         rotulo: 'Amanhã',
-        selecionado: !ehProximo && f.data == amanha,
+        selecionado: !semData && !ehProximo && f.data == amanha,
         aoTocar: () => f.escolherData(amanha),
       ),
       OpcaoChip(
@@ -323,12 +327,18 @@ class _Horario extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GradeDeChips(opcoes: [
+      if (f.ehTarefa)
+        OpcaoChip(
+          rotulo: 'Sem hora',
+          selecionado: f.diaTodo,
+          aoTocar: f.escolherSemHora,
+        ),
       for (final h in f.sugestoesDeHorario)
         () {
           final sigla = f.siglaNoHorario(h);
           return OpcaoChip(
             rotulo: sigla == null ? _hhmm(h) : '${_hhmm(h)} · $sigla',
-            selecionado: f.horaInicio == h,
+            selecionado: !f.diaTodo && f.horaInicio == h,
             aoTocar: () => f.escolherHora(h),
           );
         }(),
@@ -337,6 +347,36 @@ class _Horario extends StatelessWidget {
         icone: Icons.schedule,
         selecionado: false,
         aoTocar: f.escolherHoraInicio,
+      ),
+    ]);
+  }
+}
+
+/// Hora do aviso de evento de dia todo (tarefa sem hora, aniversário…).
+class _Aviso extends StatelessWidget {
+  const _Aviso({required this.f});
+
+  final FolhaDeEventoState f;
+
+  static const _opcoes = [7 * 60, 8 * 60, 12 * 60, 18 * 60];
+
+  @override
+  Widget build(BuildContext context) {
+    final livre = !_opcoes.contains(f.avisoMin);
+    String rotulo(int m) => _hhmm(TimeOfDay(hour: m ~/ 60, minute: m % 60));
+    return GradeDeChips(opcoes: [
+      for (final m in _opcoes)
+        OpcaoChip(
+          rotulo: rotulo(m),
+          icone: m == _opcoes.first ? Icons.notifications_none : null,
+          selecionado: f.avisoMin == m,
+          aoTocar: () => f.escolherAviso(m),
+        ),
+      OpcaoChip(
+        rotulo: livre ? rotulo(f.avisoMin) : 'Outro…',
+        icone: Icons.schedule,
+        selecionado: livre,
+        aoTocar: f.escolherAvisoOutro,
       ),
     ]);
   }
@@ -434,6 +474,7 @@ class _Detalhes extends StatelessWidget {
         menu: menuLocal.length > 1 ? menuLocal : null,
         aoTocar: f.digitarLocal,
       ),
+      if (!(f.ehTarefa && f.semData))
       OpcaoChip(
         rotulo: f.repeticao.rotulo,
         icone: Icons.repeat,
@@ -447,7 +488,7 @@ class _Detalhes extends StatelessWidget {
             ),
         ],
       ),
-      if (gravaveis.isNotEmpty || f.destino != null)
+      if ((gravaveis.isNotEmpty || f.destino != null) && !(f.ehTarefa && f.semData))
         OpcaoChip(
           rotulo: f.destino == null ? 'Só no app' : _curto(destino?.nome ?? 'Google'),
           icone: f.destino == null ? Icons.phone_android : Icons.cloud_outlined,

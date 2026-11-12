@@ -4,12 +4,17 @@ import 'package:provider/provider.dart';
 import '../../model/evento.dart';
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
+import '../../theme/tipo_evento_visual.dart';
 import '../detalhes_evento.dart';
+import '../tarefas_acoes.dart';
 import 'item_swatch.dart';
 
 /// Uma ocorrência de evento numa lista: bloco de data à esquerda, título e
 /// "horário · tipo · item" embaixo. Usado em "Próximos" e na seção de
 /// eventos do item. Tocar abre o card de detalhes.
+///
+/// Tarefa do app troca o bloco da esquerda por uma caixinha (tocar conclui,
+/// com Desfazer); a data vai pro texto de baixo. Atrasada fica em vermelho.
 class EventoTile extends StatelessWidget {
   const EventoTile({
     super.key,
@@ -17,7 +22,20 @@ class EventoTile extends StatelessWidget {
     this.mostrarItem = true,
     this.esmaecido = false,
     this.mostrarData = true,
+    this.aoMarcar,
+    this.aoTocar,
+    this.aoSegurar,
+    this.selecionado = false,
   });
+
+  /// A página de Tarefas cuida do concluir (risca antes de descer); sem
+  /// isto, a caixinha conclui com Desfazer direto.
+  final ValueChanged<bool>? aoMarcar;
+
+  /// Troca o "tocar abre o card" (modo de seleção da página de Tarefas).
+  final VoidCallback? aoTocar;
+  final VoidCallback? aoSegurar;
+  final bool selecionado;
 
   final Ocorrencia ocorrencia;
 
@@ -38,20 +56,50 @@ class EventoTile extends StatelessWidget {
     final evento = ocorrencia.evento;
     final item = state.itemPorId(evento.itemId);
     final agora = DateTime.now();
+    final tarefa = evento.ehTarefa && !evento.externo;
+    final feita = tarefa && ocorrencia.feita;
+    final atrasada = tarefa &&
+        !feita &&
+        !evento.semData &&
+        (evento.diaInteiro
+            ? inicioDoDia(ocorrencia.inicio).isBefore(inicioDoDia(agora))
+            : ocorrencia.inicio.isBefore(agora));
+    final tipo = TipoEvento.doTexto(evento.tipo);
 
     final detalhes = [
-      faixaHorario(ocorrencia),
-      if (evento.tipo.isNotEmpty) evento.tipo,
+      if (tarefa && evento.semData)
+        'Sem data'
+      else if (tarefa && mostrarData)
+        rotuloDoDia(ocorrencia.inicio, agora),
+      if (!(tarefa && (evento.diaInteiro || evento.semData))) faixaHorario(ocorrencia),
+      if (evento.tipo.isNotEmpty && !tarefa) evento.tipo,
       if (mostrarItem && item != null) item.sigla,
       if (evento.repeticao != Repeticao.nenhuma) evento.repeticao.rotulo.toLowerCase(),
       if (evento.gravadoNoGoogle) 'Google',
     ].join(' · ');
 
-    final corTexto = esmaecido ? scheme.onSurfaceVariant : scheme.onSurface;
+    final corTexto = esmaecido || feita ? scheme.onSurfaceVariant : scheme.onSurface;
 
     return ListTile(
+      selected: selecionado,
+      selectedTileColor: scheme.secondaryContainer,
+      onLongPress: aoSegurar,
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: !mostrarData
+      leading: tarefa
+          ? SizedBox(
+              width: 48,
+              child: Center(
+                child: Checkbox(
+                  value: feita,
+                  activeColor: corDoTipo(TipoEvento.tarefa, scheme.brightness),
+                  shape: const CircleBorder(),
+                  onChanged: (v) => aoMarcar != null
+                      ? aoMarcar!(v ?? false)
+                      : marcarTarefa(context, ocorrencia, v ?? false),
+                ),
+              ),
+            )
+          : !mostrarData
           ? SizedBox(
               width: 48,
               child: Center(
@@ -90,13 +138,19 @@ class EventoTile extends StatelessWidget {
         evento.titulo,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: corTexto),
+        style: TextStyle(
+          color: corTexto,
+          decoration: feita ? TextDecoration.lineThrough : null,
+        ),
       ),
-      subtitle: Text(
-        mostrarData ? '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes' : detalhes,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      subtitle: detalhes.isEmpty
+          ? null
+          : Text(
+              mostrarData && !tarefa ? '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes' : detalhes,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: atrasada ? TextStyle(color: scheme.error, fontWeight: FontWeight.w600) : null,
+            ),
       // A cor do item vinculado, na densidade do app — o mesmo sinal visual
       // que liga o evento à disciplina na grade.
       trailing: item == null
@@ -107,7 +161,9 @@ class EventoTile extends StatelessWidget {
                       ? scheme.outline
                       : Color(evento.corExterna!),
                 )
-              : null)
+              : tipo == null || tarefa
+                  ? null
+                  : Icon(iconeDoTipo(tipo), size: 20, color: corDoTipo(tipo, scheme.brightness)))
           : ItemSwatch(
               cor: item.cor,
               densidade: state.densidade,
@@ -116,7 +172,7 @@ class EventoTile extends StatelessWidget {
               raio: 4,
             ),
       // Tocar mostra o card; editar é o lápis dentro dele.
-      onTap: () => abrirDetalhesDoEvento(context, ocorrencia),
+      onTap: aoTocar ?? () => abrirDetalhesDoEvento(context, ocorrencia),
     );
   }
 }

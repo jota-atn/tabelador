@@ -25,8 +25,10 @@
 | Versão | Conteúdo |
 |---|---|
 | **v1.0.0** ✅ (tag em `ac25e8b`, 2026-11-11) | grade, widget, notificações, backup, eventos, Google Agenda (ler e gravar), onboarding, card de detalhes |
-| **v1.1** | 9 tipos de evento + Tarefa (feito, data opcional, aviso de manhã) |
+| **v1.1** ✅ (2026-11-11) | 9 tipos de evento (cor e ícone próprios) + Tarefa (feito, data opcional, aviso de manhã) + página de Tarefas |
 | **v1.2** | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
+| **v1.3** | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
+| **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
 | **v2.2** | Classroom nível 1 |
@@ -743,6 +745,46 @@ ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
 ## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
+
+### v1.1 implementado (2026-11-11)
+
+O que entrou e as decisões tomadas na implementação:
+
+- **Tipos**: `TipoEvento` = Tarefa, Prova, Compromisso, Consulta, Reunião,
+  Viagem, Aniversário, Feriado, Outro. Cor e ícone em
+  `lib/theme/tipo_evento_visual.dart` (estetoscópio vem do pacote
+  `material_symbols_icons`). O card de detalhes e a linha da lista usam a
+  cor do tipo quando o evento não tem item.
+- **Modelo** (`Evento`): `semData`, `feito` (evento que não repete),
+  `feitas` (dias concluídos de recorrente), `avisoMin` (hora do aviso de
+  dia todo). Tarefa sem data guarda a data de criação em `inicio`, que é
+  ignorada: não gera ocorrência, não vai pra grade, calendário, aviso nem
+  Google.
+- **Migração**: evento salvo com tipo "Entrega" vira Tarefa ao carregar (e
+  ao restaurar backup); a que já passou entra como **concluída**, pra não
+  chegar tudo como atrasado. "Lembrete" cai em Outro (não havia nenhum).
+- **Folha**: com Tarefa aparecem "Sem data" (no Quando) e "Sem hora" (no
+  Horário); hora escolhida = prazo, sem duração. Linha **Aviso** (07:00,
+  08:00, 12:00, 18:00, Outro…) pra **qualquer** evento de dia todo, não só
+  tarefa. Padrão do aviso de dia todo passou de 8h pra **7h** em todos os
+  tipos.
+- **Atrasada** = tarefa que não repete, não concluída, com prazo passado
+  (sem hora: o dia acabou). Ocorrência antiga de tarefa recorrente **não**
+  conta como atrasada (senão "todo dia" acumula).
+- **Concluída**: some do widget, do "Esta semana" e dos avisos; continua
+  na grade e no calendário.
+- **"Esta semana"**: tarefa com caixinha (conclui com Desfazer); atrasadas
+  sempre no topo, mesmo fechada; botão **Tarefas** no cabeçalho.
+- **Página de Tarefas** (`tarefas_screen.dart`): seções Atrasadas, Hoje,
+  Esta semana, Mais tarde, Sem data, Concluídas (escondidas, com "Mostrar
+  N concluídas"). Recorrente aparece uma vez, na próxima ocorrência
+  pendente. Gestos como decidido (caixinha, → conclui, ← apaga, segurar =
+  seleção, riscada 2s, Desfazer). Opções de listagem: período, item,
+  mostrar concluídas; lupa. Filtro por origem fica pro Classroom (v1.2).
+  **Tem botão "Nova tarefa"** (a regra "sem ＋" era da aba Eventos, não
+  desta página).
+- Fica pra depois: prioridade de Tarefa, "feito" de tarefa do Classroom,
+  widget só de tarefas.
 
 Nada construído. Decidido até agora:
 

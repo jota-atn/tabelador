@@ -102,7 +102,11 @@ class AppState extends ChangeNotifier {
     final dados = await _store.carregar();
     _itens = [...dados.itens];
     _tabelas = [...dados.tabelas];
-    _eventos = [...dados.eventos];
+    _eventos = _migrar(dados.eventos);
+    if (!identical(_eventos, dados.eventos) &&
+        !listEquals(_eventos, dados.eventos)) {
+      unawaited(_store.salvarEventos(_eventos));
+    }
     _densidade = dados.densidade;
     _notificacoesAtivas = dados.notificacoesAtivas;
     _antecedenciaMinutos = dados.antecedenciaMinutos;
@@ -351,19 +355,52 @@ class AppState extends ChangeNotifier {
   List<Evento> eventosDoItem(String itemId) =>
       List.unmodifiable(_eventos.where((e) => e.itemId == itemId));
 
-  /// Tipos já usados em eventos, pro autocomplete — separado dos tipos de
-  /// item ("Aula", "Treino") porque o vocabulário é outro ("Prova",
-  /// "Entrega"). Os padrões entram mesmo sem uso, pra o primeiro evento já
-  /// ter o que tocar.
-  List<String> get tiposDeEventoConhecidos {
-    final vistos = <String>{
-      'Prova',
-      'Entrega',
-      'Compromisso',
+  /// Tipos que saíram da lista viram os novos (ver [Evento.migrado]).
+  static List<Evento> _migrar(List<Evento> eventos) {
+    final agora = DateTime.now();
+    return [for (final e in eventos) e.migrado(agora)];
+  }
+
+  // -------------------------------------------------------------- tarefas
+
+  /// Tarefas do app (com e sem data), na ordem em que foram salvas.
+  List<Evento> get tarefas => List.unmodifiable(_eventos.where((e) => e.ehTarefa));
+
+  /// Tarefas atrasadas: não concluídas, com data, e com o prazo já
+  /// passado (sem hora: o dia acabou). Só as que não repetem — ocorrência
+  /// antiga de tarefa recorrente não se acumula como atraso.
+  List<Ocorrencia> tarefasAtrasadas(DateTime agora) {
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    return [
       for (final e in _eventos)
-        if (e.tipo.trim().isNotEmpty) e.tipo.trim(),
-    };
-    return vistos.toList()..sort();
+        if (e.ehTarefa &&
+            !e.semData &&
+            !e.feito &&
+            e.repeticao == Repeticao.nenhuma &&
+            (e.diaInteiro ? e.inicio.isBefore(hoje) : e.inicio.isBefore(agora)))
+          Ocorrencia(e, e.inicio, e.inicio.add(e.duracao)),
+    ]..sort((a, b) => a.inicio.compareTo(b.inicio));
+  }
+
+  /// Conclui (ou reabre) a ocorrência [o] — em tarefa que repete, só ela.
+  Future<void> marcarFeita(Ocorrencia o, bool feita) async {
+    final e = o.evento;
+    if (e.externo) return;
+    final novo = e.marcandoFeita(o.inicio, feita);
+    if (novo == e) return;
+    _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  /// Desfaz um [removerEvento]: o evento volta igual, e a cópia no Google
+  /// (que foi apagada lá) é recriada na mesma agenda.
+  Future<bool> restaurarEvento(Evento evento) async {
+    final destino = evento.agendaDestinoId;
+    return adicionarEvento(
+      evento.comEspelho(null, null),
+      salvarEm: destino != null && _agendas[destino]?.gravavel == true ? destino : null,
+    );
   }
 
   /// Salva [evento] e, com [salvarEm] (id de agenda do aparelho), grava
@@ -371,6 +408,8 @@ class AppState extends ChangeNotifier {
   /// falhou: o evento fica salvo no app mesmo assim, só não no Google, e
   /// quem chama avisa.
   Future<bool> adicionarEvento(Evento evento, {String? salvarEm}) async {
+    // Tarefa sem data não tem o que pôr numa agenda.
+    if (evento.semData) salvarEm = null;
     var salvo = evento;
     var ok = true;
     if (salvarEm != null) {
@@ -389,6 +428,7 @@ class AppState extends ChangeNotifier {
   /// mudou: mesma agenda atualiza; outra agenda apaga lá e cria cá; nenhuma
   /// ("só no app") apaga a cópia.
   Future<bool> atualizarEvento(Evento evento, {String? salvarEm}) async {
+    if (evento.semData) salvarEm = null;
     final anterior = eventoPorId(evento.id);
     // O formulário não sabe do espelho; herda do que estava salvo.
     var salvo = evento.comEspelho(anterior?.idNoAparelho, anterior?.agendaDestinoId);
@@ -685,7 +725,7 @@ class AppState extends ChangeNotifier {
 
     _itens = itens;
     _tabelas = tabelas;
-    _eventos = eventos;
+    _eventos = _migrar(eventos);
     // Mesma regra tolerante do carregamento normal: id ativo que não bate
     // com nenhuma tabela do backup cai na primeira, ou em nada.
     _tabelaAtivaId = _tabelas.any((t) => t.id == tabelaAtivaIdBruto)

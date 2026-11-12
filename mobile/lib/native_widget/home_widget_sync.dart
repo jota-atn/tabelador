@@ -101,10 +101,14 @@ class HomeWidgetSync {
   List<Ocorrencia> _ocorrenciasDaJanela() {
     final agora = DateTime.now();
     final hoje = DateTime(agora.year, agora.month, agora.day);
-    return _appState.ocorrenciasEntre(
-      hoje,
-      DateTime(hoje.year, hoje.month, hoje.day + _diasDeFolga + 1),
-    );
+    // Tarefa concluída sai do widget: ele mostra o que ainda falta.
+    return _appState
+        .ocorrenciasEntre(
+          hoje,
+          DateTime(hoje.year, hoje.month, hoje.day + _diasDeFolga + 1),
+        )
+        .where((o) => !o.feita)
+        .toList();
   }
 
   void dispose() {

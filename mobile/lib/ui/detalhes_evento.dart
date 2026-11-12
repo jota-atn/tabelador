@@ -5,7 +5,7 @@ import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../util/formato_data.dart';
 import 'folha_evento.dart';
-import 'folha_evento_corpo.dart';
+import '../theme/tipo_evento_visual.dart';
 import 'widgets/item_swatch.dart';
 
 const _kDiaPorExtenso = [
@@ -84,7 +84,12 @@ class DetalhesDoEvento extends StatelessWidget {
     final escuro = scheme.brightness == Brightness.dark;
     final agora = DateTime.now();
 
-    final e = ocorrencia.evento;
+    // O card fica aberto enquanto a tarefa é concluída: relê o evento.
+    final original = this.ocorrencia;
+    final e = state.eventoPorId(original.evento.id) ?? original.evento;
+    final ocorrencia = Ocorrencia(e, original.inicio, original.fim);
+    final tarefa = e.ehTarefa && !e.externo;
+    final feita = tarefa && ocorrencia.feita;
     final item = state.itemPorId(e.itemId);
     final tipo = TipoEvento.doTexto(e.tipo);
     final agendaOrigem = e.externo ? state.agendas[e.agendaId]?.nome : null;
@@ -92,12 +97,14 @@ class DetalhesDoEvento extends StatelessWidget {
         e.gravadoNoGoogle ? state.agendas[e.agendaDestinoId]?.nome : null;
 
     // A cor do card segue a mesma lógica da lista: item vinculado → cor do
-    // item; evento do Google sem item → cor da agenda; senão, a do tema.
+    // item; evento do Google sem item → cor da agenda; senão, a do tipo.
     final base = item != null
         ? item.cor.tone(escuro ? 80 : 40)
         : e.corExterna != null
             ? Color(e.corExterna!)
-            : scheme.primary;
+            : tipo != null
+                ? corDoTipo(tipo, scheme.brightness)
+                : scheme.primary;
     final fundoCabecalho = Color.alphaBlend(
       base.withValues(alpha: escuro ? 0.22 : 0.14),
       scheme.surfaceContainerLow,
@@ -105,11 +112,16 @@ class DetalhesDoEvento extends StatelessWidget {
     final sobreBase =
         ThemeData.estimateBrightnessForColor(base) == Brightness.dark ? Colors.white : Colors.black;
 
-    final passou = ocorrencia.fim.isBefore(agora) &&
+    final passou = !e.semData &&
+        ocorrencia.fim.isBefore(agora) &&
         !(e.diaInteiro && inicioDoDia(ocorrencia.inicio) == inicioDoDia(agora));
 
+    final aviso = e.avisoMin ?? kAvisoDiaTodoPadrao;
+    final textoAviso =
+        '${(aviso ~/ 60).toString().padLeft(2, '0')}:${(aviso % 60).toString().padLeft(2, '0')}';
     final horario = e.diaInteiro
-        ? 'Dia todo'
+        ? [tarefa ? 'Sem hora' : 'Dia todo', if (tarefa || e.avisoMin != null) 'aviso às $textoAviso']
+            .join(' · ')
         : [
             faixaHorario(ocorrencia),
             if (ocorrencia.fim.isAfter(ocorrencia.inicio)) _duracao(ocorrencia.fim.difference(ocorrencia.inicio)),
@@ -155,7 +167,10 @@ class DetalhesDoEvento extends StatelessWidget {
                             Text(
                               [
                                 if (e.tipo.isNotEmpty) e.tipo,
-                                distanciaEmDias(ocorrencia.inicio, agora),
+                                if (feita)
+                                  'Concluída'
+                                else if (!e.semData)
+                                  distanciaEmDias(ocorrencia.inicio, agora),
                               ].join(' · '),
                               style: TextStyle(
                                 fontSize: 12.5,
@@ -166,10 +181,11 @@ class DetalhesDoEvento extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               e.titulo,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                                 height: 1.2,
+                                decoration: feita ? TextDecoration.lineThrough : null,
                               ),
                             ),
                           ],
@@ -187,9 +203,11 @@ class DetalhesDoEvento extends StatelessWidget {
                 const SizedBox(height: 8),
                 _Linha(
                   icone: Icons.calendar_today_outlined,
-                  texto: _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
+                  texto: e.semData
+                      ? 'Sem data'
+                      : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
                 ),
-                _Linha(icone: Icons.schedule, texto: horario),
+                if (!e.semData) _Linha(icone: Icons.schedule, texto: horario),
                 if (e.repeticao != Repeticao.nenhuma)
                   _Linha(icone: Icons.repeat, texto: e.repeticao.rotulo),
                 if (e.local != null) _Linha(icone: Icons.place_outlined, texto: e.local!),
@@ -206,6 +224,23 @@ class DetalhesDoEvento extends StatelessWidget {
                     ),
                   ),
                 if (e.notas != null) _Linha(icone: Icons.notes, texto: e.notas!, multilinha: true),
+                if (tarefa)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: feita
+                        ? OutlinedButton.icon(
+                            onPressed: () => state.marcarFeita(ocorrencia, false),
+                            icon: const Icon(Icons.undo),
+                            label: const Text('Reabrir'),
+                          )
+                        : FilledButton.icon(
+                            onPressed: () => state.marcarFeita(ocorrencia, true),
+                            icon: const Icon(Icons.check),
+                            label: Text(
+                              e.repeticao == Repeticao.nenhuma ? 'Concluir' : 'Concluir esta',
+                            ),
+                          ),
+                  ),
                 const SizedBox(height: 8),
               ],
             ),

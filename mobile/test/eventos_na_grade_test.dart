@@ -255,7 +255,7 @@ void main() {
       await state.carregar();
       await abrir(tester, state);
 
-      await tester.tap(find.text('Lembrete'));
+      await tester.tap(find.text('Compromisso'));
       await tester.pump();
       // Tabela padrão: 8, 10, 12, 14, 16, 18.
       await tester.ensureVisible(find.text('14:00'));

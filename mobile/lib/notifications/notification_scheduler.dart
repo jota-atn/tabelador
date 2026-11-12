@@ -6,6 +6,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
@@ -27,8 +28,6 @@ const AndroidNotificationChannel kCanalEventos = AndroidNotificationChannel(
 /// sozinha a cada vez que o app abre e o agendador ressincroniza.
 const int kDiasAvisoEventos = 14;
 
-/// Hora do aviso de evento de dia inteiro, no próprio dia.
-const int kHoraAvisoDiaTodo = 8;
 
 /// Prepara o plugin de notificação local — ícone, canal Android, fuso do
 /// aparelho. Chamado uma vez em `main()`, antes de criar o
@@ -244,8 +243,11 @@ List<_AvisoUnico> _construirAvisosDeEvento(
   final resultado = <_AvisoUnico>[];
   for (final o in ocorrencias) {
     final e = o.evento;
+    // Tarefa já feita não precisa de lembrete.
+    if (o.feita) continue;
+    final aviso = e.avisoMin ?? kAvisoDiaTodoPadrao;
     final quando = e.diaInteiro
-        ? DateTime(o.inicio.year, o.inicio.month, o.inicio.day, kHoraAvisoDiaTodo)
+        ? DateTime(o.inicio.year, o.inicio.month, o.inicio.day, aviso ~/ 60, aviso % 60)
         : o.inicio.subtract(Duration(minutes: antecedenciaMinutos));
     if (!quando.isAfter(agora)) continue;
 

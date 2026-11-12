@@ -22,6 +22,7 @@ Future<void> abrirFolhaDeEvento(
   DateTime? inicio,
   DateTime? fim,
   String? tabelaId,
+  TipoEvento? tipo,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -40,6 +41,7 @@ Future<void> abrirFolhaDeEvento(
       inicio: inicio,
       fim: fim,
       tabelaId: tabelaId,
+      tipoInicial: tipo,
     ),
   );
 }
@@ -52,7 +54,11 @@ class FolhaDeEvento extends StatefulWidget {
     this.inicio,
     this.fim,
     this.tabelaId,
+    this.tipoInicial,
   });
+
+  /// Tipo já escolhido ao abrir ("Nova tarefa" na página de Tarefas).
+  final TipoEvento? tipoInicial;
 
   final Evento? original;
   final String? itemId;
@@ -79,6 +85,12 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   late DateTime data;
   late TimeOfDay horaInicio;
   bool diaTodo = false;
+
+  /// Tarefa sem data (só Tarefa oferece).
+  bool semData = false;
+
+  /// Hora do aviso quando é dia todo, em minutos desde a meia-noite.
+  int avisoMin = kAvisoDiaTodoPadrao;
 
   /// 0 = prazo (um momento, sem faixa).
   int minutos = 60;
@@ -109,6 +121,9 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       data = inicioDoDia(o.inicio);
       horaInicio = TimeOfDay.fromDateTime(o.inicio);
       diaTodo = o.diaInteiro;
+      semData = o.semData;
+      avisoMin = o.avisoMin ?? kAvisoDiaTodoPadrao;
+      if (semData) data = inicioDoDia(DateTime.now());
       minutos = o.duracao.inMinutes;
       repeticao = o.repeticao;
       destino = o.agendaDestinoId;
@@ -127,6 +142,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       minutos = widget.fim!.difference(inicio).inMinutes;
       _duracaoAuto = false;
     }
+    if (widget.tipoInicial != null) escolherTipo(widget.tipoInicial);
     if (widget.itemId != null) escolherItem(widget.itemId);
   }
 
@@ -161,6 +177,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   }
 
   Item? get item => _state.itemPorId(itemId);
+
+  bool get ehTarefa => tipo == TipoEvento.tarefa;
 
   /// Próximo horário do item: na tabela da folha primeiro, depois nas outras.
   ({DateTime inicio, DateTime fim})? get proximoDoItem {
@@ -238,6 +256,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   void escolherTipo(TipoEvento? t) => setState(() {
         tipo = tipo == t ? null : t;
         _tipoMexido = true;
+        if (!ehTarefa) semData = false;
         final atual = tipo;
         if (atual == null) return;
         if (_duracaoAuto) _aplicarDuracao(atual.duracao);
@@ -284,8 +303,31 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
 
   void escolherData(DateTime d) => setState(() {
         data = inicioDoDia(d);
+        semData = false;
         _quandoAuto = false;
       });
+
+  void escolherSemData() => setState(() {
+        semData = true;
+        _quandoAuto = false;
+      });
+
+  /// Tarefa: "Sem hora" (vale o dia, aviso de manhã) ou uma hora-prazo.
+  void escolherSemHora() => setState(() {
+        diaTodo = true;
+        _duracaoAuto = false;
+      });
+
+  void escolherAviso(int min) => setState(() => avisoMin = min);
+
+  Future<void> escolherAvisoOutro() async {
+    final h = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: avisoMin ~/ 60, minute: avisoMin % 60),
+      helpText: 'Avisar a que horas?',
+    );
+    if (h != null) escolherAviso(h.hour * 60 + h.minute);
+  }
 
   Future<void> escolherDataNoCalendario() async {
     final d = await showDatePicker(
@@ -300,6 +342,12 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   void escolherHora(TimeOfDay h) => setState(() {
         horaInicio = h;
         _quandoAuto = false;
+        // Tarefa não tem duração: hora escolhida é o prazo.
+        if (ehTarefa) {
+          diaTodo = false;
+          minutos = 0;
+          _duracaoAuto = false;
+        }
       });
 
   Future<void> escolherHoraInicio() async {
@@ -378,7 +426,11 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       return;
     }
 
-    final inicio = diaTodo
+    final semDataFinal = ehTarefa && semData;
+    final diaTodoFinal = diaTodo || semDataFinal;
+    final inicio = semDataFinal
+        ? (widget.original?.inicio ?? inicioDoDia(DateTime.now()))
+        : diaTodo
         ? data
         : DateTime(data.year, data.month, data.day, horaInicio.hour, horaInicio.minute);
     String? opcional(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -392,13 +444,18 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       id: widget.original?.id ?? gerarId(),
       titulo: tituloFinal,
       inicio: inicio,
-      fim: diaTodo ? null : inicio.add(Duration(minutes: minutos)),
-      diaInteiro: diaTodo,
+      fim: diaTodoFinal ? null : inicio.add(Duration(minutes: minutos)),
+      diaInteiro: diaTodoFinal,
       tipo: tipoTexto,
-      repeticao: repeticao,
+      repeticao: semDataFinal ? Repeticao.nenhuma : repeticao,
       itemId: itemId,
       local: opcional(local),
       notas: opcional(notas),
+      semData: semDataFinal,
+      // O formulário não mexe em "feito": herda do que estava salvo.
+      feito: widget.original?.feito ?? false,
+      feitas: widget.original?.feitas ?? const {},
+      avisoMin: diaTodoFinal && !semDataFinal && avisoMin != kAvisoDiaTodoPadrao ? avisoMin : null,
     );
 
     final state = _state;
