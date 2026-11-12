@@ -632,6 +632,26 @@ no cabeçalho — o cabeçalho não abre nem fecha nada. Fechada, mostra só o
 Amanhã, qui 13/11) e "Mostrar só o próximo". Estado lembrado. No fim de
 semana, link "Próxima semana · N" pro calendário.
 
+### Card de detalhes antes do editor (2026-11-10)
+
+Tocar num evento (Esta semana, Próximos, eventos do item, folha da célula,
+calendário) abre um **card só de leitura**, não mais a folha de edição:
+quase sempre o toque é pra conferir, não pra mudar.
+
+- Cabeçalho tingido com a cor do evento (item vinculado → cor do item;
+  Google sem item → cor da agenda; senão, a do tema), ícone do tipo,
+  "Tipo · Amanhã/Em 5 dias", título grande.
+- Linhas com ícone: data por extenso ("Quarta-feira, 11 de novembro", ano
+  só se não for o atual), horário + duração, repetição, local, item (com a
+  amostra da sigla), notas.
+- Rodapé: onde o evento vive — "Só neste aparelho", "Também no Google
+  Agenda · agenda" ou, em evento externo, "Do Google Agenda — editar por lá".
+- **Lápis** (só evento do app) fecha o card e abre a folha de edição; apagar
+  continua dentro da folha. Evento do Google usa o mesmo card, sem lápis
+  (substituiu a folha de leitura que ele tinha antes).
+- Código: `lib/ui/detalhes_evento.dart`; `EventoTile` chama
+  `abrirDetalhesDoEvento`.
+
 ### Limitações conhecidas
 
 - Grade mostra só a semana atual (sem navegar pra próxima); pra frente, usar
@@ -693,6 +713,293 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
+## Tarefas e aba "Eventos" (em discussão, 2026-11-11)
+
+Nada construído. Decidido até agora:
+
+- **Tarefa é um tipo de Evento**, não uma entidade à parte — reusa
+  modelo, notificação, widget, backup. Mas sem tratar Tarefa com
+  exclusividade: a ideia é repaginar Eventos como um todo.
+- Tarefa tem **"feito"** e **data opcional** (sem data = só lembrar que
+  precisa ser feita). Com data e sem hora → aviso **de manhã cedo** no dia.
+- **Saem os tipos Lembrete e Entrega**: Entrega é uma tarefa; Lembrete
+  deixa de ser tipo próprio (avisar é algo que qualquer evento faz).
+- **Quarta aba "Eventos"** (nome provisório) com um card por tipo
+  (Provas, Consultas, Tarefas…); tocar num card abre a lista daquele tipo.
+  A tela Semana continua com um resumo dos próximos (a discutir).
+
+- **Compromisso, Consulta e Reunião continuam separados** — cada um tem
+  teor e comportamento próprios (as particularidades de cada tipo serão
+  discutidas depois que a lista fechar).
+- **Tipos fixos** (cadastráveis fica pra um futuro distante).
+- **Classroom → Tarefa** (cada atividade tem data de entrega). Ideia de
+  um tipo **Feriado / Data comemorativa** pra agenda de feriados do Google.
+- Aba Eventos = **cards coloridos e vivos**, um por tipo (ícone e cor
+  próprios: Consulta azul com estetoscópio etc.), minimamente
+  informativos (quantidade); tocar abre uma página com todos os eventos
+  daquele tipo.
+- Lembretes existentes: não há nenhum salvo, pode apagar o tipo sem
+  migração.
+- Horário do aviso de Tarefa com data e sem hora: **configurável na
+  própria tarefa** (padrão de manhã cedo).
+
+- Tipos (9): **Tarefa, Prova, Compromisso, Consulta, Reunião, Viagem,
+  Aniversário, Feriado, Outro**. Feriado cobre também data comemorativa.
+- **Evento do Google: tipo padrão por agenda** (escolhido na tela
+  Agendas). Classroom → Tarefa e agenda de feriados → Feriado,
+  reconhecidas sozinhas; agenda comum → Outro. "Feito" de tarefa do
+  Classroom fica guardado localmente (o "entregue" não vem pela agenda).
+- Layout da aba: **card de Tarefas largo no topo** com as 3 próximas
+  pendentes marcáveis; demais em grade de 2 colunas, ordem fixa, tipo
+  vazio aparece apagado. **Sem botão ＋ na aba** — criar evento continua
+  pelo botão da tela Semana, como hoje.
+- **Calendário do mês** ganha atalho na aba Eventos e **mantém** o botão
+  na tela Semana.
+- Card **Feriados**: mostra se hoje é feriado e quantos faltam até o fim
+  do ano. Card **Aniversários**: os do mês atual.
+- Tarefas: trabalhar bem a usabilidade de concluir (gestos: arrastar pra
+  um lado conclui, pro outro apaga; segurar etc.).
+
+- **Paleta aprovada** (harmonizada com Material You, tons próprios no
+  escuro): Tarefa verde `#2E7D32` (check), Prova vermelho `#D84343`,
+  Compromisso laranja `#EF6C00` (aperto de mão), Consulta azul `#1E88E5`
+  (estetoscópio), Reunião roxo `#5E35B1` (grupo), Viagem verde-azulado
+  `#00897B` (avião), Aniversário rosa `#D81B60` (bolo), Feriado dourado
+  `#F9A825` (celebração), Outro cinza-azulado `#607D8B` (calendário).
+  Adicionar o pacote Material Symbols (estetoscópio etc.) — aprovado.
+- **Gestos de Tarefa**: caixinha conclui; arrastar → direita conclui,
+  ← esquerda apaga (Classroom: **oculta** do app); tocar no corpo abre o
+  card de detalhes; **segurar = modo de seleção** (concluir/apagar
+  várias). Concluir deixa riscada ~2s antes de descer pra "Concluídas",
+  com Desfazer; apagar também com Desfazer. Recorrente: concluir marca só
+  a ocorrência atual.
+- Página de Tarefas com **botão de opções de listagem** (só desta semana,
+  pesquisar etc.).
+- **Widget separado só de tarefas** (futuro) — melhor que enfiar gesto
+  no widget de horários.
+- Aniversários: **mês atual inteiro, passados esmaecidos**; nos últimos
+  dias do mês adianta o primeiro do mês seguinte.
+- **Feriados nacionais embutidos** (calculados no app, incl. móveis via
+  Páscoa); agenda de feriados do Google opcional.
+
+- **Correção de regra (a fazer)**: evento vinculado a item aparece só nas
+  tabelas que usam o item, sempre; "Mostrar eventos" passa a valer só pra
+  evento sem item. Hoje (`eventoVisivelNaTabela`) "Mostrar eventos" ligado
+  mostra tudo — "Monitoria de SO" (2026.1) vazaria na tabela 2025.2.
+- **Tarefas no "Esta semana"**: as que vencem na semana + **atrasadas no
+  topo** em destaque; sem data não entram.
+- **Filtros da página de Tarefas**: período (Todas/Hoje/Esta
+  semana/Atrasadas/Sem data), item, origem (app/Classroom), mostrar
+  concluídas; lupa pra pesquisar título.
+- Ideia pra discussão por tipo: **feriado esmaece as aulas do dia** na
+  grade e suprime o aviso delas.
+
+- **"Esta semana": linha de tarefa só com caixinha** (toque conclui, com
+  Desfazer); arraste e seleção só na página de Tarefas.
+- **Feriados: embutidos mandam, Google complementa.** Embutidos = lei
+  federal (fixos 1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12) +
+  móveis pela Páscoa (Sexta-feira Santa; Carnaval e Corpus Christi como
+  **ponto facultativo**), com testes contra datas conhecidas. Só embutidos
+  e feriados criados à mão esmaecem aulas; evento da agenda de feriados do
+  Google aparece mas não esmaece (ela mistura Dia dos Namorados etc.), e
+  some quando cai na mesma data de um embutido (comparação por data, não
+  nome). **Ponto facultativo esmaece ou não: escolha por tabela.**
+- **Feriado: um tipo só, cada data marcada como folga ou comemorativa.**
+  Só folga esmaece aulas e conta em "N feriados até o fim do ano".
+  Embutidos incluem as datas comemorativas principais (Mães e Pais —
+  2º domingo de maio/agosto —, Namorados, Crianças, Ano Novo, Natal…).
+- **Botão "É folga"** no card de detalhes de feriado do Google (guardado
+  localmente por id do evento). **A fazer com o celular conectado**: ler
+  a agenda de feriados do Google no aparelho e ver se a descrição separa
+  feriado público de observância — se sim, classificar sozinho.
+- **Enfeites de data**: **sem emoji** — animação leve e simples + um tom
+  de cor diferente no card de sempre (corações subindo no Dia dos
+  Namorados, neve no Natal, fogos no Ano Novo, confete em Aniversário).
+  Aparecem **sempre** no card de detalhes e no card do tipo na aba
+  Eventos; no **"Esta semana" só no próprio dia**; faixa festiva no topo
+  da tela inicial no dia, **desativável** em Aparência.
+
+### Particularidades por tipo (rodada 1)
+
+- **Aviso é do evento, não do tipo** — o tipo só sugere o padrão.
+- **Tarefa**: tem aviso; recorrente é concluída por ocorrência.
+- **Prova**: aviso com antecedência maior, configurável. **Nota depois**
+  da prova — e talvez uma visão organizada das notas (por item, com
+  gráfico), pra ajudar o estudante.
+- **Compromisso**: saídas, encontros marcados. Sem particularidade por
+  enquanto.
+- **Consulta**: local sempre importante. Ideia: **botão pra chamar
+  Uber/99** já com o endereço de destino.
+- **Reunião**: costuma repetir (padrão semanal) e tem **link de
+  videochamada**.
+- **Viagem**: **vários dias** (sem ida/volta).
+- **Aniversário**: **idade opcional** (ano de nascimento); campo
+  **Presente**.
+- **Feriado**: como decidido acima.
+- **Outro**: em questão se precisa existir.
+
+### Rodada 2
+
+- **Tarefa ganha prioridade** (formato a definir).
+- **Nota** em Prova e em Tarefa vinculada a item (trabalho avaliado);
+  visão de notas por item puxa a ideia de **tipar Itens** (abaixo).
+- **Consulta: local escolhido no mapa / validado** — busca automática do
+  endereço, avisando se não achar. **Uber**: link oficial com destino.
+  **99**: sem link público documentado (pesquisa 2026-11-11) — conferir
+  no celular conectado o que o app 99 aceita (intent filters).
+- **Reunião**: padrão semanal; campo link + botão "Entrar"; reconhecer o
+  link de videochamada sozinho em evento do Google.
+- **Viagem**: vários dias; **esmaece aulas** (como feriado).
+- **Aniversário**: ano de nascimento opcional (idade); **Presente** (ideia
+  + "comprado") e aviso dias antes se não comprado.
+- **Outro**: existe pra receber a agenda comum do Google; coisas como
+  corte de cabelo são Compromisso ou Tarefa.
+
+### Itens tipados — rodada 1 (2026-11-11)
+
+- **Tipos fixos.** Hoje `Item.tipo` é texto livre; migração converte os
+  textos conhecidos ("Aula" → Disciplina, "Treino" → Treino…) e o resto
+  vai pro tipo genérico.
+- Uso real: horários de disciplina, academia, intervalos pra estudo,
+  monitorias, almoço.
+- **Estudo é tipo próprio**, com relação com Disciplina; dá pra criar
+  item de estudo a partir de uma disciplina.
+- **Trabalho**: sem particularidade clara (talvez ligação com Reuniões).
+- **Alimentação** (almoço etc.): horário com comidas pré-definidas, marcar
+  que comeu e **enviar pro Wellio** — calorias e detalhes ficam lá.
+- **Treino**: mesmo esquema (marcar que fez, enviar pro Wellio). Pode haver
+  vários treinos no mesmo horário (treino combinado).
+- O Tabelador é **organizacional**; o Wellio, **informacional** (calorias,
+  nutrientes, gasto do treino não entram aqui).
+
+### Itens tipados — rodada 2 (2026-11-11)
+
+- **Treino = um item com ficha dentro** (opção C): o item "Academia" ocupa
+  a grade como hoje; dentro, os treinos (Costas, Bíceps…) com exercícios e
+  qual combinação cai em cada dia da semana. Treino combinado = dois
+  treinos no mesmo dia. Marcar feito → enviar pro Wellio.
+- **Alimentação no mesmo molde** ("Almoço" com cardápio). Ambos devem
+  casar bem com o modelo do Wellio — ver "Integração com o Wellio".
+- **Estudo**: vínculo opcional a uma Disciplina (e criar estudo a partir
+  dela); anotar o que estudar conforme avança, **desativável** e sem gerar
+  pressão (o app organiza, não cobra); "estudei" alimenta horas por
+  disciplina; **pomodoro opcional**, não padrão. Estudo gerando Tarefas:
+  a discutir.
+- **Sem tipo Deslocamento**: o aviso de sair e o botão de transporte já
+  vêm do evento (Consulta, Compromisso).
+- **Pausa/intervalo = Rotina** (tipo genérico, sem particularidade).
+- **Trabalho**: Reuniões vinculadas a ele aparecem na página dele.
+- **Monitoria**: *assistir* é um evento avulso vinculado à disciplina
+  (não recorrente); *dar* monitoria é recorrente, parecido com Trabalho
+  mas não igual (dá pra ter os dois).
+- **Classroom ↔ Disciplina, nível 1 (pela agenda) — decidido**: campo
+  "Turma do Classroom" na Disciplina, escolhido entre as agendas de turma
+  (sugere a de nome parecido); toda atividade da turma vira Tarefa
+  vinculada à disciplina. Botão "Importar disciplinas do Classroom" no
+  começo do semestre (nome + cor). **Nível 2 (API oficial: notas do
+  professor, materiais, entregue)** fica como futuro — exige login Google,
+  projeto no Cloud, escopos sensíveis, e conta institucional pode
+  bloquear apps de terceiros.
+- **Monitoria (dar)** = tipo próprio, pra marcar o horário que você dá
+  monitoria; vínculo à disciplina; atividades da monitoria = tarefas,
+  reuniões e eventos vinculados; anotações simples. **Ir** à monitoria =
+  uma tarefa/evento criado a partir do Estudo.
+- **Wellio: Tabelador planeja, Wellio registra** — o planejamento semanal
+  sai do Wellio (§13.2 dele); link nos dois sentidos.
+- Proposta: "o que estudar" = **Tarefas vinculadas** (sem data não
+  atrasa); princípio **registra, não cobra**.
+- **Tópico de estudo pertence à Disciplina** (opção A): aparece na página
+  da disciplina e em todo Estudo vinculado a ela. Atividades do Classroom
+  na lista do Estudo ficam num **acordeão recolhível** pra não poluir.
+- **Disciplina**: professor, local, notas com **cálculo de média editável**
+  (cada disciplina tem a sua aritmética: várias provas, minitestes, pontos
+  extras), faltas, links, materiais.
+- Estudo: lista do que estudar = Tarefas vinculadas; **registra, não
+  cobra** — confirmado.
+- **Média por grupos** (nome, peso, regra interna: média simples / soma /
+  descarta a menor), pontos extras com teto opcional, escala 0–10 ou
+  0–100, notas puxadas das Provas/Tarefas vinculadas + lançamento avulso,
+  média parcial ignora o que não tem nota. **"Quanto preciso tirar"**
+  entra (desligado por padrão).
+- **Faltas**: "Faltei hoje" no toque longo da célula **e** contador direto
+  na página da disciplina; dá pra **remover** falta lançada errado.
+- **Aba Itens = lista agrupada por tipo** (cor/ícone do tipo, linha com
+  resumo próprio). Problema levantado: disciplina de período antigo não
+  deve poluir a lista (nota de SO de 3 períodos atrás).
+- Criar a partir de um item = mesma folha, já vinculada (vínculo único:
+  Estudo → disciplina; Monitoria → a própria monitoria).
+- Cada grupo da média diz **quantas avaliações terá** (o que falta = sem
+  nota) → "quanto preciso tirar" = nota uniforme nas que faltam; casos
+  "já garantido" / "não dá mais" sem drama. Prova final/recuperação: depois.
+- **Faltas por aula**: dois horários seguidos = 2 faltas.
+
+### Ideia do usuário: tela inicial = junção das tabelas ativas (em discussão)
+
+Em vez de uma tabela ativa por vez, **várias tabelas ativas sobrepostas**
+na tela inicial: "2025.2" (disciplinas), "Trabalho", "Monitoria"… A tela
+inicial mostra a junção, **avisa conflito de horário**, mostra eventos;
+deslizar/escolher continua permitindo ver uma tabela só. Arquivar a tabela
+do período tira ela da junção (responde o "encerrar período"). Pontos da
+crítica: tabelas têm horários (slots) e dias diferentes → a junção precisa
+de eixo de tempo real, não de células; onde edita; vigência opcional.
+
+Decidido:
+- **"Ignorar esse conflito"** pra sobreposição proposital (almoço dentro
+  do trabalho).
+- **Vigência opcional** (início/fim) na tabela: entra e sai da junção
+  sozinha; sem vigência, fica ativa até arquivar.
+- **Disciplina sempre exclusiva da tabela do período** (notas/faltas
+  ficam separadas por período); arquivar a tabela leva as disciplinas pro
+  Histórico com a média final; **"Cursar de novo"** cria um item novo no
+  período novo (copia nome, cor, professor, regra de média; zera notas e
+  faltas). Academia, Almoço, Trabalho etc. continuam compartilhados.
+
+- **Junção desenhada pelo relógio** (régua de horas, blocos com altura
+  pela duração, sobreposição lado a lado com ⚠) — decidido. A grade de
+  células continua dentro de cada tabela.
+- **Chips** (quais tabelas entram na junção) **e deslizar** (ver uma
+  tabela sozinha) — decidido.
+- **Junção também edita** (usuário recusou "só pra ver": segurar/tocar na
+  tela inicial é central na usabilidade):
+  - **Segurar bloco** → menu de hoje com cabeçalho "SO · ter 09–11 · em
+    2025.2": Novo evento para SO, Faltei hoje (Disciplina), Trocar item,
+    Limpar horário, e "Outras tabelas neste horário" (avisa conflito).
+  - **Segurar vazio** → "Novo evento às HH:MM" + "Pôr item", listando só
+    as tabelas com horário naquele momento (só uma → direto; última usada
+    primeiro). **A UI deixa explícito que o item entra numa tabela**:
+    rótulo "Pôr item em Trabalho · 14–18" mesmo quando é a única opção, e
+    confirmação "SO adicionado em 2025.2 · ter 09–11".
+  - Nenhuma tabela com horário ali → **"Criar horário aqui em…"** (nova
+    linha na tabela escolhida).
+  - **Tocar num bloco** → editor do dia da tabela daquele bloco.
+
+### Itens tipados — ideia original
+
+Mesma repaginação de Eventos aplicada a Itens: tipos fixos com campos
+próprios — **Disciplina** (notas/média, links úteis, materiais, faltas?),
+**Treino** (exercícios customizáveis), **Trabalho** etc. — e a aba Itens
+organizada por tipo (cards como Eventos, ou outro formato). Hoje
+`Item.tipo` é texto livre com autocomplete.
+
+- **Prioridade: três níveis** (alta, normal, baixa).
+- **Local da Consulta: busca automática** pelo geocodificador do Android
+  (grátis, sem chave; canal Kotlin próprio) com sugestões e aviso "não
+  encontrei esse endereço"; guarda coordenadas; botão **"Ver no mapa"**
+  abre o Maps pra conferir. Sem mapa embutido (exigiria chave de API).
+- **Itens tipados = próxima rodada de discussão**, depois de fechar
+  Eventos.
+
+- **Sem chip "Outro" na folha de criação**: evento sem tipo (ou da agenda
+  comum do Google) cai no card Outros.
+- **Quantidade nos cards**: regra geral = próximos 30 dias + linha com o
+  próximo. Provas: + "N notas pra lançar" se prova passou sem nota.
+  Reuniões e Outros: **esta semana**. Viagens: "Em viagem · volta …"
+  durante. (Tarefas, Aniversários, Feriados como acima.)
+- **Enfeite só automático** (lista embutida, casa pela data; todo
+  Aniversário ganha confete) — sem campo na folha.
+
+**Eventos fechado na spec (2026-11-11).** Próximo: Itens tipados.
+
 ## Ideias futuras (anotadas em 2026-11-10)
 
 Nada decidido nem desenhado ainda — só o que ficou na mesa ao fim do dia.
@@ -711,6 +1018,65 @@ Nada decidido nem desenhado ainda — só o que ficou na mesa ao fim do dia.
   atualização gerada em outra máquina é recusada pelo Android, e a pessoa
   teria que desinstalar e perder os dados.
 
+- **Adicionar tarefa pela Alexa** (2026-11-11, prioridade alta pro
+  usuário, mas só depois das tarefas locais existirem). As listas nativas
+  da Alexa fecharam pra terceiros em 01/07/2024 (List Management API
+  descontinuada; Todoist/AnyList perderam a integração), então "Alexa,
+  adiciona X na minha lista" não chega no app. Caminho viável: **skill
+  própria** em pt-BR, modo desenvolvimento (sem certificação; parceira
+  entra como beta tester) — "Alexa, pede pro Tabelador adicionar X". A
+  skill grava numa fila na internet (Alexa-hosted ou servidor pequeno na
+  VPS Hetzner), protegida por um token de pareamento que o app mostra uma
+  vez; o app puxa a fila ao abrir/voltar (mesmo gancho do widget) e talvez
+  em segundo plano. Primeira peça do app que depende de servidor/internet.
+  Descartado: API privada da Amazon com login (frágil, expõe credencial).
+
+- **Integração com o Wellio** (outro projeto do usuário, `~/Projetos/wellio`:
+  app Android Kotlin/Compose + Room, offline, de água, alimentação e
+  exercício). Futuro — especificação de intenção, o "como" se decide ao
+  implementar. Ver seção "Integração com o Wellio" abaixo.
+
+## Integração com o Wellio (futuro, especificado em 2026-11-11)
+
+**Divisão de papéis**: Tabelador = **organizacional** (quando, o quê,
+fez ou não); Wellio = **informacional** (kcal, macros, METs, metas,
+histórico). Nada de caloria entra no Tabelador.
+
+**O que já existe no Wellio e casa com o Tabelador** (SPEC dele, §4.1):
+- `exercise_type` (base do Compendium, 67 atividades com níveis Leve /
+  Moderada / Intensa) e `workout_template` + `workout_template_item`
+  (exercício + minutos) — equivale a "um treino" da ficha do Tabelador.
+- `food_item` (TACO + extras + próprios) com `food_portion` (medidas
+  caseiras) e `food_entry.meal` (café da manhã, almoço, lanche, jantar,
+  ceia) — equivale ao cardápio de um item Alimentação.
+- O Wellio já prevê "registrar com ajuste antes de confirmar" (modelos de
+  treino, repetir refeição) — o envio do Tabelador deve cair nesse mesmo
+  fluxo, não gravar direto.
+
+**Princípios pra ficar coerente**:
+1. **Vocabulário do Wellio**: exercícios e alimentos da ficha/cardápio
+   são escolhidos da base do Wellio (quando instalado), não digitados
+   livres — senão "Supino" de um lado não casa com nada do outro.
+   Treino da ficha pode simplesmente **apontar pra um modelo de treino
+   do Wellio**; refeição, pra uma lista de alimentos + medida.
+2. **Funciona sem o Wellio**: sem ele instalado (ex.: parceira), a ficha
+   e o cardápio são texto simples locais e não aparece "Enviar".
+3. **Envio = Intent explícito** pro Wellio (mesmo aparelho, sem servidor)
+   abrindo a confirmação dele já preenchida (data, horário, refeição,
+   itens, minutos). Leitura do catálogo do Wellio por um
+   `ContentProvider` exportado.
+4. **Só os dois apps conversam**: permissão com `protectionLevel=
+   "signature"` — exige os dois assinados com a **mesma chave** (hoje
+   ambos usam a de debug desta máquina; ver "chave de assinatura
+   própria").
+5. Treino de força detalhado (séries/reps/carga) é "para depois" no
+   Wellio (§13.3.2); no Tabelador pode existir antes, como organização.
+
+**Sobreposição a resolver**: o Wellio planeja (§13.2, M8) um
+"Planejamento da semana" com treinos e refeições por dia/horário
+(`plan_item`). Isso é o que a grade do Tabelador já faz. Decidir quem
+planeja: provavelmente o Tabelador planeja e o Wellio registra, e o
+§13.2 do Wellio passa a ler o plano do Tabelador em vez de ter o seu.
 ## Pontos em aberto
 
 - **`tipo` como texto livre com autocomplete** vs. entidade cadastrável com CRUD próprio. Texto livre foi escolhido por simplicidade; se `tipo` acabar precisando de ícone ou comportamento próprio, vira entidade.
