@@ -20,6 +20,15 @@
 - **Tag no git** `vX.Y.Z` em cada versão lançada; APK distribuído com a
   versão no nome (`tabelador-v1.1.0-arm64.apk`).
 
+**Branches e PRs** (desde v1.2):
+- `master` só recebe o que foi testado no aparelho; a tag sai dela.
+- Uma branch por versão minor/major (`v1.2-aba-eventos`, `v1.3-feriados`,
+  `v2.0-juncao-tabelas`); patch em `fix/<assunto>`. Sai de `master`.
+- Desenvolve e testa na branch → **Pull Request no GitHub** (registro da
+  versão: resumo + diff) → merge (merge commit, não squash) → tag em
+  `master` → apaga a branch.
+- Spec/ideias sem código podem ir direto em `master`.
+
 **Plano**:
 
 | Versão | Conteúdo |
