@@ -8,6 +8,7 @@ import '../theme/tipo_evento_visual.dart';
 import '../util/formato_data.dart';
 import '../util/tarefas.dart';
 import 'calendario_screen.dart';
+import 'eventos_do_tipo_screen.dart';
 import 'tarefas_screen.dart';
 import 'widgets/evento_tile.dart';
 
@@ -16,12 +17,6 @@ const _kJanela = Duration(days: 365);
 
 /// Tipo de uma ocorrência pra aba: evento sem tipo conta como Outro.
 TipoEvento tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
-
-/// Feriado que é folga: criado no app, ou da agenda de feriados do Google
-/// com a descrição começando por "Feriado" (o Google marca "Data
-/// comemorativa" nas outras). Embutidos e o botão "É folga" ficam pro v1.3.
-bool ehFolga(Evento e) =>
-    !e.externo || (e.notas ?? '').trimLeft().toLowerCase().startsWith('feriado');
 
 /// A aba Eventos: card largo de Tarefas no topo (3 próximas pendentes,
 /// marcáveis) e um card por tipo em grade de 2 colunas, ordem fixa; tipo sem
@@ -280,7 +275,7 @@ class _CardTipo extends StatelessWidget {
                 _Icone(tipo: tipo, cor: vazio ? scheme.outline : cor),
                 const Spacer(),
                 Text(
-                  _plural(tipo),
+                  pluralDoTipo(tipo),
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 Text(
@@ -364,117 +359,3 @@ class _CardTipo extends StatelessWidget {
     return (contagem, null);
   }
 }
-
-String _plural(TipoEvento t) => switch (t) {
-      TipoEvento.tarefa => 'Tarefas',
-      TipoEvento.prova => 'Provas',
-      TipoEvento.compromisso => 'Compromissos',
-      TipoEvento.consulta => 'Consultas',
-      TipoEvento.reuniao => 'Reuniões',
-      TipoEvento.viagem => 'Viagens',
-      TipoEvento.aniversario => 'Aniversários',
-      TipoEvento.feriado => 'Feriados',
-      TipoEvento.outro => 'Outros',
-    };
-
-const _kMeses = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
-
-/// Todos os eventos de um tipo: próximos (um ano) agrupados por mês, e os
-/// dos últimos 30 dias escondidos atrás de um botão.
-class EventosDoTipoScreen extends StatefulWidget {
-  const EventosDoTipoScreen({super.key, required this.tipo});
-
-  final TipoEvento tipo;
-
-  @override
-  State<EventosDoTipoScreen> createState() => _EventosDoTipoScreenState();
-}
-
-class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
-  bool _passados = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final scheme = Theme.of(context).colorScheme;
-    final agora = DateTime.now();
-    final hoje = inicioDoDia(agora);
-    final todas = state
-        .ocorrenciasEntre(hoje.subtract(const Duration(days: 30)), hoje.add(_kJanela))
-        .where((o) => tipoDe(o.evento) == widget.tipo)
-        .toList();
-    final passados = todas.where((o) => inicioDoDia(o.inicio).isBefore(hoje)).toList().reversed.toList();
-    final proximos = todas.where((o) => !inicioDoDia(o.inicio).isBefore(hoje)).toList();
-
-    final porMes = <DateTime, List<Ocorrencia>>{};
-    for (final o in proximos) {
-      (porMes[DateTime(o.inicio.year, o.inicio.month)] ??= []).add(o);
-    }
-
-    String rotuloMes(DateTime m) =>
-        m.year == agora.year ? _kMeses[m.month - 1] : '${_kMeses[m.month - 1]} de ${m.year}';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(iconeDoTipo(widget.tipo), color: corDoTipo(widget.tipo, scheme.brightness)),
-            const SizedBox(width: 12),
-            Text(_plural(widget.tipo)),
-          ],
-        ),
-      ),
-      body: todas.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'Nada marcado. Crie pelo botão da tela Semana, ou escolha este '
-                  'tipo pra uma agenda do Google em Aparência → Agendas.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-              children: [
-                for (final m in porMes.entries) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 14, 8, 2),
-                    child: Text(
-                      '${rotuloMes(m.key)} · ${m.value.length}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  for (final o in m.value) EventoTile(ocorrencia: o),
-                ],
-                if (proximos.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Nada pela frente.', style: TextStyle(color: scheme.onSurfaceVariant)),
-                  ),
-                if (passados.isNotEmpty)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => setState(() => _passados = !_passados),
-                      icon: Icon(_passados ? Icons.expand_less : Icons.expand_more),
-                      label: Text(_passados ? 'Esconder os passados' : 'Últimos 30 dias (${passados.length})'),
-                    ),
-                  ),
-                if (_passados)
-                  for (final o in passados) EventoTile(ocorrencia: o, esmaecido: true),
-              ],
-            ),
-    );
-  }
-}
-
