@@ -819,6 +819,28 @@ Nada construído. Decidido até agora:
   Eventos; no **"Esta semana" só no próprio dia**; faixa festiva no topo
   da tela inicial no dia, **desativável** em Aparência.
 
+### Verificado no aparelho (2026-11-11)
+
+- **Agenda de feriados do Google** (`ownerAccount` termina em
+  `#holiday@group.v.calendar.google.com`, ex. `pt-br.brazilian#holiday…`):
+  a **descrição começa com "Feriado" ou "Data comemorativa"** —
+  classificação automática confiável (texto em pt-BR; ler só a primeira
+  linha). Ressalva: o Google chama de "Feriado" também ponto facultativo
+  e meio-expediente (Carnaval seg/ter, Cinzas até 14h, vésperas de Natal e
+  Ano Novo após 14h, Corpo de Deus, Dia do Servidor Público) — os
+  embutidos continuam decidindo o que esmaece. O aparelho tem **várias
+  agendas "Feriados no Brasil"** (uma por conta, ids `pt-br.` e `pt.`):
+  deduplicar por data + título.
+- **Classroom**: `ownerAccount` = `classroom…@group.calendar.google.com`
+  ou `c_classroom…@group.calendar.google.com` → reconhecível. Os nomes
+  trazem o período ("2025.1 Teoria da Computação", "Projeto de Software
+  2026.2") — dá pra sugerir em qual tabela/período importar.
+- **99** (`com.taxis99`): só esquemas internos da DiDi (`taxis99://`,
+  `oia.99app.com`), **sem parâmetro de destino documentado** e não trata
+  `geo:`. Botão 99 = abrir o app + copiar o endereço pra área de
+  transferência. **Uber** (`com.ubercab`) trata `geo:` e tem o link
+  oficial com destino.
+
 ### Particularidades por tipo (rodada 1)
 
 - **Aviso é do evento, não do tipo** — o tipo só sugere o padrão.
