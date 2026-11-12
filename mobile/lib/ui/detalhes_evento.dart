@@ -257,29 +257,24 @@ class DetalhesDoEvento extends StatelessWidget {
           ),
 
           // ------------------------------------------------- rodapé: onde vive
-          Padding(
+          // Só quando o evento está no Google: "só neste aparelho" e "feriado
+          // calculado pelo app" não mudam nada pra quem olha.
+          if ((e.externo && !e.embutido) || e.gravadoNoGoogle)
+            Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
             child: Row(
               children: [
                 Icon(
-                  e.embutido
-                      ? Icons.auto_awesome_outlined
-                      : e.externo || e.gravadoNoGoogle
-                          ? Icons.cloud_outlined
-                          : Icons.phone_android,
+                  Icons.cloud_outlined,
                   size: 16,
                   color: scheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    e.embutido
-                        ? 'Calendário nacional, calculado pelo app'
-                        : e.externo
-                        ? 'Do Google Agenda${agendaOrigem == null ? '' : ' · $agendaOrigem'} — editar por lá, por enquanto'
-                        : e.gravadoNoGoogle
-                            ? 'Também no Google Agenda${agendaDestino == null ? '' : ' · $agendaDestino'}'
-                            : 'Só neste aparelho',
+                    e.externo
+                        ? 'Do Google Agenda${agendaOrigem == null ? '' : ' · $agendaOrigem'}'
+                        : 'Também no Google Agenda${agendaDestino == null ? '' : ' · $agendaDestino'}',
                     style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
                 ),

@@ -278,11 +278,7 @@ class _Lista extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Text(
-          'Marque as agendas que devem aparecer no app. Eventos criados no app '
-          'podem ser salvos numa delas (escolha no próprio formulário) e vão '
-          'pro Google Agenda. Cada agenda marcada tem um tipo pros eventos '
-          'dela — turmas do Classroom viram Tarefa e feriados, Feriado, '
-          'sozinhos.',
+          'Marque as agendas que aparecem no app.',
           style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
         ),
       ),

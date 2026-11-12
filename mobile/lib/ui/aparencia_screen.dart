@@ -159,12 +159,6 @@ class AparenciaScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
-          const SizedBox(height: 8),
-          Text(
-            'Vale pro app e pro widget. A cor sempre identifica o item — '
-            'a sigla continua visível em qualquer densidade.',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-          ),
           const SizedBox(height: 28),
           Text(
             'NOTIFICAÇÕES',
@@ -179,10 +173,6 @@ class AparenciaScreen extends StatelessWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Avisar antes de cada horário'),
-            subtitle: Text(
-              'Da tabela ativa, com item preenchido, e dos eventos.',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-            ),
             value: state.notificacoesAtivas,
             onChanged: (ativar) => alternarNotificacoes(context, ativar),
           ),
@@ -211,7 +201,7 @@ class AparenciaScreen extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               title: const Text('Avisar eventos também'),
               subtitle: Text(
-                'Com hora: na mesma antecedência. Dia todo: às 8h do dia.',
+                'Com hora: na mesma antecedência. Dia todo: às 7h do dia.',
                 style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
               ),
               value: state.notificarEventos,
@@ -287,8 +277,8 @@ class AparenciaScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Reinstalar o app (por cima de uma atualização, por exemplo) '
-            'apaga os dados — exportar antes é a única forma de recuperar.',
+            'Desinstalar o app apaga os dados — exportar é a única forma de '
+            'recuperar.',
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
         ],
