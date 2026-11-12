@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../dev/exemplos.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../theme/tipo_evento_visual.dart';
@@ -46,7 +47,11 @@ class EventosScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Eventos'),
+        // Segurar o título abre o menu escondido de dados de exemplo.
+        title: GestureDetector(
+          onLongPress: () => _menuDeExemplos(context),
+          child: const Text('Eventos'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_month),
@@ -83,6 +88,51 @@ class EventosScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _menuDeExemplos(BuildContext context) async {
+    final state = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final qtd = state.eventos.where(ehExemplo).length;
+    final escolha = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Dados de exemplo', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text('Eventos de mentira pra ver as telas cheias. '
+                  'Remover apaga só eles, nunca os seus.'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_outlined),
+              title: Text(qtd == 0 ? 'Adicionar exemplos' : 'Recriar exemplos (datas de hoje)'),
+              onTap: () => Navigator.of(ctx).pop('add'),
+            ),
+            if (qtd > 0)
+              ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: Text('Remover os $qtd exemplos'),
+                onTap: () => Navigator.of(ctx).pop('del'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (escolha == 'add') {
+      await state.removerEventosOnde(ehExemplo);
+      final novos = eventosDeExemplo(
+        DateTime.now(),
+        itens: [for (final i in state.itens) if (!i.arquivado) i],
+      );
+      await state.adicionarEventos(novos);
+      messenger.showSnackBar(SnackBar(content: Text('${novos.length} eventos de exemplo adicionados.')));
+    } else if (escolha == 'del') {
+      final n = await state.removerEventosOnde(ehExemplo);
+      messenger.showSnackBar(SnackBar(content: Text('$n eventos de exemplo removidos.')));
+    }
   }
 
   static bool _naoPassou(Ocorrencia o, DateTime agora) =>

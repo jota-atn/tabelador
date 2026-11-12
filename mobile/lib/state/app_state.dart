@@ -423,6 +423,36 @@ class AppState extends ChangeNotifier {
     await _store.salvarEventos(_eventos);
   }
 
+  /// Adiciona vários de uma vez (eventos de exemplo): um aviso e uma
+  /// gravação só. Não espelha no Google.
+  Future<void> adicionarEventos(List<Evento> novos) async {
+    final ids = {for (final e in novos) e.id};
+    _eventos = [
+      for (final e in _eventos)
+        if (!ids.contains(e.id)) e,
+      ...novos,
+    ];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  /// Remove todos os eventos do app que satisfazem [teste] (só os do app,
+  /// sem mexer em cópia no Google — usado pros de exemplo, que não vão pra
+  /// lá). Devolve quantos saíram.
+  Future<int> removerEventosOnde(bool Function(Evento) teste) async {
+    final antes = _eventos.length;
+    _eventos = [
+      for (final e in _eventos)
+        if (!teste(e)) e,
+    ];
+    final removidos = antes - _eventos.length;
+    if (removidos > 0) {
+      notifyListeners();
+      await _store.salvarEventos(_eventos);
+    }
+    return removidos;
+  }
+
   /// Desfaz um [removerEvento]: o evento volta igual, e a cópia no Google
   /// (que foi apagada lá) é recriada na mesma agenda.
   Future<bool> restaurarEvento(Evento evento) async {

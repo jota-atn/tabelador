@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tabelador/dev/exemplos.dart';
 import 'package:tabelador/model/evento.dart';
 import 'package:tabelador/state/app_state.dart';
 import 'package:tabelador/ui/eventos_screen.dart';
@@ -111,6 +112,18 @@ void main() {
 
   group('estado', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test('exemplos: todos os tipos; remover não toca nos do usuário', () async {
+      final state = AppState();
+      await state.carregar();
+      await state.adicionarEvento(tarefa('Minha', semData: true));
+      final exemplos = eventosDeExemplo(DateTime(2026, 11, 12));
+      expect({for (final e in exemplos) e.tipo}, {for (final t in TipoEvento.values) t.rotulo});
+      await state.adicionarEventos(exemplos);
+      expect(state.eventos, hasLength(exemplos.length + 1));
+      expect(await state.removerEventosOnde(ehExemplo), exemplos.length);
+      expect(state.eventos.single.titulo, 'Minha');
+    });
 
     test('marcarFeita persiste e atrasadas ignora feita e recorrente', () async {
       final state = AppState();
