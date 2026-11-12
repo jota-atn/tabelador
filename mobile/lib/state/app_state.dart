@@ -312,7 +312,12 @@ class AppState extends ChangeNotifier {
       horaInicial: origem.horaInicial,
       intervalo: origem.intervalo,
       qtdHorarios: origem.qtdHorarios,
-    ).copyWith(celulas: origem.celulas, mostrarEventos: origem.mostrarEventos);
+      dias: origem.dias,
+    ).copyWith(
+      celulas: origem.celulas,
+      mostrarEventos: origem.mostrarEventos,
+      pontoFacultativoFolga: origem.pontoFacultativoFolga,
+    );
 
     await adicionarTabela(copia);
     return copia;
