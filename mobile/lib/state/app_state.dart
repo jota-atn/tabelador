@@ -731,8 +731,10 @@ class AppState extends ChangeNotifier {
       resultado.add(e.decorado(
         tipo: tipo.rotulo,
         feito: _feitasExternas.contains(e.id),
-        // Feriado do Google é comemorativo até a pessoa dizer que é folga.
-        comemorativa: tipo == TipoEvento.feriado && !_folgasExternas.contains(e.id),
+        // Feriado do Google é comemorativo (e viagem mantém as aulas) até a
+        // pessoa dizer que é folga.
+        comemorativa: (tipo == TipoEvento.feriado || tipo == TipoEvento.viagem) &&
+            !_folgasExternas.contains(e.id),
         nota: _notasExternas[e.id],
       ));
     }

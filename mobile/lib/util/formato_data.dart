@@ -25,6 +25,23 @@ String faixaHorario(Ocorrencia o) {
   return '${hora(o.inicio)}–${hora(o.fim)}';
 }
 
+/// Dia todo de vários dias: "ter 17 – sex 20/11". Durante, "Em viagem ·
+/// volta sex 20/11" (Viagem) ou "Até sex 20/11" (os outros tipos).
+String faixaDeDias(Ocorrencia o, DateTime agora) {
+  final ultimo = o.ultimoDia;
+  String dia(DateTime d) => '${diaAbreviado(d).toLowerCase()} ${diaMes(d)}';
+  if (o.cobre(agora)) {
+    final hoje = inicioDoDia(agora) == ultimo;
+    if (TipoEvento.doTexto(o.evento.tipo) == TipoEvento.viagem) {
+      return 'Em viagem · volta ${hoje ? 'hoje' : dia(ultimo)}';
+    }
+    return hoje ? 'Termina hoje' : 'Até ${dia(ultimo)}';
+  }
+  final i = o.inicio;
+  final comeco = i.month == ultimo.month ? '${i.day}' : diaMes(i);
+  return '${diaAbreviado(i).toLowerCase()} $comeco – ${dia(ultimo)}';
+}
+
 /// Meia-noite do dia de [d].
 DateTime inicioDoDia(DateTime d) => DateTime(d.year, d.month, d.day);
 

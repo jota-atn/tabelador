@@ -86,7 +86,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
     final porDia = <DateTime, List<Ocorrencia>>{};
     for (final o in state.ocorrenciasEntre(primeiroDia, fimDaGrade)) {
-      (porDia[inicioDoDia(o.inicio)] ??= []).add(o);
+      // Vários dias: aparece em cada dia que ocupa.
+      for (var d = inicioDoDia(o.inicio); !d.isAfter(o.ultimoDia); d = DateTime(d.year, d.month, d.day + 1)) {
+        (porDia[d] ??= []).add(o);
+      }
     }
     // Dia todo primeiro, depois por hora — mesma ordem da lista embaixo.
     for (final lista in porDia.values) {

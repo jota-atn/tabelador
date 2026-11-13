@@ -93,6 +93,10 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   /// comemorativa, que não esmaece as aulas.
   bool folga = true;
 
+  /// Último dia de um evento de dia todo que dura vários dias; nulo = um
+  /// dia só.
+  DateTime? ate;
+
   /// Hora do aviso quando é dia todo, em minutos desde a meia-noite.
   int avisoMin = kAvisoDiaTodoPadrao;
 
@@ -129,7 +133,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       folga = !o.comemorativa;
       avisoMin = o.avisoMin ?? kAvisoDiaTodoPadrao;
       if (semData) data = inicioDoDia(DateTime.now());
-      minutos = o.duracao.inMinutes;
+      minutos = o.diaInteiro ? 0 : o.duracao.inMinutes;
+      if (o.variosDias) ate = o.ultimoDia;
       repeticao = o.repeticao;
       destino = o.agendaDestinoId;
       _localAuto = o.local == null;
@@ -307,6 +312,13 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       });
 
   void escolherData(DateTime d) => setState(() {
+        // Mudar a ida leva a volta junto (mesma quantidade de dias).
+        final volta = ate;
+        if (volta != null) {
+          final n = volta.difference(data).inHours / 24;
+          final novo = inicioDoDia(d);
+          ate = DateTime(novo.year, novo.month, novo.day + n.round());
+        }
         data = inicioDoDia(d);
         semData = false;
         _quandoAuto = false;
@@ -383,6 +395,24 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
 
   void escolherFolga(bool v) => setState(() => folga = v);
 
+  void escolherUmDiaSo() => setState(() => ate = null);
+
+  /// Data final de um evento de dia todo (viagem, recesso).
+  Future<void> escolherAte() async {
+    final primeiro = DateTime(data.year, data.month, data.day + 1);
+    final d = await showDatePicker(
+      context: context,
+      initialDate: ate ?? primeiro,
+      firstDate: primeiro,
+      lastDate: DateTime(2100),
+      helpText: 'Até que dia?',
+    );
+    if (d != null) setState(() => ate = inicioDoDia(d));
+  }
+
+  /// O "Até" só vale pra dia todo com data (tarefa sem hora não dura dias).
+  bool get variosDias => diaTodo && !ehTarefa && ate != null && ate!.isAfter(data);
+
   void escolherRepeticao(Repeticao r) => setState(() {
         repeticao = r;
         _repeticaoAuto = false;
@@ -451,7 +481,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       id: widget.original?.id ?? gerarId(),
       titulo: tituloFinal,
       inicio: inicio,
-      fim: diaTodoFinal ? null : inicio.add(Duration(minutes: minutos)),
+      fim: diaTodoFinal ? (variosDias && !semDataFinal ? ate : null) : inicio.add(Duration(minutes: minutos)),
       diaInteiro: diaTodoFinal,
       tipo: tipoTexto,
       repeticao: semDataFinal ? Repeticao.nenhuma : repeticao,
@@ -463,7 +493,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       feito: widget.original?.feito ?? false,
       feitas: widget.original?.feitas ?? const {},
       avisoMin: diaTodoFinal && !semDataFinal && avisoMin != kAvisoDiaTodoPadrao ? avisoMin : null,
-      comemorativa: tipo == TipoEvento.feriado && !folga,
+      // Feriado: comemorativa; Viagem: mantém as aulas.
+      comemorativa: (tipo == TipoEvento.feriado || tipo == TipoEvento.viagem) && !folga,
     );
 
     final state = _state;

@@ -43,6 +43,14 @@ String distanciaEmDias(DateTime d, DateTime agora) {
   };
 }
 
+/// "ter 17/11 – sex 20/11 · 4 dias".
+String _periodo(Ocorrencia o) {
+  String dia(DateTime d) => '${diaAbreviado(d).toLowerCase()} ${diaMes(d)}';
+  final n = (o.ultimoDia.difference(inicioDoDia(o.inicio)).inHours / 24).round() + 1;
+  final texto = '${dia(o.inicio)} – ${dia(o.ultimoDia)} · $n dias';
+  return texto[0].toUpperCase() + texto.substring(1);
+}
+
 /// 120 → "2 h", 90 → "1 h 30", 45 → "45 min".
 String _duracao(Duration d) {
   final m = d.inMinutes;
@@ -175,6 +183,8 @@ class DetalhesDoEvento extends StatelessWidget {
                                 if (e.tipo.isNotEmpty) e.tipo,
                                 if (feita)
                                   'Concluída'
+                                else if (ocorrencia.variosDias && ocorrencia.cobre(agora))
+                                  tipo == TipoEvento.viagem ? 'Em viagem' : 'Acontecendo'
                                 else if (!e.semData)
                                   distanciaEmDias(ocorrencia.inicio, agora),
                               ].join(' · '),
@@ -211,7 +221,9 @@ class DetalhesDoEvento extends StatelessWidget {
                   icone: Icons.calendar_today_outlined,
                   texto: e.semData
                       ? 'Sem data'
-                      : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
+                      : ocorrencia.variosDias
+                          ? _periodo(ocorrencia)
+                          : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
                 ),
                 if (!e.semData) _Linha(icone: Icons.schedule, texto: horario),
                 if (e.repeticao != Repeticao.nenhuma)
@@ -258,10 +270,11 @@ class DetalhesDoEvento extends StatelessWidget {
                     ),
                 // Feriado do Google: o app não sabe se é folga (a agenda
                 // mistura feriado com data comemorativa) — a pessoa diz.
-                if (e.ehFeriado && e.externo && !e.embutido)
+                if ((e.ehFeriado || tipo == TipoEvento.viagem) && e.externo && !e.embutido)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: SeletorFolga(
+                      viagem: tipo == TipoEvento.viagem,
                       folga: !e.comemorativa,
                       aoMudar: (v) => state.definirFolgaExterna(e.id, v),
                     ),
@@ -331,9 +344,12 @@ class DetalhesDoEvento extends StatelessWidget {
 /// Folga ou data comemorativa — duas opções lado a lado, uma marcada. Usado
 /// no card de detalhes do feriado do Google e na folha de criar feriado.
 class SeletorFolga extends StatelessWidget {
-  const SeletorFolga({super.key, required this.folga, required this.aoMudar});
+  const SeletorFolga({super.key, required this.folga, required this.aoMudar, this.viagem = false});
 
   final bool folga;
+
+  /// Viagem: "Sem aula" / "Mantém as aulas" em vez de Folga/Comemorativa.
+  final bool viagem;
   final ValueChanged<bool> aoMudar;
 
   @override
@@ -342,16 +358,16 @@ class SeletorFolga extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SegmentedButton<bool>(
-          segments: const [
+          segments: [
             ButtonSegment(
               value: true,
-              label: Text('Folga'),
-              icon: Icon(Icons.beach_access_outlined),
+              label: Text(viagem ? 'Sem aula' : 'Folga'),
+              icon: const Icon(Icons.beach_access_outlined),
             ),
             ButtonSegment(
               value: false,
-              label: Text('Comemorativa'),
-              icon: Icon(Icons.celebration_outlined),
+              label: Text(viagem ? 'Mantém as aulas' : 'Comemorativa'),
+              icon: Icon(viagem ? Icons.school_outlined : Icons.celebration_outlined),
             ),
           ],
           selected: {folga},
@@ -359,9 +375,12 @@ class SeletorFolga extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          folga
-              ? 'Sem aula nesse dia: os horários ficam apagados e sem aviso.'
-              : 'Só uma data pra lembrar: as aulas seguem normais.',
+          switch ((viagem, folga)) {
+            (false, true) => 'Sem aula nesse dia: os horários ficam apagados e sem aviso.',
+            (false, false) => 'Só uma data pra lembrar: as aulas seguem normais.',
+            (true, true) => 'Os horários dos dias da viagem ficam apagados e sem aviso.',
+            (true, false) => 'As aulas seguem normais durante a viagem.',
+          },
           style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],

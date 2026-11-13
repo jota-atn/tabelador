@@ -194,6 +194,11 @@ Evento eventoDoAparelho(Map<Object?, Object?> m, Map<String, int?> cores) {
   if (diaInteiro) {
     final u = DateTime.fromMillisecondsSinceEpoch(inicioMs, isUtc: true);
     inicio = DateTime(u.year, u.month, u.day);
+    // Fim do Google é exclusivo (meia-noite do dia seguinte ao último); no
+    // app [Evento.fim] de dia todo é o último dia.
+    final f = DateTime.fromMillisecondsSinceEpoch(fimMs, isUtc: true);
+    final ultimo = DateTime(f.year, f.month, f.day - 1);
+    if (ultimo.isAfter(inicio)) fim = ultimo;
   } else {
     inicio = DateTime.fromMillisecondsSinceEpoch(inicioMs);
     fim = DateTime.fromMillisecondsSinceEpoch(fimMs);
@@ -227,7 +232,8 @@ Map<String, Object?> camposParaAparelho(Evento e) {
   int fim;
   if (e.diaInteiro) {
     inicio = DateTime.utc(e.inicio.year, e.inicio.month, e.inicio.day).millisecondsSinceEpoch;
-    fim = DateTime.utc(e.inicio.year, e.inicio.month, e.inicio.day + 1).millisecondsSinceEpoch;
+    final ultimo = e.ultimoDia;
+    fim = DateTime.utc(ultimo.year, ultimo.month, ultimo.day + 1).millisecondsSinceEpoch;
   } else {
     inicio = e.inicio.millisecondsSinceEpoch;
     fim = (e.fim != null && e.fim!.isAfter(e.inicio) ? e.fim! : e.inicio).millisecondsSinceEpoch;

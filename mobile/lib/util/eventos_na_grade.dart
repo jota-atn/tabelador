@@ -23,16 +23,22 @@ bool ehFolga(Evento e, Tabela? tabela) {
   return tabela == null || eventoVisivelNaTabela(tabela, e);
 }
 
-/// O nome do feriado que dá folga em [tabela] no dia de [quando], ou null.
-/// [ocorrencias] são as do período (com os embutidos já dentro, como sai de
-/// `AppState.ocorrenciasEntre`); o embutido também é checado direto, pra
-/// quem chama sem eles.
+/// Viagem marcada "Sem aula" ([Evento.comemorativa] falso, ver
+/// [Evento.mantemAulas]): apaga as aulas de toda tabela nos dias dela.
+bool ehViagemSemAula(Evento e) =>
+    TipoEvento.doTexto(e.tipo) == TipoEvento.viagem && !e.mantemAulas;
+
+/// O nome do feriado (ou viagem) que tira as aulas de [tabela] no dia de
+/// [quando], ou null. [ocorrencias] são as do período (com os embutidos já
+/// dentro, como sai de `AppState.ocorrenciasEntre`); o embutido também é
+/// checado direto, pra quem chama sem eles.
 String? folgaNoDia(DateTime quando, Tabela? tabela, Iterable<Ocorrencia> ocorrencias) {
   final embutido = folgaEmbutida(quando, tabela);
   if (embutido != null) return embutido.nome;
-  final dia = inicioDoDia(quando);
   for (final o in ocorrencias) {
-    if (inicioDoDia(o.inicio) == dia && ehFolga(o.evento, tabela)) return o.evento.titulo;
+    if (o.cobre(quando) && (ehFolga(o.evento, tabela) || ehViagemSemAula(o.evento))) {
+      return o.evento.titulo;
+    }
   }
   return null;
 }
@@ -99,17 +105,21 @@ EventosDaSemana distribuirEventos({
   for (final o in ocorrencias) {
     if (!eventoVisivelNaTabela(tabela, o.evento)) continue;
 
+    // Dia todo vai pra faixa de cada dia que ocupa nesta semana — a
+    // viagem de ter a sex aparece nos quatro.
+    if (o.evento.diaInteiro) {
+      for (final dia in tabela.dias) {
+        if (o.cobre(dataDaColuna(segunda, dia))) (diaTodo[dia] ??= []).add(o);
+      }
+      continue;
+    }
+
     final dia = kTodosDias[o.inicio.weekday - 1];
     if (!tabela.dias.contains(dia)) continue;
     // Fora da semana mostrada (o chamador deveria ter filtrado, mas uma
     // ocorrência de outra semana no mesmo dia da semana iria pra coluna
     // errada sem esta checagem).
     if (inicioDoDia(o.inicio) != dataDaColuna(segunda, dia)) continue;
-
-    if (o.evento.diaInteiro) {
-      (diaTodo[dia] ??= []).add(o);
-      continue;
-    }
 
     final minIni = o.inicio.hour * 60 + o.inicio.minute;
     final pontual = !o.fim.isAfter(o.inicio);

@@ -74,19 +74,21 @@ String construirSnapshotJson({
   // o nativo filtra pelos de hoje na hora de desenhar. O chamador manda uma
   // janela de alguns dias pra frente, pra o widget continuar certo mesmo
   // sem o app abrir por um tempo.
+  // Vários dias (viagem): uma entrada por dia da janela que ela ocupa.
+  final base = hoje ?? DateTime.now();
+  final janela = [for (var d = 0; d < dias; d++) DateTime(base.year, base.month, base.day + d)];
   final events = <Map<String, dynamic>>[
     for (final o in ocorrencias)
       if (tabelaAtiva == null || eventoVisivelNaTabela(tabelaAtiva, o.evento))
-        _evento(o, itemPorId(o.evento.itemId), claro, escuro),
+        for (final dia in <DateTime?>[if (o.variosDias) ...janela.where(o.cobre) else null])
+          {..._evento(o, itemPorId(o.evento.itemId), claro, escuro), 'date': ?(dia == null ? null : _iso(dia))},
   ];
 
   // Dias de folga (feriado) na mesma janela, por data: o nativo esmaece os
   // horários quando hoje é um deles.
   final folgas = <String, String>{};
   if (tabelaAtiva != null) {
-    final base = hoje ?? DateTime.now();
-    for (var d = 0; d < dias; d++) {
-      final dia = DateTime(base.year, base.month, base.day + d);
+    for (final dia in janela) {
       final nome = folgaNoDia(dia, tabelaAtiva, ocorrencias);
       if (nome != null) folgas[_iso(dia)] = nome;
     }

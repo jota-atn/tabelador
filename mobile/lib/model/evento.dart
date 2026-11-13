@@ -183,6 +183,10 @@ class Evento {
   /// folga, que é o caso de quem cria um feriado à mão.
   final bool comemorativa;
 
+  /// Em Viagem o mesmo campo quer dizer "Mantém as aulas" (falso = Sem
+  /// aula, o padrão): nos dois tipos ele é "não tira as aulas".
+  bool get mantemAulas => comemorativa;
+
   /// Nota de cada ocorrência avaliada (dia, meia-noite → nota). Por dia, como
   /// [feitas]: tarefa semanal avaliada tem uma nota por semana. Não
   /// confundir com [notas], que é o texto livre do evento.
@@ -228,12 +232,32 @@ class Evento {
   static DateTime _dia(DateTime d) => DateTime(d.year, d.month, d.day);
   bool get gravadoNoGoogle => !externo && idNoAparelho != null;
 
-  Duration get duracao =>
-      fim == null || !fim!.isAfter(inicio) ? Duration.zero : fim!.difference(inicio);
+  /// Dia todo de vários dias: [fim] guarda o **último dia** (meia-noite,
+  /// inclusivo). Nulo, ou no mesmo dia do início, é um dia só.
+  bool get variosDias => diaInteiro && fim != null && _dia(fim!).isAfter(_dia(inicio));
+
+  /// Último dia do evento (meia-noite) — o do início quando é um dia só.
+  DateTime get ultimoDia => variosDias ? _dia(fim!) : _dia(inicio);
+
+  /// Quantos dias depois do primeiro ele ainda ocupa (0 = um dia só).
+  int get diasExtras => variosDias
+      ? DateTime.utc(fim!.year, fim!.month, fim!.day)
+          .difference(DateTime.utc(inicio.year, inicio.month, inicio.day))
+          .inDays
+      : 0;
+
+  /// Em evento de vários dias a ocorrência vai até a meia-noite **depois** do
+  /// último dia (fim exclusivo), pra "ainda não acabou" valer o dia todo.
+  Duration get duracao {
+    if (variosDias) return DateTime(fim!.year, fim!.month, fim!.day + 1).difference(_dia(inicio));
+    return fim == null || !fim!.isAfter(inicio) || diaInteiro ? Duration.zero : fim!.difference(inicio);
+  }
 
   /// Ocorrências que **começam** em `[de, ate)`, em ordem. Evento que começou
   /// antes de [de] e ainda não acabou não entra — pra lista "Próximos" e pra
-  /// grade da semana isso é o que importa (o que vai acontecer).
+  /// grade da semana isso é o que importa (o que vai acontecer). A exceção é
+  /// o de vários dias: a viagem que começou na semana passada e volta
+  /// quarta entra na semana de agora.
   ///
   /// Mensal num dia 31 pula mês sem dia 31; anual em 29/02 pula ano não
   /// bissexto — mesmo comportamento do Google Agenda, em vez de escorregar
@@ -241,8 +265,17 @@ class Evento {
   List<Ocorrencia> ocorrenciasEntre(DateTime de, DateTime ate) {
     final resultado = <Ocorrencia>[];
     if (semData) return resultado;
+    final extras = diasExtras;
+    final ateDe = de;
+    // Vários dias: procura a partir de antes da janela, pra achar a
+    // ocorrência que começou antes e ainda está acontecendo.
+    if (extras > 0) de = DateTime(de.year, de.month, de.day - extras - 1);
     void considerar(DateTime comeco) {
-      if (!comeco.isBefore(de) && comeco.isBefore(ate)) {
+      if (!comeco.isBefore(ate)) return;
+      if (extras > 0) {
+        final fimOc = DateTime(comeco.year, comeco.month, comeco.day + extras + 1);
+        if (fimOc.isAfter(ateDe)) resultado.add(Ocorrencia(this, comeco, fimOc));
+      } else if (!comeco.isBefore(de)) {
         resultado.add(Ocorrencia(this, comeco, comeco.add(duracao)));
       }
     }
@@ -506,6 +539,20 @@ class Ocorrencia {
   final DateTime fim;
 
   bool get feita => evento.feitaEm(inicio);
+
+  /// Dia todo que ocupa mais de um dia (viagem, recesso).
+  bool get variosDias => evento.diaInteiro && fim.difference(inicio) > const Duration(hours: 25);
+
+  /// Último dia (meia-noite) que esta ocorrência ocupa.
+  DateTime get ultimoDia => variosDias
+      ? DateTime(fim.year, fim.month, fim.day - 1)
+      : DateTime(inicio.year, inicio.month, inicio.day);
+
+  /// Esta ocorrência ocupa o dia de [quando]?
+  bool cobre(DateTime quando) {
+    final dia = DateTime(quando.year, quando.month, quando.day);
+    return !dia.isBefore(DateTime(inicio.year, inicio.month, inicio.day)) && !dia.isAfter(ultimoDia);
+  }
 
   /// Tarefa sem data não tem ocorrência de verdade; esta é a "de mentira"
   /// que as listas e o card de detalhes usam pra mostrar ela.

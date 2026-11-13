@@ -68,13 +68,18 @@ class EventoTile extends StatelessWidget {
     final tipo = TipoEvento.doTexto(evento.tipo);
     final link = linkDeReuniao(evento);
 
+    final emViagem = tipo == TipoEvento.viagem && ocorrencia.cobre(agora);
     final detalhes = [
       if (tarefa && evento.semData)
         'Sem data'
       else if (tarefa && mostrarData)
         rotuloDoDia(ocorrencia.inicio, agora),
-      if (!(tarefa && (evento.diaInteiro || evento.semData))) faixaHorario(ocorrencia),
-      if (evento.tipo.isNotEmpty && !tarefa) evento.tipo,
+      if (ocorrencia.variosDias)
+        faixaDeDias(ocorrencia, agora)
+      else if (!(tarefa && (evento.diaInteiro || evento.semData)))
+        faixaHorario(ocorrencia),
+      // "Em viagem" já diz o tipo.
+      if (evento.tipo.isNotEmpty && !tarefa && !(ocorrencia.variosDias && emViagem)) evento.tipo,
       if (mostrarItem && item != null) item.sigla,
       if (evento.repeticao != Repeticao.nenhuma) evento.repeticao.rotulo.toLowerCase(),
       if (evento.gravadoNoGoogle) 'Google',
@@ -148,7 +153,7 @@ class EventoTile extends StatelessWidget {
       subtitle: detalhes.isEmpty
           ? null
           : Text(
-              mostrarData && !tarefa ? '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes' : detalhes,
+              mostrarData && !tarefa && !ocorrencia.variosDias ? '${rotuloDoDia(ocorrencia.inicio, agora)} · $detalhes' : detalhes,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: atrasada ? TextStyle(color: scheme.error, fontWeight: FontWeight.w600) : null,

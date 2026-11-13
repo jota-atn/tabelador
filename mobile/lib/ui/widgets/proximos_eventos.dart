@@ -62,7 +62,10 @@ class ProximosEventos extends StatelessWidget {
 
     final porDia = <DateTime, List<Ocorrencia>>{};
     for (final o in ocorrencias) {
-      (porDia[inicioDoDia(o.inicio)] ??= []).add(o);
+      // Viagem que já começou entra no primeiro dia da lista.
+      final dia = inicioDoDia(o.inicio);
+      final comeco = atual ? hoje : inicio;
+      (porDia[dia.isBefore(comeco) ? comeco : dia] ??= []).add(o);
     }
 
     final primeiro = ocorrencias.isEmpty ? null : ocorrencias.first;
