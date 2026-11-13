@@ -783,8 +783,7 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 | Seção | Opções |
 |---|---|
 | Aparência | tema (sistema/claro/escuro); cor do app (Material You ou uma de uma paleta curta: só a moldura do app, itens e tipos mantêm suas cores); densidade de cor (já existe) |
-| Semana | o que aparece abaixo da grade |
-| Eventos e Tarefas | esconder tipos não usados; mostrar tarefas concluídas (padrão: escondidas) |
+| Eventos e Tarefas | o que aparece abaixo da grade da Semana; esconder tipos não usados |
 | Avisos | antecedência dos horários e avisar eventos (já existem); horário padrão do aviso de dia todo (hoje fixo em 7h, `kAvisoDiaTodoPadrao`; o evento ainda pode ter o seu); dias antes do lembrete de presente (hoje fixo em 7, `kDiasAvisoPresente`) |
 | Google Agenda | agendas do aparelho (já existe) |
 | Widget | fundo opaco ou translúcido; mostrar eventos; mostrar o dia seguinte quando os horários de hoje acabarem |
@@ -794,10 +793,10 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 - **Semana começa no domingo ou na segunda** não fica em Ajustes: é configuração **da tabela** (folha de config da tabela, junto dos dias).
 
 Em aberto:
-- Seção Semana com uma opção só fere a regra das 2+: achar outra opção ou juntar com outra seção.
-- Mostrar concluídas: o usuário quer o filtro na tela de Tarefas; falta decidir se fica só lá (lembrado entre aberturas) ou também em Ajustes.
 
 Decidido depois:
+- Sem seção Semana (teria uma opção só); "abaixo da grade" vai para Eventos e Tarefas. A seção nasce quando houver opções reais da Semana.
+- Mostrar concluídas: filtro só na tela de Tarefas, lembrado entre aberturas; não aparece em Ajustes.
 - Calendários sem tabela (calendário do mês, página do tipo) começam no mesmo dia que a **tabela ativa**.
 - Esconder tipo: some o card da aba Eventos e o tipo na criação de evento; eventos já existentes desse tipo continuam na Semana e na grade.
 
