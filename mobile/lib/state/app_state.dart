@@ -52,6 +52,7 @@ class AppState extends ChangeNotifier {
   Set<String> _folgasExternas = {};
   Map<String, Nota> _notasExternas = {};
   Map<String, Presente> _presentesExternos = {};
+  Map<String, Prioridade> _prioridadesExternas = {};
   double _ultimoMaximo = 10;
   Map<String, AgendaEscolhida> _agendas = {};
   bool _agendasConfiguradas = false;
@@ -179,6 +180,7 @@ class AppState extends ChangeNotifier {
     _folgasExternas = {...dados.folgasExternas};
     _notasExternas = {...dados.notasExternas};
     _presentesExternos = {...dados.presentesExternos};
+    _prioridadesExternas = {...dados.prioridadesExternas};
     _ultimoMaximo = dados.ultimoMaximo;
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
@@ -740,6 +742,7 @@ class AppState extends ChangeNotifier {
             !_folgasExternas.contains(e.id),
         nota: _notasExternas[e.id],
         presente: _presentesExternos[e.id],
+        prioridade: _prioridadesExternas[e.id] ?? Prioridade.normal,
       ));
     }
     return resultado;
@@ -800,6 +803,20 @@ class AppState extends ChangeNotifier {
     _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+  }
+
+  /// Prioridade de uma tarefa externa (Classroom), guardada no app. As do
+  /// app mudam pela folha.
+  Future<void> definirPrioridadeExterna(String id, Prioridade p) async {
+    final antes = _prioridadesExternas[id] ?? Prioridade.normal;
+    if (antes == p) return;
+    if (p == Prioridade.normal) {
+      _prioridadesExternas.remove(id);
+    } else {
+      _prioridadesExternas[id] = p;
+    }
+    _redecorar();
+    await _store.salvarPrioridadesExternas(_prioridadesExternas);
   }
 
   /// Marca (ou desmarca) um feriado do Google como folga: aí ele esmaece as
@@ -962,6 +979,7 @@ class AppState extends ChangeNotifier {
           'folgas': _folgasExternas.toList()..sort(),
           'notas': codificarNotasExternas(_notasExternas),
           'presentes': codificarPresentesExternos(_presentesExternos),
+          'prioridades': codificarPrioridadesExternas(_prioridadesExternas),
         },
       };
 
@@ -1010,6 +1028,7 @@ class AppState extends ChangeNotifier {
     _folgasExternas = ids(externos['folgas']);
     _notasExternas = decodificarNotasExternas(externos['notas']);
     _presentesExternos = decodificarPresentesExternos(externos['presentes']);
+    _prioridadesExternas = decodificarPrioridadesExternas(externos['prioridades']);
     _externos = _decorarExternos(_externosBrutos);
 
     notifyListeners();
@@ -1026,5 +1045,6 @@ class AppState extends ChangeNotifier {
     await _store.salvarFolgasExternas(_folgasExternas);
     await _store.salvarNotasExternas(_notasExternas);
     await _store.salvarPresentesExternos(_presentesExternos);
+    await _store.salvarPrioridadesExternas(_prioridadesExternas);
   }
 }

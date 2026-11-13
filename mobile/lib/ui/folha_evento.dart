@@ -93,6 +93,9 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   /// comemorativa, que não esmaece as aulas.
   bool folga = true;
 
+  /// Só Tarefa oferece.
+  Prioridade prioridade = Prioridade.normal;
+
   /// Último dia de um evento de dia todo que dura vários dias; nulo = um
   /// dia só.
   DateTime? ate;
@@ -134,6 +137,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       diaTodo = o.diaInteiro;
       semData = o.semData;
       folga = !o.comemorativa;
+      prioridade = o.prioridade;
       avisoMin = o.avisoMin ?? kAvisoDiaTodoPadrao;
       if (semData) data = inicioDoDia(DateTime.now());
       minutos = o.diaInteiro ? 0 : o.duracao.inMinutes;
@@ -404,6 +408,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
 
   void escolherFolga(bool v) => setState(() => folga = v);
 
+  void escolherPrioridade(Prioridade p) => setState(() => prioridade = p);
+
   void escolherUmDiaSo() => setState(() => ate = null);
 
   /// Vários dias: dia todo, ou com hora de ida e de volta.
@@ -535,6 +541,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       avisoMin: diaTodoFinal && !semDataFinal && avisoMin != kAvisoDiaTodoPadrao ? avisoMin : null,
       // Feriado: comemorativa; Viagem: mantém as aulas.
       comemorativa: (tipo == TipoEvento.feriado || tipo == TipoEvento.viagem) && !folga,
+      prioridade: ehTarefa ? prioridade : Prioridade.normal,
     );
 
     final state = _state;

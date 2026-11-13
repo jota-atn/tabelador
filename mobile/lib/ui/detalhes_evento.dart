@@ -315,6 +315,25 @@ class DetalhesDoEvento extends StatelessWidget {
                       aoMudar: (v) => state.definirFolgaExterna(e.id, v),
                     ),
                   ),
+                // Tarefa do Classroom não abre na folha: a prioridade se
+                // escolhe aqui.
+                if (tarefa && e.externo && !feita)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: SegmentedButton<Prioridade>(
+                      segments: [
+                        for (final p in Prioridade.values)
+                          ButtonSegment(
+                            value: p,
+                            label: Text(p.rotulo),
+                            icon: iconeDaPrioridade(p) == null ? null : Icon(iconeDaPrioridade(p)),
+                          ),
+                      ],
+                      selected: {e.prioridade},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) => state.definirPrioridadeExterna(e.id, s.first),
+                    ),
+                  ),
                 if (tarefa)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),

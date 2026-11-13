@@ -34,6 +34,7 @@ class DadosSalvos {
     this.folgasExternas = const {},
     this.notasExternas = const {},
     this.presentesExternos = const {},
+    this.prioridadesExternas = const {},
     this.ultimoMaximo = 10,
   });
 
@@ -57,6 +58,9 @@ class DadosSalvos {
   /// Presente de aniversário externo (agenda de aniversários do Google), por
   /// id da ocorrência.
   final Map<String, Presente> presentesExternos;
+
+  /// Prioridade de tarefa externa (Classroom), por id; só alta/baixa.
+  final Map<String, Prioridade> prioridadesExternas;
 
   /// Máximo da última nota lançada — vem preenchido na próxima.
   final double ultimoMaximo;
@@ -202,6 +206,7 @@ class TabeladorStore {
   static const _kFolgasExternas = 'external_day_off_ids';
   static const _kNotasExternas = 'external_grades_json';
   static const _kPresentesExternos = 'external_gifts_json';
+  static const _kPrioridadesExternas = 'external_priority_json';
   static const _kUltimoMaximo = 'last_grade_max';
 
   Future<DadosSalvos> carregar() async {
@@ -227,6 +232,7 @@ class TabeladorStore {
       folgasExternas: {...?prefs.getStringList(_kFolgasExternas)},
       notasExternas: decodificarNotasExternas(prefs.getString(_kNotasExternas)),
       presentesExternos: decodificarPresentesExternos(prefs.getString(_kPresentesExternos)),
+      prioridadesExternas: decodificarPrioridadesExternas(prefs.getString(_kPrioridadesExternas)),
       ultimoMaximo: prefs.getDouble(_kUltimoMaximo) ?? 10,
     );
   }
@@ -315,6 +321,11 @@ class TabeladorStore {
   Future<void> salvarPresentesExternos(Map<String, Presente> presentes) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kPresentesExternos, jsonEncode(codificarPresentesExternos(presentes)));
+  }
+
+  Future<void> salvarPrioridadesExternas(Map<String, Prioridade> prioridades) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kPrioridadesExternas, jsonEncode(codificarPrioridadesExternas(prioridades)));
   }
 
   Future<void> salvarUltimoMaximo(double maximo) async {
@@ -409,6 +420,25 @@ Map<String, Presente> decodificarPresentesExternos(Object? bruto) {
     if (mapa is! Map) return {};
     return {
       for (final e in mapa.entries) e.key as String: ?Presente.fromJson(e.value),
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+Map<String, String> codificarPrioridadesExternas(Map<String, Prioridade> prioridades) => {
+      for (final e in prioridades.entries)
+        if (e.value != Prioridade.normal) e.key: e.value.key,
+    };
+
+/// Tolerante: JSON ausente ou estragado vira mapa vazio.
+Map<String, Prioridade> decodificarPrioridadesExternas(Object? bruto) {
+  try {
+    final mapa = bruto is String ? jsonDecode(bruto) : bruto;
+    if (mapa is! Map) return {};
+    return {
+      for (final e in mapa.entries)
+        if (Prioridade.fromKey(e.value as String?) case final p when p != Prioridade.normal) e.key as String: p,
     };
   } catch (_) {
     return {};
