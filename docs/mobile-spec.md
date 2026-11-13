@@ -38,6 +38,7 @@
 | **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
 | **v1.3** ✅ (2026-11-12) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
 | **v1.4** ✅ (2026-11-12) | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
+| **v1.5** | Nota em Prova (e Tarefa avaliada) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -753,6 +754,34 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Nota em Prova (v1.5, decidido 2026-11-12)
+
+Só o **lançamento** da nota. Média, pesos e "quanto preciso tirar" ficam
+pra Disciplina (v2.1) — o formato abaixo já é o que ela vai consumir.
+
+**Decisões do usuário**:
+- **Nota "de" máximo**: `7,5 de 10`, `18 de 20`. O máximo vem preenchido
+  com o último usado; quase sempre só se digita a nota.
+- **Onde**: card de detalhes ganha **"Lançar nota"** depois que a prova
+  passou (ou a tarefa foi concluída/passou); mostra "Nota: 7,5 de 10" e
+  toque edita/remove. **Página Provas**: as que já passaram mostram a nota
+  ou um "sem nota" discreto. **Sem notificação, sem cobrança** (registra,
+  não cobra).
+- **Quais**: **Prova** e **Tarefa ligada a um item** (trabalho avaliado).
+  Tarefa solta não tem nota.
+- **Google/Classroom também**, guardada no app (por id do evento, como o
+  "feito" do Classroom). Tarefa do Classroom conta como avaliada mesmo sem
+  item — o vínculo turma↔disciplina só vem na v2.2.
+
+**Modelo**:
+- `Nota { valor, maximo }` (double). Por **ocorrência**, como `feitas`
+  (tarefa semanal avaliada tem uma nota por semana): `Evento.notasLancadas`
+  = dia → Nota. Não confundir com `Evento.notas` (texto livre).
+- Externos: `notas_externas` (id → Nota) nas preferências.
+- **Backup** passa a levar as notas dos externos (e, de carona, o "feito"
+  e o "oculto" dos externos e as folgas marcadas, que hoje não iam).
+- Último máximo usado lembrado nas preferências.
 
 ## Navegar entre semanas (v1.4, implementado 2026-11-12, PR #4)
 
