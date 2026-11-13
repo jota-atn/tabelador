@@ -42,6 +42,7 @@
 | **v1.6** ✅ (2026-11-12) | Link em Reunião (Entrar no card, na lista e no aviso; série do Google agrupada) |
 | **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
 | **v1.8** ✅ (2026-11-12) | Presente em Aniversário (ideia + comprado, aviso 7 dias antes; também no do Google) |
+| **v1.9** | Prioridade em Tarefa (alta/normal/baixa, ordem na seção, marca na linha) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -757,6 +758,28 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Prioridade em Tarefa (v1.9, em especificação 2026-11-12)
+
+**Decisões do usuário**:
+- **Três níveis**: Alta, Normal (padrão), Baixa.
+- **Efeito**: dentro de cada seção da página de Tarefas (Atrasadas, Hoje,
+  Esta semana…), alta primeiro, baixa por último; depois por data. E uma
+  **marca na linha** (página de Tarefas e "Esta semana").
+- **Marca na folha da tarefa**.
+- **Tarefa do Classroom também**, guardada no app pelo evento.
+
+**Padrões (ajustáveis no teste)**:
+- **Folha**: em Detalhes, linha **Prioridade**: Alta · Normal · Baixa.
+- **Linha**: alta = bandeira cheia (vermelha) antes do título; baixa =
+  seta pra baixo discreta; normal = nada.
+- **Card de detalhes**: tarefa do Classroom não tem folha, então o card
+  ganha o seletor Alta/Normal/Baixa só nela.
+- Sem aviso extra.
+
+**Técnico**:
+- `Evento.prioridade` (enum, JSON só quando não é normal). Externo: prefs
+  `external_priority_json`, backup em `externos.prioridades`.
 
 ## Presente em Aniversário (v1.8, implementado 2026-11-12, PR #8)
 
