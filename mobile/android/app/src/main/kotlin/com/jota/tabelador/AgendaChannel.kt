@@ -57,7 +57,14 @@ object AgendaChannel {
                             apagarEvento(app, call.argument<String>("eventoId")!!.toLong())
                             null
                         }
-                        "abrirLink" -> abrirLink(app, call.argument<String>("url")!!)
+                        "abrirLink" -> abrirLink(
+                            app,
+                            call.argument<String>("url")!!,
+                            call.argument<String>("pacote"),
+                        )
+                        "appInstalado" -> appInstalado(app, call.argument<String>("pacote")!!)
+                        "abrirApp" -> abrirApp(app, call.argument<String>("pacote")!!)
+                        "geocodificar" -> geocodificar(app, call.argument<String>("endereco")!!)
                         "lerEventos" -> lerEventos(
                             app,
                             call.argument<List<String>>("ids")!!.map { it.toLong() },
@@ -83,15 +90,49 @@ object AgendaChannel {
      * Abre um link no app que cuida dele (Meet, Zoom, Teams) ou no
      * navegador. Mora aqui pra não precisar de plugin novo só pra isso.
      */
-    private fun abrirLink(context: Context, url: String): Boolean =
-        try {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            true
-        } catch (e: ActivityNotFoundException) {
-            false
+    private fun abrirLink(context: Context, url: String, pacote: String? = null): Boolean {
+        fun tentar(comPacote: Boolean): Boolean =
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (comPacote && pacote != null) intent.setPackage(pacote)
+                context.startActivity(intent)
+                true
+            } catch (e: ActivityNotFoundException) {
+                false
+            }
+        // Com pacote (Uber), vai direto pro app; se ele não abrir o link,
+        // cai no navegador.
+        return (pacote != null && tentar(true)) || tentar(false)
+    }
+
+    /** Precisa do pacote em `<queries>` no manifesto (Android 11+). */
+    private fun appInstalado(context: Context, pacote: String): Boolean =
+        context.packageManager.getLaunchIntentForPackage(pacote) != null
+
+    private fun abrirApp(context: Context, pacote: String): Boolean {
+        val intent = context.packageManager.getLaunchIntentForPackage(pacote) ?: return false
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        return true
+    }
+
+    /**
+     * Endereço digitado -> coordenadas, pelo localizador do próprio Android
+     * (sem chave nem conta). Null se não achar ou o aparelho não tiver o
+     * serviço. Roda no executor, fora da main thread.
+     */
+    @Suppress("DEPRECATION")
+    private fun geocodificar(context: Context, endereco: String): Map<String, Double>? {
+        if (!android.location.Geocoder.isPresent()) return null
+        val r = try {
+            android.location.Geocoder(context, java.util.Locale("pt", "BR"))
+                .getFromLocationName(endereco, 1)
+        } catch (e: java.io.IOException) {
+            null
         }
+        val a = r?.firstOrNull() ?: return null
+        return mapOf("lat" to a.latitude, "lng" to a.longitude)
+    }
 
     private fun listarAgendas(context: Context): List<Map<String, Any?>> {
         val projecao = arrayOf(

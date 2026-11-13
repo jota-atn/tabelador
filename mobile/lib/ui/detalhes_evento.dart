@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../util/formato_data.dart';
+import '../util/carro.dart';
 import '../util/link_reuniao.dart';
 import 'folha_evento.dart';
 import 'editar_presente.dart';
@@ -234,6 +235,8 @@ class DetalhesDoEvento extends StatelessWidget {
                 if (e.repeticao != Repeticao.nenhuma)
                   _Linha(icone: Icons.repeat, texto: e.repeticao.rotulo),
                 if (e.local != null) _Linha(icone: Icons.place_outlined, texto: e.local!),
+                if (enderecoPraCarro(e, localDoItem: item?.local) case final endereco?)
+                  _BotoesDeCarro(endereco: endereco, apelido: e.titulo),
                 if (item != null)
                   _Linha(
                     icone: Icons.bookmark_outline,
@@ -432,6 +435,71 @@ class SeletorFolga extends StatelessWidget {
       ],
       selected: {folga},
       onSelectionChanged: (s) => aoMudar(s.first),
+    );
+  }
+}
+
+/// Uber e 99 embaixo do local de Consulta e Compromisso — cada um só se o
+/// app está instalado.
+class _BotoesDeCarro extends StatefulWidget {
+  const _BotoesDeCarro({required this.endereco, required this.apelido});
+
+  final String endereco;
+  final String apelido;
+
+  @override
+  State<_BotoesDeCarro> createState() => _BotoesDeCarroState();
+}
+
+class _BotoesDeCarroState extends State<_BotoesDeCarro> {
+  /// Instalado não muda com o card aberto: pergunta uma vez por sessão.
+  static Future<(bool, bool)>? _instalados;
+
+  static Future<(bool, bool)> _verificar() async =>
+      (await appInstalado(kPacoteUber), await appInstalado(kPacote99));
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<(bool, bool)>(
+      future: _instalados ??= _verificar(),
+      builder: (context, snap) {
+        final (uber, noventaENove) = snap.data ?? (false, false);
+        if (!uber && !noventaENove) return const SizedBox.shrink();
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Row(
+            children: [
+              if (uber)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      if (!await chamarUber(widget.endereco, apelido: widget.apelido)) {
+                        messenger?.showSnackBar(const SnackBar(content: Text('Não deu pra abrir o Uber.')));
+                      }
+                    },
+                    icon: const Icon(Icons.local_taxi_outlined),
+                    label: const Text('Uber'),
+                  ),
+                ),
+              if (uber && noventaENove) const SizedBox(width: 8),
+              if (noventaENove)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final abriu = await chamar99(widget.endereco);
+                      messenger?.showSnackBar(SnackBar(
+                        content: Text(abriu ? 'Endereço copiado' : 'Não deu pra abrir a 99.'),
+                      ));
+                    },
+                    icon: const Icon(Icons.local_taxi_outlined),
+                    label: const Text('99'),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
