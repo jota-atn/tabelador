@@ -143,14 +143,30 @@ class EventoTile extends StatelessWidget {
           ],
         ),
       ),
-      title: Text(
-        evento.titulo,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: corTexto,
-          decoration: feita ? TextDecoration.lineThrough : null,
-        ),
+      title: Row(
+        children: [
+          // Prioridade de tarefa: bandeira (alta) ou seta (baixa) antes do
+          // título; concluída não precisa mais.
+          if (iconeDaPrioridade(evento.prioridade) case final icone? when tarefa && !feita) ...[
+            Icon(
+              icone,
+              size: 16,
+              color: evento.prioridade == Prioridade.alta ? scheme.error : scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              evento.titulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: corTexto,
+                decoration: feita ? TextDecoration.lineThrough : null,
+              ),
+            ),
+          ),
+        ],
       ),
       subtitle: detalhes.isEmpty
           ? null

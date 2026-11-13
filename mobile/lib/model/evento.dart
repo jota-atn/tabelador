@@ -25,6 +25,23 @@ enum Repeticao {
       );
 }
 
+/// Prioridade de uma tarefa. Normal é o padrão (e não vai pro JSON).
+enum Prioridade {
+  alta('alta', 'Alta'),
+  normal('normal', 'Normal'),
+  baixa('baixa', 'Baixa');
+
+  const Prioridade(this.key, this.rotulo);
+
+  final String key;
+  final String rotulo;
+
+  static Prioridade fromKey(String? key) => Prioridade.values.firstWhere(
+        (p) => p.key == key,
+        orElse: () => Prioridade.normal,
+      );
+}
+
 /// Como a duração de um evento é escolhida na folha de criação. Não é
 /// guardado — sai de [Evento.diaInteiro]/[Evento.fim] — mas é o que os tipos
 /// definem como padrão.
@@ -106,6 +123,7 @@ class Evento {
     this.comemorativa = false,
     this.notasLancadas = const {},
     this.presentes = const {},
+    this.prioridade = Prioridade.normal,
   });
 
   Evento.novo({
@@ -121,6 +139,7 @@ class Evento {
     this.semData = false,
     this.avisoMin,
     this.comemorativa = false,
+    this.prioridade = Prioridade.normal,
   })  : id = gerarId(),
         feito = false,
         feitas = const {},
@@ -198,6 +217,9 @@ class Evento {
   /// Presente de cada aniversário (dia da ocorrência → presente): cada ano
   /// tem o seu, como [notasLancadas].
   final Map<DateTime, Presente> presentes;
+
+  /// Só faz diferença em Tarefa: ordem na seção e marca na linha.
+  final Prioridade prioridade;
 
   bool get ehAniversario => TipoEvento.doTexto(tipo) == TipoEvento.aniversario;
 
@@ -414,6 +436,7 @@ class Evento {
           'notasLancadas': {
             for (final d in notasLancadas.keys.toList()..sort()) _diaIso(d): notasLancadas[d]!.toJson(),
           },
+        if (prioridade != Prioridade.normal) 'prioridade': prioridade.key,
         if (presentes.isNotEmpty)
           'presentes': {
             for (final d in presentes.keys.toList()..sort()) _diaIso(d): presentes[d]!.toJson(),
@@ -451,6 +474,7 @@ class Evento {
         for (final entrada in (json['notasLancadas'] as Map<String, dynamic>? ?? const {}).entries)
           if (DateTime.tryParse(entrada.key) case final d?) _dia(d): ?Nota.fromJson(entrada.value),
       },
+      prioridade: Prioridade.fromKey(json['prioridade'] as String?),
       presentes: {
         for (final entrada in (json['presentes'] as Map<String, dynamic>? ?? const {}).entries)
           if (DateTime.tryParse(entrada.key) case final d?) _dia(d): ?Presente.fromJson(entrada.value),
@@ -475,6 +499,7 @@ class Evento {
     bool? comemorativa,
     Map<DateTime, Nota>? notasLancadas,
     Map<DateTime, Presente>? presentes,
+    Prioridade? prioridade,
     String? Function()? itemId,
     String? Function()? idNoAparelho,
     String? Function()? agendaDestinoId,
@@ -503,6 +528,7 @@ class Evento {
         comemorativa: comemorativa ?? this.comemorativa,
         notasLancadas: notasLancadas ?? this.notasLancadas,
         presentes: presentes ?? this.presentes,
+        prioridade: prioridade ?? this.prioridade,
       );
 
   /// Evento externo com o tipo da agenda e o "feito" guardado no app.
@@ -512,8 +538,10 @@ class Evento {
     bool comemorativa = false,
     Nota? nota,
     Presente? presente,
+    Prioridade prioridade = Prioridade.normal,
   }) =>
       _copiar(
+        prioridade: prioridade,
         tipo: tipo,
         feito: feito,
         comemorativa: comemorativa,
@@ -553,7 +581,8 @@ class Evento {
       other.avisoMin == avisoMin &&
       other.comemorativa == comemorativa &&
       mapEquals(other.notasLancadas, notasLancadas) &&
-      mapEquals(other.presentes, presentes);
+      mapEquals(other.presentes, presentes) &&
+      other.prioridade == prioridade;
 
   @override
   int get hashCode => Object.hashAll([
@@ -578,6 +607,7 @@ class Evento {
         comemorativa,
         Object.hashAllUnordered(notasLancadas.entries.map((e) => Object.hash(e.key, e.value))),
         Object.hashAllUnordered(presentes.entries.map((e) => Object.hash(e.key, e.value))),
+        prioridade,
       ]);
 
   @override

@@ -57,3 +57,10 @@ Color corDoEvento(Evento e, Item? item, ColorScheme scheme) {
   final tipo = TipoEvento.doTexto(e.tipo);
   return tipo == null ? scheme.outline : corDoTipo(tipo, scheme.brightness);
 }
+
+/// Bandeira pra alta, seta pra baixo pra baixa; normal não tem marca.
+IconData? iconeDaPrioridade(Prioridade p) => switch (p) {
+      Prioridade.alta => Icons.flag,
+      Prioridade.normal => null,
+      Prioridade.baixa => Icons.south,
+    };

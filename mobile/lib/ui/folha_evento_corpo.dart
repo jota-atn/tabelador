@@ -173,6 +173,19 @@ class CorpoDaFolha extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                     ],
+                    if (f.ehTarefa) ...[
+                      const RotuloLinha('Prioridade'),
+                      GradeDeChips(opcoes: [
+                        for (final p in Prioridade.values)
+                          OpcaoChip(
+                            rotulo: p.rotulo,
+                            icone: iconeDaPrioridade(p),
+                            selecionado: f.prioridade == p,
+                            aoTocar: () => f.escolherPrioridade(p),
+                          ),
+                      ]),
+                      const SizedBox(height: 12),
+                    ],
                     _Detalhes(f: f),
                     const SizedBox(height: 10),
                     TextField(

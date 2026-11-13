@@ -62,7 +62,8 @@ SecaoTarefa secaoPelaData(Ocorrencia o, DateTime agora) {
 }
 
 /// Todas as tarefas organizadas: pendentes por data, sem data, concluídas
-/// por último (mais recente primeiro). Dentro de cada seção, por data.
+/// por último (mais recente primeiro). Dentro de cada seção, pela
+/// prioridade e depois pela data.
 List<LinhaTarefa> organizarTarefas(Iterable<Evento> tarefas, DateTime agora) {
   final linhas = <LinhaTarefa>[];
   for (final e in tarefas) {
@@ -73,6 +74,11 @@ List<LinhaTarefa> organizarTarefas(Iterable<Evento> tarefas, DateTime agora) {
   linhas.sort((a, b) {
     final s = a.secao.index.compareTo(b.secao.index);
     if (s != 0) return s;
+    // Pendentes: alta primeiro, baixa por último; depois pela data.
+    if (a.secao != SecaoTarefa.concluidas) {
+      final p = a.ocorrencia.evento.prioridade.index.compareTo(b.ocorrencia.evento.prioridade.index);
+      if (p != 0) return p;
+    }
     final c = a.ocorrencia.inicio.compareTo(b.ocorrencia.inicio);
     return a.secao == SecaoTarefa.concluidas ? -c : c;
   });
