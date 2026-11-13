@@ -787,7 +787,7 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 | Eventos e Tarefas | esconder tipos não usados; mostrar tarefas concluídas (padrão: escondidas) |
 | Avisos | antecedência dos horários e avisar eventos (já existem); horário padrão do aviso de dia todo (hoje fixo em 7h, `kAvisoDiaTodoPadrao`; o evento ainda pode ter o seu); dias antes do lembrete de presente (hoje fixo em 7, `kDiasAvisoPresente`) |
 | Google Agenda | agendas do aparelho (já existe) |
-| Widget | a definir |
+| Widget | fundo opaco ou translúcido; mostrar eventos; mostrar o dia seguinte quando os horários de hoje acabarem |
 | Dados | exportar/importar backup |
 | Sobre | versão, novidades da versão, rever a introdução |
 
@@ -795,10 +795,11 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 
 Em aberto:
 - Seção Semana com uma opção só fere a regra das 2+: achar outra opção ou juntar com outra seção.
-- Calendários que não pertencem a uma tabela (calendário do mês, página do tipo) hoje começam na segunda: seguem a tabela ativa?
-- Opções do Widget.
-- Esconder tipo: o que acontece com eventos já existentes desse tipo (decidir junto do 3.2).
-- Mostrar concluídas: se o filtro sai da tela de Tarefas (decidir junto do 3.3).
+- Mostrar concluídas: o usuário quer o filtro na tela de Tarefas; falta decidir se fica só lá (lembrado entre aberturas) ou também em Ajustes.
+
+Decidido depois:
+- Calendários sem tabela (calendário do mês, página do tipo) começam no mesmo dia que a **tabela ativa**.
+- Esconder tipo: some o card da aba Eventos e o tipo na criação de evento; eventos já existentes desse tipo continuam na Semana e na grade.
 
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
