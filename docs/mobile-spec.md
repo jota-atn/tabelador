@@ -775,9 +775,16 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   teams.live.com, meet.jit.si, whereby.com); ignorar suporte/tel.
   **Esconder esse bloco das notas no card** — o botão Entrar substitui.
 - Reuniões do CAESI são **eventos separados** (sem RRULE), cada um com
-  link próprio. Decisão: **série do Google** (mesmo evento recorrente) é
-  agrupada como série na página do tipo; **eventos separados não são
-  juntados por adivinhação** (links diferentes).
+  link próprio.
+- **Agrupamento (revisto com o usuário)**: na página do tipo, vira **uma
+  série** tanto a série do Google (mesmo `EVENT_ID`) quanto eventos
+  separados com **mesmo nome (sem diferenciar maiúscula/espaço sobrando),
+  mesmo dia da semana e mesmo horário**. É **só exibição**: nada é
+  fundido nos dados nem no Google, e **cada ocorrência mantém o próprio
+  link** (o Entrar de cada semana abre o link daquela semana). Vale pra
+  eventos do app e do Google. A série não promete "toda semana" (o
+  intervalo pode não ser regular): "Segundas, 19:00 · 4 vezes · próxima
+  seg 16/11".
 
 **Técnico**:
 - Abrir link: método novo no canal Kotlin existente (`Intent.ACTION_VIEW`),
@@ -785,7 +792,8 @@ Google (`google_card_pending`) se ainda não configurou agendas.
 - Ação "Entrar" no aviso: `AndroidNotificationAction` com payload do link;
   tocar abre o app e ele abre o link.
 - Série do Google: o id externo é `g:<EVENT_ID>:<início>`; agrupar por
-  `EVENT_ID`.
+  `EVENT_ID`; série "por semelhança": chave título normalizado + dia da
+  semana + hora:minuto.
 
 ## Nota em Prova (v1.5, implementado 2026-11-12, PR #5)
 
