@@ -41,6 +41,7 @@
 | **v1.5** ✅ (2026-11-12) | Nota em Prova (e Tarefa avaliada) |
 | **v1.6** ✅ (2026-11-12) | Link em Reunião (Entrar no card, na lista e no aviso; série do Google agrupada) |
 | **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
+| **v1.8** | Presente em Aniversário (ideia + comprado, aviso 7 dias antes) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -756,6 +757,31 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Presente em Aniversário (v1.8, em especificação 2026-11-12)
+
+**Decisões do usuário**:
+- **Sem idade** (ano de nascimento descartado: "só vai poluir").
+- **Presente = ideia + comprado**, por ano: cada aniversário (ocorrência)
+  tem o seu; o do ano que vem começa vazio.
+- **Aviso 7 dias antes** se tem ideia e não está comprado.
+- Vale também pro **aniversário do Google** (agenda de aniversários dos
+  contatos), guardado no app por evento, sem mexer no Google.
+
+**Padrões (ajustáveis no teste)**:
+- **Card de detalhes**: botão **Presente** (como "Lançar nota"). Com
+  presente: linha "🎁 Livro do Tolkien" com caixinha **Comprado** ao lado;
+  tocar na linha edita (diálogo: ideia, Comprado, Remover).
+- **Lista**: na linha do aniversário, "presente: livro…" enquanto não
+  comprado; "presente comprado" depois.
+- **Aviso**: 7 dias antes, na hora de aviso de dia todo (07:00):
+  "Presente · Aniversário da Ana" / "Livro do Tolkien · sáb 21/11". Some
+  ao marcar comprado.
+
+**Técnico**:
+- `Evento.presentes` (dia da ocorrência → `Presente(ideia, comprado)`),
+  como `notasLancadas`. Externo: prefs `external_gifts_json`, backup em
+  `externos.presentes`.
 
 ## Viagem e eventos de vários dias (v1.7, implementado 2026-11-12, PR #7)
 
