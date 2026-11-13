@@ -183,4 +183,58 @@ void main() {
     ));
     expect(find.text('Viagem a BH'), findsOneWidget);
   });
+
+  group('com hora', () {
+    // Sexta 13/11 18:00 até domingo 15/11 22:00.
+    Evento comHora({String tipo = 'Viagem'}) => Evento(
+          id: 'h',
+          titulo: 'Viagem a BH',
+          inicio: DateTime(2026, 11, 13, 18),
+          fim: DateTime(2026, 11, 15, 22),
+          tipo: tipo,
+        );
+
+    test('é de vários dias; festa que vira a noite não é', () {
+      expect(comHora().variosDias, isTrue);
+      expect(comHora().ultimoDia, DateTime(2026, 11, 15));
+      final festa = Evento(id: 'f', titulo: 'Festa', inicio: DateTime(2026, 11, 13, 22), fim: DateTime(2026, 11, 14, 2));
+      expect(festa.variosDias, isFalse);
+    });
+
+    test('aparece na semana seguinte se ainda não voltou', () {
+      final e = Evento(
+        id: 'h2',
+        titulo: 'Viagem',
+        inicio: DateTime(2026, 11, 14, 8),
+        fim: DateTime(2026, 11, 17, 12),
+        tipo: 'Viagem',
+      );
+      final o = e.ocorrenciasEntre(_proxima, _proxima.add(const Duration(days: 7))).single;
+      expect(o.fim, DateTime(2026, 11, 17, 12));
+      expect(o.cobre(DateTime(2026, 11, 17)), isTrue);
+      expect(o.cobre(DateTime(2026, 11, 18)), isFalse);
+    });
+
+    test('Sem aula: dia do meio inteiro; ida e volta só os horários dentro', () {
+      // Tabela de 8h, blocos de 2h, seg a dom.
+      final tabela = Tabela.nova(nome: 'T', dias: kTodosDias);
+      final ocs = comHora().ocorrenciasEntre(_segunda, _proxima);
+      final r = distribuirEventos(tabela: tabela, segunda: _segunda, ocorrencias: ocs);
+      expect(r.folga('SEXTA'), isNull);
+      expect(r.apagado('SEXTA', 0), isFalse); // 8-10
+      expect(r.apagado('SEXTA', 5), isTrue); // 18-20
+      expect(r.folga('SÁBADO'), 'Viagem a BH');
+      expect(r.apagado('DOMINGO', 5), isTrue);
+      expect(r.diaTodo('SEXTA'), hasLength(1));
+      expect(r.naCelula('SEXTA', 5), isEmpty);
+    });
+
+    test('textos com hora', () {
+      final o = comHora().ocorrenciasEntre(_segunda, _proxima).single;
+      expect(faixaDeDias(o, DateTime(2026, 11, 13, 9)), 'sex 13 18:00 – dom 15/11 22:00');
+      expect(faixaDeDias(o, DateTime(2026, 11, 14, 9)), 'Em viagem · volta dom 15/11 22:00');
+      expect(faixaDeDias(o, DateTime(2026, 11, 15, 9)), 'Em viagem · volta hoje 22:00');
+      expect(o.acontecendo(DateTime(2026, 11, 13, 9)), isFalse);
+    });
+  });
 }

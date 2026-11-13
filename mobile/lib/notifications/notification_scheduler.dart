@@ -254,7 +254,11 @@ String? Function(DateTime) _folgasDaTabela(AppState state, Tabela tabela) {
   final hoje = DateTime(agora.year, agora.month, agora.day);
   final ocorrencias =
       state.ocorrenciasEntre(hoje, DateTime(hoje.year, hoje.month, hoje.day + 7 * _kSemanasFolga + 1));
-  return (quando) => folgaNoDia(quando, tabela, ocorrencias);
+  // [quando] é o começo da aula: viagem com hora tira só as aulas entre a
+  // ida e a volta.
+  return (quando) =>
+      folgaNoDia(quando, tabela, ocorrencias) ??
+      viagemNoHorario(quando, quando.add(Duration(hours: tabela.intervalo)), ocorrencias);
 }
 
 class _AvisoUnico {

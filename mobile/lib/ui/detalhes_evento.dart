@@ -47,7 +47,9 @@ String distanciaEmDias(DateTime d, DateTime agora) {
 String _periodo(Ocorrencia o) {
   String dia(DateTime d) => '${diaAbreviado(d).toLowerCase()} ${diaMes(d)}';
   final n = (o.ultimoDia.difference(inicioDoDia(o.inicio)).inHours / 24).round() + 1;
-  final texto = '${dia(o.inicio)} – ${dia(o.ultimoDia)} · $n dias';
+  final comHora = !o.evento.diaInteiro;
+  final texto = '${dia(o.inicio)}${comHora ? ' ${hora(o.inicio)}' : ''}'
+      ' – ${dia(o.ultimoDia)}${comHora ? ' ${hora(o.fim)}' : ''} · $n dias';
   return texto[0].toUpperCase() + texto.substring(1);
 }
 
@@ -183,7 +185,7 @@ class DetalhesDoEvento extends StatelessWidget {
                                 if (e.tipo.isNotEmpty) e.tipo,
                                 if (feita)
                                   'Concluída'
-                                else if (ocorrencia.variosDias && ocorrencia.cobre(agora))
+                                else if (ocorrencia.variosDias && ocorrencia.acontecendo(agora))
                                   tipo == TipoEvento.viagem ? 'Em viagem' : 'Acontecendo'
                                 else if (!e.semData)
                                   distanciaEmDias(ocorrencia.inicio, agora),
@@ -225,7 +227,9 @@ class DetalhesDoEvento extends StatelessWidget {
                           ? _periodo(ocorrencia)
                           : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
                 ),
-                if (!e.semData) _Linha(icone: Icons.schedule, texto: horario),
+                // Vários dias com hora: a hora já está na linha da data.
+                if (!e.semData && !(ocorrencia.variosDias && !e.diaInteiro))
+                  _Linha(icone: Icons.schedule, texto: horario),
                 if (e.repeticao != Repeticao.nenhuma)
                   _Linha(icone: Icons.repeat, texto: e.repeticao.rotulo),
                 if (e.local != null) _Linha(icone: Icons.place_outlined, texto: e.local!),

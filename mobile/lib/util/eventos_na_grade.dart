@@ -36,11 +36,32 @@ String? folgaNoDia(DateTime quando, Tabela? tabela, Iterable<Ocorrencia> ocorren
   final embutido = folgaEmbutida(quando, tabela);
   if (embutido != null) return embutido.nome;
   for (final o in ocorrencias) {
-    if (o.cobre(quando) && (ehFolga(o.evento, tabela) || ehViagemSemAula(o.evento))) {
+    if (o.cobre(quando) && ehFolga(o.evento, tabela)) return o.evento.titulo;
+    // Viagem com hora: só o dia que ela ocupa inteiro; ida e volta ficam
+    // pra [viagemNoHorario], aula por aula.
+    if (ehViagemSemAula(o.evento) && o.ocupaODiaTodo(quando)) return o.evento.titulo;
+  }
+  return null;
+}
+
+/// A viagem "Sem aula" que pega o horário `[de, ate)`, ou null — pra ida e
+/// volta com hora, onde só parte das aulas do dia fica sem acontecer.
+String? viagemNoHorario(DateTime de, DateTime ate, Iterable<Ocorrencia> ocorrencias) {
+  for (final o in ocorrencias) {
+    if (ehViagemSemAula(o.evento) && o.inicio.isBefore(ate) && o.fim.isAfter(de)) {
       return o.evento.titulo;
     }
   }
   return null;
+}
+
+/// Começo e fim do [slot] de [tabela] no dia de [data].
+(DateTime, DateTime) horarioDoSlot(Tabela tabela, DateTime data, int slot) {
+  final hora = tabela.horaInicial + slot * tabela.intervalo;
+  return (
+    DateTime(data.year, data.month, data.day, hora),
+    DateTime(data.year, data.month, data.day, hora + tabela.intervalo),
+  );
 }
 
 /// Segunda-feira (meia-noite) da semana de [d].
@@ -60,7 +81,7 @@ DateTime dataDaColuna(DateTime segunda, String dia) =>
 /// tem — esse só aparece na lista "Próximos").
 class EventosDaSemana {
   EventosDaSemana._(this.segunda, this._celulas, this._diaTodo, this._fora,
-      [this._folgas = const {}]);
+      [this._folgas = const {}, this._apagados = const {}]);
 
   static final EventosDaSemana vazio =
       EventosDaSemana._(DateTime(2000), const {}, const {}, const {});
@@ -68,6 +89,13 @@ class EventosDaSemana {
   /// Dia -> nome do feriado que dá folga nele (aulas esmaecidas).
   final Map<String, String> _folgas;
   String? folga(String dia) => _folgas[dia];
+
+  /// "dia/slot" das aulas apagadas por viagem com hora no dia da ida ou da
+  /// volta (o resto do dia segue normal).
+  final Set<String> _apagados;
+
+  /// A aula desse horário não acontece (folga do dia ou viagem)?
+  bool apagado(String dia, int slot) => _folgas.containsKey(dia) || _apagados.contains('$dia/$slot');
 
   final DateTime segunda;
   final Map<String, List<Ocorrencia>> _celulas;
@@ -107,7 +135,7 @@ EventosDaSemana distribuirEventos({
 
     // Dia todo vai pra faixa de cada dia que ocupa nesta semana — a
     // viagem de ter a sex aparece nos quatro.
-    if (o.evento.diaInteiro) {
+    if (o.evento.diaInteiro || o.variosDias) {
       for (final dia in tabela.dias) {
         if (o.cobre(dataDaColuna(segunda, dia))) (diaTodo[dia] ??= []).add(o);
       }
@@ -150,7 +178,16 @@ EventosDaSemana distribuirEventos({
       dia: ?folgaNoDia(dataDaColuna(segunda, dia), tabela, ocorrencias),
   };
 
-  return EventosDaSemana._(segunda, celulas, diaTodo, fora, folgas);
+  final apagados = <String>{
+    for (final dia in tabela.dias)
+      if (!folgas.containsKey(dia))
+        for (var slot = 0; slot < tabela.qtdHorarios; slot++)
+          if (horarioDoSlot(tabela, dataDaColuna(segunda, dia), slot) case (final de, final ate)
+              when viagemNoHorario(de, ate, ocorrencias) != null)
+            '$dia/$slot',
+  };
+
+  return EventosDaSemana._(segunda, celulas, diaTodo, fora, folgas, apagados);
 }
 
 /// Próximo horário (a partir de [agora]) em que [itemId] ocupa uma célula de

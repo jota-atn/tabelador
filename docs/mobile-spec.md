@@ -796,6 +796,19 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   (o que "Sem aula" ou "Comemorativa" faz) não fica na tela; aparece ao
   segurar a opção (tooltip). Vale pra features novas.
 
+**Ida e volta com hora** (pedido no teste, 2026-11-12):
+- Com "Dia todo" desligado, a Duração ganha **"Outro dia…"** (data e hora
+  da volta): "sex 13 18:00 – dom 15/11 22:00". Vale pra qualquer tipo.
+- "Sem aula" apaga só as aulas **entre a ida e a volta** (a de sexta 8h
+  continua). Dia inteiro dentro da viagem apaga o dia todo, como antes.
+- Grade: o bloco começa no horário da ida e termina no da volta. Calendário:
+  dias inteiros (não tem hora ali).
+- Lista/card/widget: "Em viagem · volta dom 15/11 22:00". Aviso antes da
+  ida, com a antecedência dos eventos com hora.
+- Evento com hora conta como "vários dias" se termina noutro dia **e** dura
+  12 h ou mais (festa das 22h às 2h continua sendo de um dia só).
+- Google: evento com hora de vários dias também aparece em todos os dias.
+
 **Técnico**:
 - Modelo: dia todo de vários dias guarda o **último dia** em `fim`
   (meia-noite, inclusivo). `fim` nulo = um dia (todo evento já salvo

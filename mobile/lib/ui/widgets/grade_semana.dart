@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -230,7 +231,7 @@ class GradeSemana extends StatelessWidget {
                                 // Feriado de folga: as aulas do dia ficam
                                 // esmaecidas — estão lá, mas não acontecem.
                                 child: Opacity(
-                                  opacity: eventos?.folga(tabela.dias[dia]) == null ? 1 : 0.3,
+                                  opacity: eventos?.apagado(tabela.dias[dia], slot) ?? false ? 0.3 : 1,
                                   child: _Celula(
                                     item: itemPorId(
                                       tabela.celula(tabela.dias[dia], slot),
@@ -320,6 +321,17 @@ class GradeSemana extends StatelessWidget {
             for (final x in ev.diaTodo(tabela.dias[i]))
               if (!x.variosDias) x,
         ];
+        // Com hora, a coluna da ida começa no horário da ida e a da volta
+        // termina no da volta; o contorno é a união das colunas.
+        final colunas = <Rect>[
+          for (var i = ini; i <= fim; i++)
+            Rect.fromLTRB(
+              (i - ini) * (larguraDia + 1),
+              _yDoMomento(o.inicio, ev.dataDe(tabela.dias[i]), altura, inicioDoBloco: true),
+              (i - ini) * (larguraDia + 1) + larguraDia,
+              _yDoMomento(o.fim, ev.dataDe(tabela.dias[i]), altura, inicioDoBloco: false),
+            ),
+        ];
         widgets
           ..add(Positioned(
             left: esquerda,
@@ -327,13 +339,7 @@ class GradeSemana extends StatelessWidget {
             width: largo,
             height: altura,
             child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: cor.withValues(alpha: 0.08),
-                  border: Border.all(color: cor.withValues(alpha: 0.55), width: 1.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              child: CustomPaint(painter: _BlocoPintor(colunas, cor)),
             ),
           ))
           ..add(Positioned(
@@ -375,6 +381,65 @@ class GradeSemana extends StatelessWidget {
     }
     return widgets;
   }
+
+  /// Altura, na coluna de [data], de onde o bloco começa (ou termina) por
+  /// causa de [momento]: dia antes/depois dele é a coluna inteira; no próprio
+  /// dia, a posição da hora na régua da tabela (antes do primeiro horário,
+  /// do topo; depois do último, até o fim).
+  double _yDoMomento(DateTime momento, DateTime data, double altura, {required bool inicioDoBloco}) {
+    final dia = DateTime(momento.year, momento.month, momento.day);
+    final topoHorarios = _alturaCabecalho + _alturaFaixa;
+    final fimHorarios = topoHorarios + tabela.qtdHorarios * alturaLinha;
+    if (inicioDoBloco && data.isAfter(dia)) return 0;
+    // Fim à meia-noite em ponto (dia todo, ou volta 00:00) é o fim do dia
+    // anterior: as colunas cobertas vão até embaixo.
+    if (!inicioDoBloco && (data.isBefore(dia) || momento == dia)) return altura;
+    final minutos = momento.hour * 60 + momento.minute - tabela.horaInicial * 60;
+    if (minutos <= 0) return inicioDoBloco ? 0 : topoHorarios;
+    final y = topoHorarios + minutos / (tabela.intervalo * 60) * alturaLinha;
+    if (y >= fimHorarios) return inicioDoBloco ? fimHorarios : altura;
+    return y;
+  }
+}
+
+/// Fundo leve e contorno na cor do evento sobre a união das colunas.
+class _BlocoPintor extends CustomPainter {
+  _BlocoPintor(this.colunas, this.cor);
+
+  final List<Rect> colunas;
+  final Color cor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var forma = Path();
+    void unir(Path p) => forma = Path.combine(PathOperation.union, forma, p);
+    for (var i = 0; i < colunas.length; i++) {
+      final r = colunas[i];
+      if (r.height <= 0) continue;
+      unir(Path()..addRRect(RRect.fromRectAndRadius(r, const Radius.circular(10))));
+      // Emenda com a próxima coluna: um retângulo reto na altura que as duas
+      // têm em comum tapa os cantos arredondados de dentro e o fio entre os
+      // dias.
+      if (i + 1 < colunas.length) {
+        final p = colunas[i + 1];
+        final topo = r.top > p.top ? r.top : p.top;
+        final base = r.bottom < p.bottom ? r.bottom : p.bottom;
+        if (base > topo) unir(Path()..addRect(Rect.fromLTRB(r.right - 12, topo, p.left + 12, base)));
+      }
+    }
+    canvas
+      ..drawPath(forma, Paint()..color = cor.withValues(alpha: 0.08))
+      ..drawPath(
+        forma,
+        Paint()
+          ..color = cor.withValues(alpha: 0.55)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+  }
+
+  @override
+  bool shouldRepaint(_BlocoPintor old) => old.cor != cor || !listEquals(old.colunas, colunas);
 }
 
 extension on GradeSemana {

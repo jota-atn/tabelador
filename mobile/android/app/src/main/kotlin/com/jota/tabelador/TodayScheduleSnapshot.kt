@@ -46,6 +46,8 @@ data class TodayScheduleSnapshot(
     val events: List<ScheduleEvent> = emptyList(),
     /** Data (`yyyy-MM-dd`) -> nome do feriado que dá folga nela. */
     val folgas: Map<String, String> = emptyMap(),
+    /** Data -> horários (`ScheduleSlot.time`) apagados por viagem com hora. */
+    val apagados: Map<String, Set<String>> = emptyMap(),
 ) {
     companion object {
         val vazio = TodayScheduleSnapshot(tableName = "", week = emptyMap())
@@ -71,6 +73,15 @@ data class TodayScheduleSnapshot(
                     folgas = buildMap {
                         val f = obj.optJSONObject("folgas")
                         if (f != null) for (k in f.keys()) put(k, f.optString(k))
+                    },
+                    apagados = buildMap {
+                        val a = obj.optJSONObject("apagados")
+                        if (a != null) {
+                            for (k in a.keys()) {
+                                val lista = a.optJSONArray(k) ?: continue
+                                put(k, buildSet { for (i in 0 until lista.length()) add(lista.optString(i)) })
+                            }
+                        }
                     },
                 )
             } catch (e: Exception) {

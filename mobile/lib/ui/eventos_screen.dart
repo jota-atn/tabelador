@@ -312,7 +312,7 @@ class _CardTipo extends StatelessWidget {
         : (n == 1 ? 'próximo' : 'próximos');
     final p = proximas.first;
     // Vários dias já começado: "Viagem a BH · Em viagem · volta sex 20/11".
-    if (p.variosDias && p.cobre(agora)) {
+    if (p.variosDias && p.acontecendo(agora)) {
       return ('$n $palavra', '${p.evento.titulo} · ${faixaDeDias(p, agora)}');
     }
     return ('$n $palavra', '${rotuloDoDia(p.inicio, agora)} · ${p.evento.titulo}');

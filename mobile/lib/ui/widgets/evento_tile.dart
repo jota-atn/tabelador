@@ -68,7 +68,7 @@ class EventoTile extends StatelessWidget {
     final tipo = TipoEvento.doTexto(evento.tipo);
     final link = linkDeReuniao(evento);
 
-    final emViagem = tipo == TipoEvento.viagem && ocorrencia.cobre(agora);
+    final emViagem = tipo == TipoEvento.viagem && ocorrencia.acontecendo(agora);
     final detalhes = [
       if (tarefa && evento.semData)
         'Sem data'
