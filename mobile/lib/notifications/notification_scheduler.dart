@@ -11,6 +11,7 @@ import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
+import '../util/formato_data.dart';
 import '../util/link_reuniao.dart';
 
 const AndroidNotificationChannel kCanalHorarios = AndroidNotificationChannel(
@@ -283,6 +284,9 @@ class _AvisoUnico {
 /// (7 × 100 + slot), pra nunca colidir.
 const int _kBaseIdEvento = 100000;
 
+/// Quantos dias antes do aniversário vem o lembrete do presente.
+const int kDiasAvisoPresente = 7;
+
 /// Um aviso por ocorrência de evento nos próximos [kDiasAvisoEventos] dias,
 /// de **todos** os eventos — ao contrário da grade, não filtra pela tabela
 /// ativa: o aniversário escondido da tabela da academia continua merecendo
@@ -329,6 +333,35 @@ List<_AvisoUnico> _construirAvisosDeEvento(
         ].join(' · '),
         quando: quando,
         link: link,
+      ),
+    );
+  }
+
+  // Presente de aniversário ainda não comprado: um aviso 7 dias antes, na
+  // hora de aviso de dia todo. Janela própria (o aniversário pode estar
+  // além dos dias de aviso normais).
+  final aniversarios = state.ocorrenciasEntre(
+    hoje,
+    DateTime(hoje.year, hoje.month, hoje.day + kDiasAvisoPresente + kDiasAvisoEventos),
+  );
+  for (final o in aniversarios) {
+    final presente = o.evento.presenteEm(o.inicio);
+    if (!o.evento.ehAniversario || presente == null || presente.comprado) continue;
+    final aviso = o.evento.avisoMin ?? kAvisoDiaTodoPadrao;
+    final quando = DateTime(
+      o.inicio.year,
+      o.inicio.month,
+      o.inicio.day - kDiasAvisoPresente,
+      aviso ~/ 60,
+      aviso % 60,
+    );
+    if (!quando.isAfter(agora)) continue;
+    resultado.add(
+      _AvisoUnico(
+        id: _kBaseIdEvento + resultado.length,
+        titulo: 'Presente · ${o.evento.titulo}',
+        corpo: '${presente.ideia} · ${diaAbreviado(o.inicio).toLowerCase()} ${diaMes(o.inicio)}',
+        quando: quando,
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../agenda/agendas_do_aparelho.dart';
 import '../model/evento.dart';
 import '../model/nota.dart';
+import '../model/presente.dart';
 import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
@@ -32,6 +33,7 @@ class DadosSalvos {
     this.ocultasExternas = const {},
     this.folgasExternas = const {},
     this.notasExternas = const {},
+    this.presentesExternos = const {},
     this.ultimoMaximo = 10,
   });
 
@@ -51,6 +53,10 @@ class DadosSalvos {
   /// Nota lançada em evento externo (prova do Google, atividade do
   /// Classroom), por id do evento — a agenda não guarda isso.
   final Map<String, Nota> notasExternas;
+
+  /// Presente de aniversário externo (agenda de aniversários do Google), por
+  /// id da ocorrência.
+  final Map<String, Presente> presentesExternos;
 
   /// Máximo da última nota lançada — vem preenchido na próxima.
   final double ultimoMaximo;
@@ -195,6 +201,7 @@ class TabeladorStore {
   static const _kOcultasExternas = 'external_hidden_ids';
   static const _kFolgasExternas = 'external_day_off_ids';
   static const _kNotasExternas = 'external_grades_json';
+  static const _kPresentesExternos = 'external_gifts_json';
   static const _kUltimoMaximo = 'last_grade_max';
 
   Future<DadosSalvos> carregar() async {
@@ -219,6 +226,7 @@ class TabeladorStore {
       ocultasExternas: {...?prefs.getStringList(_kOcultasExternas)},
       folgasExternas: {...?prefs.getStringList(_kFolgasExternas)},
       notasExternas: decodificarNotasExternas(prefs.getString(_kNotasExternas)),
+      presentesExternos: decodificarPresentesExternos(prefs.getString(_kPresentesExternos)),
       ultimoMaximo: prefs.getDouble(_kUltimoMaximo) ?? 10,
     );
   }
@@ -304,6 +312,11 @@ class TabeladorStore {
     await prefs.setString(_kNotasExternas, jsonEncode(codificarNotasExternas(notas)));
   }
 
+  Future<void> salvarPresentesExternos(Map<String, Presente> presentes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kPresentesExternos, jsonEncode(codificarPresentesExternos(presentes)));
+  }
+
   Future<void> salvarUltimoMaximo(double maximo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kUltimoMaximo, maximo);
@@ -379,6 +392,23 @@ Map<String, Nota> decodificarNotasExternas(Object? bruto) {
     if (mapa is! Map) return {};
     return {
       for (final e in mapa.entries) e.key as String: ?Nota.fromJson(e.value),
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+Map<String, dynamic> codificarPresentesExternos(Map<String, Presente> presentes) => {
+      for (final e in presentes.entries) e.key: e.value.toJson(),
+    };
+
+/// Tolerante: JSON ausente ou estragado vira mapa vazio.
+Map<String, Presente> decodificarPresentesExternos(Object? bruto) {
+  try {
+    final mapa = bruto is String ? jsonDecode(bruto) : bruto;
+    if (mapa is! Map) return {};
+    return {
+      for (final e in mapa.entries) e.key as String: ?Presente.fromJson(e.value),
     };
   } catch (_) {
     return {};

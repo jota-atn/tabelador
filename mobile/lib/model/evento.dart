@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../util/id.dart';
 import 'nota.dart';
+import 'presente.dart';
 
 /// Como um [Evento] se repete. De propósito sem editor de RRULE: os quatro
 /// casos cobrem prova (nenhuma), reunião (semanal), fatura (mensal) e
@@ -104,6 +105,7 @@ class Evento {
     this.avisoMin,
     this.comemorativa = false,
     this.notasLancadas = const {},
+    this.presentes = const {},
   });
 
   Evento.novo({
@@ -123,6 +125,7 @@ class Evento {
         feito = false,
         feitas = const {},
         notasLancadas = const {},
+        presentes = const {},
         agendaId = null,
         corExterna = null,
         idNoAparelho = null,
@@ -191,6 +194,26 @@ class Evento {
   /// [feitas]: tarefa semanal avaliada tem uma nota por semana. Não
   /// confundir com [notas], que é o texto livre do evento.
   final Map<DateTime, Nota> notasLancadas;
+
+  /// Presente de cada aniversário (dia da ocorrência → presente): cada ano
+  /// tem o seu, como [notasLancadas].
+  final Map<DateTime, Presente> presentes;
+
+  bool get ehAniversario => TipoEvento.doTexto(tipo) == TipoEvento.aniversario;
+
+  Presente? presenteEm(DateTime inicioDaOcorrencia) => presentes[_dia(inicioDaOcorrencia)];
+
+  /// Guarda (ou, com null, apaga) o presente da ocorrência.
+  Evento comPresente(DateTime inicioDaOcorrencia, Presente? presente) {
+    final dia = _dia(inicioDaOcorrencia);
+    final novos = {...presentes};
+    if (presente == null) {
+      novos.remove(dia);
+    } else {
+      novos[dia] = presente;
+    }
+    return _copiar(presentes: novos);
+  }
 
   /// Recebe nota: Prova, Tarefa ligada a um item (trabalho avaliado) e
   /// tarefa externa (atividade do Classroom, ainda sem vínculo com item).
@@ -391,6 +414,10 @@ class Evento {
           'notasLancadas': {
             for (final d in notasLancadas.keys.toList()..sort()) _diaIso(d): notasLancadas[d]!.toJson(),
           },
+        if (presentes.isNotEmpty)
+          'presentes': {
+            for (final d in presentes.keys.toList()..sort()) _diaIso(d): presentes[d]!.toJson(),
+          },
       };
 
   static String _diaIso(DateTime d) =>
@@ -424,6 +451,10 @@ class Evento {
         for (final entrada in (json['notasLancadas'] as Map<String, dynamic>? ?? const {}).entries)
           if (DateTime.tryParse(entrada.key) case final d?) _dia(d): ?Nota.fromJson(entrada.value),
       },
+      presentes: {
+        for (final entrada in (json['presentes'] as Map<String, dynamic>? ?? const {}).entries)
+          if (DateTime.tryParse(entrada.key) case final d?) _dia(d): ?Presente.fromJson(entrada.value),
+      },
     );
   }
 
@@ -443,6 +474,7 @@ class Evento {
     String? tipo,
     bool? comemorativa,
     Map<DateTime, Nota>? notasLancadas,
+    Map<DateTime, Presente>? presentes,
     String? Function()? itemId,
     String? Function()? idNoAparelho,
     String? Function()? agendaDestinoId,
@@ -470,6 +502,7 @@ class Evento {
         avisoMin: avisoMin,
         comemorativa: comemorativa ?? this.comemorativa,
         notasLancadas: notasLancadas ?? this.notasLancadas,
+        presentes: presentes ?? this.presentes,
       );
 
   /// Evento externo com o tipo da agenda e o "feito" guardado no app.
@@ -478,12 +511,14 @@ class Evento {
     required bool feito,
     bool comemorativa = false,
     Nota? nota,
+    Presente? presente,
   }) =>
       _copiar(
         tipo: tipo,
         feito: feito,
         comemorativa: comemorativa,
         notasLancadas: nota == null ? const {} : {_dia(inicio): nota},
+        presentes: presente == null ? const {} : {_dia(inicio): presente},
       );
 
   /// Tipos que saíram da lista: "Entrega" vira Tarefa — e a que já passou
@@ -517,10 +552,11 @@ class Evento {
       setEquals(other.feitas, feitas) &&
       other.avisoMin == avisoMin &&
       other.comemorativa == comemorativa &&
-      mapEquals(other.notasLancadas, notasLancadas);
+      mapEquals(other.notasLancadas, notasLancadas) &&
+      mapEquals(other.presentes, presentes);
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         id,
         titulo,
         inicio,
@@ -541,7 +577,8 @@ class Evento {
         avisoMin,
         comemorativa,
         Object.hashAllUnordered(notasLancadas.entries.map((e) => Object.hash(e.key, e.value))),
-      );
+        Object.hashAllUnordered(presentes.entries.map((e) => Object.hash(e.key, e.value))),
+      ]);
 
   @override
   String toString() => 'Evento($id, $titulo, $inicio)';

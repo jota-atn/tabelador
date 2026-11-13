@@ -82,6 +82,8 @@ class EventoTile extends StatelessWidget {
       if (evento.tipo.isNotEmpty && !tarefa && !(ocorrencia.variosDias && emViagem)) evento.tipo,
       if (mostrarItem && item != null) item.sigla,
       if (evento.repeticao != Repeticao.nenhuma) evento.repeticao.rotulo.toLowerCase(),
+      if (evento.presenteEm(ocorrencia.inicio) case final p?)
+        p.comprado ? 'presente comprado' : 'presente: ${p.ideia}',
       if (evento.gravadoNoGoogle) 'Google',
     ].join(' · ');
 

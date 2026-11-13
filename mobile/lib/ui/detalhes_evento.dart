@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../util/formato_data.dart';
 import '../util/link_reuniao.dart';
 import 'folha_evento.dart';
+import 'editar_presente.dart';
 import 'lancar_nota.dart';
 import '../theme/tipo_evento_visual.dart';
 import 'widgets/item_swatch.dart';
@@ -270,6 +271,37 @@ class DetalhesDoEvento extends StatelessWidget {
                         onPressed: () => abrirLancarNota(context, ocorrencia),
                         icon: const Icon(Icons.grade_outlined),
                         label: const Text('Lançar nota'),
+                      ),
+                    ),
+                // Presente: um por ano (ocorrência). Guardado, a linha mostra
+                // a ideia com "Comprado" ao lado e o toque edita.
+                if (e.ehAniversario && !e.semData)
+                  if (e.presenteEm(ocorrencia.inicio) case final presente?)
+                    InkWell(
+                      onTap: () => abrirEditarPresente(context, ocorrencia),
+                      child: _Linha(
+                        icone: Icons.card_giftcard,
+                        texto: presente.ideia,
+                        fim: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Comprado', style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
+                            Checkbox(
+                              value: presente.comprado,
+                              onChanged: (v) =>
+                                  state.definirPresente(ocorrencia, presente.comComprado(v ?? false)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                      child: OutlinedButton.icon(
+                        onPressed: () => abrirEditarPresente(context, ocorrencia),
+                        icon: const Icon(Icons.card_giftcard),
+                        label: const Text('Presente'),
                       ),
                     ),
                 // Feriado do Google: o app não sabe se é folga (a agenda
