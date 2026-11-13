@@ -40,6 +40,7 @@
 | **v1.4** ✅ (2026-11-12) | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
 | **v1.5** ✅ (2026-11-12) | Nota em Prova (e Tarefa avaliada) |
 | **v1.6** ✅ (2026-11-12) | Link em Reunião (Entrar no card, na lista e no aviso; série do Google agrupada) |
+| **v1.7** | Viagem de vários dias (e qualquer evento de dia todo; sem aula durante a viagem) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -611,7 +612,7 @@ olho acompanhar. Mesma folha pra criar e editar. Cabeçalho com ícone,
    | Entrega | prazo (um horário, sem duração) |
    | Lembrete | prazo |
    | Compromisso, Consulta, Reunião, Outro | 1h |
-   | Viagem | dia todo (um dia só — vários dias fica pra depois) |
+   | Viagem | dia todo (vários dias desde v1.7) |
    | Aniversário | dia todo, repete todo ano |
 
    Sem tipo personalizado por enquanto. Evento antigo com tipo em texto
@@ -755,6 +756,46 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Viagem e eventos de vários dias (v1.7, em especificação 2026-11-12)
+
+**Decisões do usuário**:
+- **Qualquer evento de dia todo** pode durar vários dias (Viagem,
+  recesso como Feriado, congresso como Compromisso…), não só Viagem.
+  Eventos de vários dias do Google passam a aparecer **em todos os dias**
+  que ocupam, não só no primeiro.
+- **Aulas durante a viagem**: escolha por viagem, na folha da Viagem —
+  **Sem aula** (padrão) / **Mantém as aulas**. "Sem aula" esmaece os dias
+  na grade e tira o aviso das aulas, igual feriado de folga. Só Viagem tem
+  essa escolha (Feriado continua com Folga/Comemorativa; os outros tipos
+  não mexem nas aulas).
+- **Lista "Esta semana": uma linha só** — "Viagem a BH · ter 17 – sex
+  20/11". Durante a viagem fica no topo: "Em viagem · volta sex 20/11".
+
+**Padrões (sem pergunta, ajustáveis no teste)**:
+- **Folha**: em "Quando", com "Dia todo" ligado, aparece o chip **"Até"**
+  (data final). Desligado = um dia só, como hoje. Resumo do Quando: "ter
+  17 – sex 20/11".
+- **Grade**: a viagem aparece na faixa de dia todo **em cada dia** que
+  ocupa, inclusive quando começou numa semana anterior.
+- **Calendário**: aparece em todos os dias. **Widget**: aparece hoje se
+  hoje está dentro da viagem.
+- **Aviso**: um só, no dia da ida (na hora de aviso de dia todo).
+- **Card de detalhes**: "ter 17/11 – sex 20/11 · 4 dias".
+- **Aba Eventos, card Viagem**: "Em viagem · volta sex 20/11" durante;
+  antes, a contagem até a ida como hoje.
+
+**Técnico**:
+- Modelo: dia todo de vários dias guarda o **último dia** em `fim`
+  (meia-noite, inclusivo). `fim` nulo = um dia (todo evento já salvo
+  continua igual, sem migração).
+- Google: dia todo vem com fim **exclusivo** em meia-noite UTC; vira
+  último dia = fim − 1 dia. Ao gravar no Google, o inverso.
+- `ocorrenciasEntre` passa a incluir ocorrência de vários dias que
+  **começou antes** da janela e ainda não acabou (sobreposição), não só as
+  que começam nela.
+- Viagem ganha campo `semAula` (padrão verdadeiro); `ehFolga` passa a
+  valer pra Viagem com `semAula` em todos os dias dela.
 
 ## Link em Reunião (v1.6, implementado 2026-11-12, PR #6)
 
