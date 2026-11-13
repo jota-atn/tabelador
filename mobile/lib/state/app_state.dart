@@ -7,6 +7,7 @@ import '../data/tabelador_store.dart';
 import '../model/evento.dart';
 import '../model/item.dart';
 import '../model/nota.dart';
+import '../model/presente.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
 import '../util/feriados.dart';
@@ -50,6 +51,7 @@ class AppState extends ChangeNotifier {
   Set<String> _ocultasExternas = {};
   Set<String> _folgasExternas = {};
   Map<String, Nota> _notasExternas = {};
+  Map<String, Presente> _presentesExternos = {};
   double _ultimoMaximo = 10;
   Map<String, AgendaEscolhida> _agendas = {};
   bool _agendasConfiguradas = false;
@@ -176,6 +178,7 @@ class AppState extends ChangeNotifier {
     _ocultasExternas = {...dados.ocultasExternas};
     _folgasExternas = {...dados.folgasExternas};
     _notasExternas = {...dados.notasExternas};
+    _presentesExternos = {...dados.presentesExternos};
     _ultimoMaximo = dados.ultimoMaximo;
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
@@ -736,6 +739,7 @@ class AppState extends ChangeNotifier {
         comemorativa: (tipo == TipoEvento.feriado || tipo == TipoEvento.viagem) &&
             !_folgasExternas.contains(e.id),
         nota: _notasExternas[e.id],
+        presente: _presentesExternos[e.id],
       ));
     }
     return resultado;
@@ -771,6 +775,28 @@ class AppState extends ChangeNotifier {
     }
     final novo = e.comNota(o.inicio, nota);
     if (novo == e) return;
+    _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
+  }
+
+  /// Guarda o presente da ocorrência [o] (null apaga). Evento externo
+  /// (aniversário do Google) guarda no app, por id.
+  Future<void> definirPresente(Ocorrencia o, Presente? presente) async {
+    final e = o.evento;
+    if (e.externo) {
+      if (presente == null) {
+        if (_presentesExternos.remove(e.id) == null) return;
+      } else {
+        _presentesExternos[e.id] = presente;
+      }
+      _redecorar();
+      await _store.salvarPresentesExternos(_presentesExternos);
+      return;
+    }
+    final atual = eventoPorId(e.id) ?? e;
+    final novo = atual.comPresente(o.inicio, presente);
+    if (novo == atual) return;
     _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
     notifyListeners();
     await _store.salvarEventos(_eventos);
@@ -935,6 +961,7 @@ class AppState extends ChangeNotifier {
           'ocultas': _ocultasExternas.toList()..sort(),
           'folgas': _folgasExternas.toList()..sort(),
           'notas': codificarNotasExternas(_notasExternas),
+          'presentes': codificarPresentesExternos(_presentesExternos),
         },
       };
 
@@ -982,6 +1009,7 @@ class AppState extends ChangeNotifier {
     _ocultasExternas = ids(externos['ocultas']);
     _folgasExternas = ids(externos['folgas']);
     _notasExternas = decodificarNotasExternas(externos['notas']);
+    _presentesExternos = decodificarPresentesExternos(externos['presentes']);
     _externos = _decorarExternos(_externosBrutos);
 
     notifyListeners();
@@ -997,5 +1025,6 @@ class AppState extends ChangeNotifier {
     await _store.salvarOcultasExternas(_ocultasExternas);
     await _store.salvarFolgasExternas(_folgasExternas);
     await _store.salvarNotasExternas(_notasExternas);
+    await _store.salvarPresentesExternos(_presentesExternos);
   }
 }
