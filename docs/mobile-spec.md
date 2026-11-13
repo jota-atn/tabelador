@@ -28,6 +28,7 @@
   versão: resumo + diff) → merge (merge commit, não squash) → tag em
   `master` → apaga a branch.
 - Spec/ideias sem código podem ir direto em `master`.
+- **Onboarding**: toda versão que muda um conceito ou uma tela principal revê o onboarding (`onboarding_screen.dart`) antes do PR.
 
 **Plano**:
 
@@ -799,6 +800,20 @@ Decidido depois:
 - Mostrar concluídas: filtro só na tela de Tarefas, lembrado entre aberturas; não aparece em Ajustes.
 - Calendários sem tabela (calendário do mês, página do tipo) começam no mesmo dia que a **tabela ativa**.
 - Esconder tipo: some o card da aba Eventos e o tipo na criação de evento; eventos já existentes desse tipo continuam na Semana e na grade.
+
+### Ponto 2 — Onboarding (decidido)
+
+Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem copiar telas do app, que mudam), faz a **configuração** que já existe, e as **telas vazias** do app ensinam o resto (também ataca o ponto 5).
+
+1. Bem-vindo
+2. Itens: animação de um chip colorido caindo na grade
+3. Sua tabela: cria ali mesmo (já existe)
+4. Eventos e Tarefas: os tipos com cor e ícone; Tarefas como a to-do
+5. Do seu jeito: tema, cor do app, densidade, com prévia ao vivo (o mesmo componente do cabeçalho de Ajustes)
+6. Google Agenda
+7. Widget e avisos
+
+"Pular" sempre visível; Google e widget puláveis um a um; telas 2 e 4 de leitura rápida. Tirar o texto "muda em Aparência". Implementar **por último** na rodada, depois que 1, 3 e 4 mudarem as telas.
 
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
