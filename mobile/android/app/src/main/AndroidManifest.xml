@@ -57,6 +57,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Botões Uber/99 no card de Consulta e Compromisso: sem isto o
+             Android 11+ responde "não instalado". -->
+        <package android:name="com.ubercab"/>
+        <package android:name="com.taxis99"/>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

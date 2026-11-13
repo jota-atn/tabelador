@@ -43,7 +43,8 @@
 | **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
 | **v1.8** ✅ (2026-11-12) | Presente em Aniversário (ideia + comprado, aviso 7 dias antes; também no do Google) |
 | **v1.9** ✅ (2026-11-12) | Prioridade em Tarefa (alta/normal/baixa, ordem na seção, marca na linha; Classroom pelo card) |
-| **v1.10** | Uber/99 em Consulta e Compromisso (card de detalhes; destino pelo localizador do Android) |
+| **v1.10** ✅ (2026-11-12) | Uber/99 em Consulta e Compromisso (card de detalhes, ícone dos apps; destino pelo localizador do Android); "Até" só em Viagem/Feriado/Outro |
+| — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
 | **v2.2** | Classroom nível 1 |
@@ -759,7 +760,7 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
-## Uber/99 em Consulta e Compromisso (v1.10, em especificação 2026-11-12)
+## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
 - **Só Consulta e Compromisso** ("local depende do tipo": reunião às
@@ -771,7 +772,7 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   certo; se não achar, abre com o texto.
 
 **Padrões (ajustáveis no teste)**:
-- Botões **Uber** e **99** lado a lado, cada um só se o app está
+- Botões com o **ícone do próprio app** (pedido no teste). Botões **Uber** e **99** lado a lado, cada um só se o app está
   instalado. Sem local, ou local que é link de videochamada: sem botões.
 - Link do Uber: `https://m.uber.com/ul/?action=setPickup&pickup=my_location`
   `&dropoff[latitude]…[longitude]…[nickname]…[formatted_address]…`.
@@ -869,6 +870,9 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   segurar a opção (tooltip). Vale pra features novas.
 
 **Ida e volta com hora** (pedido no teste, 2026-11-12):
+- **Só Viagem, Feriado (recesso), Outro e sem tipo** têm "Até" (revisto na
+  v1.10: prova, consulta, reunião, compromisso não duram dias). Evento do
+  Google de vários dias continua aparecendo em todos os dias.
 - **Um lugar só pra volta** (revisto no teste: "Outro dia…" escondido na
   Duração confundia). Em "Quando": a data (ida) e a linha **Até** ("Mesmo
   dia" / data da volta), sempre visível fora de Tarefa. Com volta noutro

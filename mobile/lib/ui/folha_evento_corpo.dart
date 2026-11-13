@@ -121,7 +121,7 @@ class CorpoDaFolha extends StatelessWidget {
                   filhos: [
                     _Quando(f: f),
                     if (!f.semData || !f.ehTarefa) ...[
-                      if (!f.ehTarefa) ...[
+                      if (f.aceitaVariosDias) ...[
                         const RotuloLinha('Até'),
                         _Ate(f: f),
                       ],
