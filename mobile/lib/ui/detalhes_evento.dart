@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../util/formato_data.dart';
+import '../util/link_reuniao.dart';
 import 'folha_evento.dart';
 import 'lancar_nota.dart';
 import '../theme/tipo_evento_visual.dart';
@@ -94,6 +95,10 @@ class DetalhesDoEvento extends StatelessWidget {
     final item = state.itemPorId(e.itemId);
     final tipo = TipoEvento.doTexto(e.tipo);
     final agendaOrigem = e.externo ? state.agendas[e.agendaId]?.nome : null;
+    final link = linkDeReuniao(e);
+    // O bloco de chamada que o Google cola na descrição some: o Entrar
+    // faz o papel dele.
+    final notasVisiveis = notasSemBlocoDeChamada(e.notas);
     final agendaDestino =
         e.gravadoNoGoogle ? state.agendas[e.agendaDestinoId]?.nome : null;
 
@@ -224,7 +229,16 @@ class DetalhesDoEvento extends StatelessWidget {
                       altura: 26,
                     ),
                   ),
-                if (e.notas != null) _Linha(icone: Icons.notes, texto: e.notas!, multilinha: true),
+                if (notasVisiveis != null) _Linha(icone: Icons.notes, texto: notasVisiveis, multilinha: true),
+                if (link != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: FilledButton.icon(
+                      onPressed: () => _entrar(context, link),
+                      icon: const Icon(Icons.videocam_outlined),
+                      label: const Text('Entrar'),
+                    ),
+                  ),
                 // Nota: só depois que a avaliação aconteceu (ou a tarefa foi
                 // entregue). Lançada, a linha mostra e o toque edita.
                 if (e.avaliavel && (!ocorrencia.inicio.isAfter(agora) || feita))
@@ -302,6 +316,13 @@ class DetalhesDoEvento extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static Future<void> _entrar(BuildContext context, String link) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (!await abrirLink(link)) {
+      messenger?.showSnackBar(const SnackBar(content: Text('Não deu pra abrir o link.')));
+    }
   }
 
   static String _capitalizar(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

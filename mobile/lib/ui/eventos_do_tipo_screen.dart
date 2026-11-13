@@ -635,7 +635,7 @@ class _LinhaSerie extends StatelessWidget {
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
                       Text(
-                        '${_quandoRepete(e)} · próxima ${rotuloDoDia(serie.proxima.inicio, agora).toLowerCase()}',
+                        '${serie.padrao ?? _quandoRepete(e)} · próxima ${rotuloDoDia(serie.proxima.inicio, agora).toLowerCase()}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),

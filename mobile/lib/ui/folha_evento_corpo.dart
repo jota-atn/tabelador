@@ -133,6 +133,19 @@ class CorpoDaFolha extends StatelessWidget {
                         const RotuloLinha('Aviso'),
                         _Aviso(f: f),
                       ],
+                      // Reunião costuma repetir: a escolha fica à vista
+                      // aqui, sem vir marcada.
+                      if (f.tipo == TipoEvento.reuniao) ...[
+                        const RotuloLinha('Repete'),
+                        GradeDeChips(opcoes: [
+                          for (final r in Repeticao.values)
+                            OpcaoChip(
+                              rotulo: r.rotulo,
+                              selecionado: f.repeticao == r,
+                              aoTocar: () => f.escolherRepeticao(r),
+                            ),
+                        ]),
+                      ],
                     ],
                   ],
                 ),
@@ -198,6 +211,14 @@ class CorpoDaFolha extends StatelessWidget {
 
   /// "qui 12/11 · 10:00–12:00", "sáb 14/11 · dia todo", "seg 16/11 · 23:59".
   static String _resumoQuando(FolhaDeEventoState f) {
+    final base = _resumoQuandoBase(f);
+    // Em Reunião a repetição mora nesta seção: aparece no resumo também.
+    return f.tipo == TipoEvento.reuniao && f.repeticao != Repeticao.nenhuma
+        ? '$base · ${f.repeticao.rotulo.toLowerCase()}'
+        : base;
+  }
+
+  static String _resumoQuandoBase(FolhaDeEventoState f) {
     if (f.ehTarefa && f.semData) return 'sem data';
     final dia = '${diaAbreviado(f.data).toLowerCase()} ${diaMes(f.data)}';
     if (f.diaTodo) return '$dia · ${f.ehTarefa ? 'sem hora' : 'dia todo'}';
@@ -479,7 +500,7 @@ class _Detalhes extends StatelessWidget {
         menu: menuLocal.length > 1 ? menuLocal : null,
         aoTocar: f.digitarLocal,
       ),
-      if (!(f.ehTarefa && f.semData))
+      if (!(f.ehTarefa && f.semData) && f.tipo != TipoEvento.reuniao)
       OpcaoChip(
         rotulo: f.repeticao.rotulo,
         icone: Icons.repeat,

@@ -51,6 +51,51 @@ void main() {
     expect(p.passadas.map((o) => o.evento.titulo), ['Retro']);
   });
 
+  test('reuniões separadas de mesmo nome, dia e hora viram série; cada uma com seu link', () {
+    Evento caesi(String id, DateTime inicio, String link) => Evento(
+          id: id,
+          titulo: id == 'c3' ? 'reunião geral caesi ' : 'Reunião Geral CAESI',
+          inicio: inicio,
+          fim: inicio.add(const Duration(hours: 1)),
+          tipo: 'Reunião',
+          local: link,
+          agendaId: 'principal',
+        );
+    final es = [
+      caesi('c1', DateTime(2026, 11, 16, 19), 'meet.google.com/aaa-aaaa-aaa'),
+      caesi('c2', DateTime(2026, 11, 23, 19), 'meet.google.com/bbb-bbbb-bbb'),
+      caesi('c3', DateTime(2026, 11, 30, 19), 'meet.google.com/ccc-cccc-ccc'),
+      // Mesmo nome, outro horário: fica de fora.
+      caesi('c4', DateTime(2026, 11, 21, 10), 'meet.google.com/ddd-dddd-ddd'),
+    ];
+    final p = organizarPaginaDoTipo(ocorrencias(es), agora);
+
+    final serie = p.series.single;
+    expect(serie.vezes, 3);
+    expect(serie.padrao, 'Segundas, 19:00');
+    expect(serie.proxima.evento.id, 'c1');
+    // Fora da semana, as da série saem da linha do tempo; a solta fica.
+    final naLinha = [for (final g in p.grupos) for (final o in g.ocorrencias) o.evento.id];
+    expect(naLinha, isNot(contains('c2')));
+    expect(naLinha, contains('c4'));
+  });
+
+  test('série do Google (mesmo evento lá) também agrupa', () {
+    Evento instancia(DateTime inicio) => Evento(
+          id: 'g:77:${inicio.millisecondsSinceEpoch}',
+          titulo: 'Aluguel',
+          inicio: inicio,
+          diaInteiro: true,
+          tipo: 'Reunião',
+          agendaId: 'principal',
+        );
+    final p = organizarPaginaDoTipo(
+      ocorrencias([instancia(DateTime(2026, 12, 5)), instancia(DateTime(2027, 1, 5))]),
+      agora,
+    );
+    expect(p.series.single.padrao, 'Todo dia 5');
+  });
+
   test('contagem regressiva', () {
     expect(contagemRegressiva(DateTime(2026, 11, 11, 20), agora), 'Hoje');
     expect(contagemRegressiva(DateTime(2026, 11, 12), agora), 'Amanhã');

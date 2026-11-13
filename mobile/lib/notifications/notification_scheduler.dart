@@ -11,6 +11,7 @@ import '../model/item.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
+import '../util/link_reuniao.dart';
 
 const AndroidNotificationChannel kCanalHorarios = AndroidNotificationChannel(
   'horarios_proximos',
@@ -30,6 +31,16 @@ const AndroidNotificationChannel kCanalEventos = AndroidNotificationChannel(
 const int kDiasAvisoEventos = 14;
 
 
+/// Id da ação "Entrar" nos avisos de reunião; o link vai no payload.
+const String kAcaoEntrar = 'entrar';
+
+void _aoResponderAviso(NotificationResponse r) {
+  final link = r.payload;
+  if (r.actionId == kAcaoEntrar && link != null && link.isNotEmpty) {
+    unawaited(abrirLink(link));
+  }
+}
+
 /// Prepara o plugin de notificação local — ícone, canal Android, fuso do
 /// aparelho. Chamado uma vez em `main()`, antes de criar o
 /// [NotificationScheduler].
@@ -48,7 +59,15 @@ Future<FlutterLocalNotificationsPlugin> inicializarNotificacoes() async {
     const InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     ),
+    onDidReceiveNotificationResponse: _aoResponderAviso,
   );
+  // App estava fechado e foi aberto pelo "Entrar": o callback acima não
+  // dispara nesse caso, a resposta vem por aqui.
+  final abertura = await plugin.getNotificationAppLaunchDetails();
+  final resposta = abertura?.notificationResponse;
+  if ((abertura?.didNotificationLaunchApp ?? false) && resposta != null) {
+    _aoResponderAviso(resposta);
+  }
   await plugin
       .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>()
@@ -136,7 +155,7 @@ class NotificationScheduler {
       for (final a in agendamentos)
         [a.id, a.titulo, a.corpo, a.primeira.toIso8601String()],
       for (final a in avisosDeEvento)
-        [a.id, a.titulo, a.corpo, a.quando.toIso8601String()],
+        [a.id, a.titulo, a.corpo, a.quando.toIso8601String(), a.link],
     ]);
     if (assinatura == _ultimaAssinatura) return;
     _ultimaAssinatura = assinatura;
@@ -182,8 +201,16 @@ class NotificationScheduler {
             kCanalEventos.id,
             kCanalEventos.name,
             channelDescription: kCanalEventos.description,
+            // Reunião com link: "Entrar" direto do aviso. Abre o app por
+            // um instante, que já abre a chamada.
+            actions: a.link == null
+                ? null
+                : const [
+                    AndroidNotificationAction(kAcaoEntrar, 'Entrar', showsUserInterface: true),
+                  ],
           ),
         ),
+        payload: a.link,
         // Mesmo tradeoff do aviso de horário: inexato, sem permissão extra.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
@@ -236,12 +263,16 @@ class _AvisoUnico {
     required this.titulo,
     required this.corpo,
     required this.quando,
+    this.link,
   });
 
   final int id;
   final String titulo;
   final String corpo;
   final DateTime quando;
+
+  /// Link de videochamada, se houver — vira a ação "Entrar".
+  final String? link;
 }
 
 /// Base dos ids de aviso de evento — bem acima do maior id de horário
@@ -275,7 +306,12 @@ List<_AvisoUnico> _construirAvisosDeEvento(
         : o.inicio.subtract(Duration(minutes: antecedenciaMinutos));
     if (!quando.isAfter(agora)) continue;
 
-    final local = e.local ?? state.itemPorId(e.itemId)?.local;
+    final link = linkDeReuniao(e);
+    // Local que é o próprio link não vai no texto: o "Entrar" já leva lá.
+    final localBruto = e.local ?? state.itemPorId(e.itemId)?.local;
+    final local = link != null && localBruto != null && linkDeReuniao(Evento(id: '', titulo: '', inicio: o.inicio, local: localBruto)) != null
+        ? null
+        : localBruto;
     String doisDigitos(int n) => n.toString().padLeft(2, '0');
     resultado.add(
       _AvisoUnico(
@@ -288,6 +324,7 @@ List<_AvisoUnico> _construirAvisosDeEvento(
           ?local,
         ].join(' · '),
         quando: quando,
+        link: link,
       ),
     );
   }
