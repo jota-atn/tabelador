@@ -760,6 +760,46 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
+## Fase de uso — rodada 1 (em discussão, 2026-11-13)
+
+Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
+
+1. A tela "Aparência" mistura assuntos, tem pouca coisa configurável e nenhuma personalidade.
+2. O onboarding tem que ficar coerente com o app atual (Itens, Eventos, temas e cores, uso básico).
+3. Poluição de entidades:
+   - 3.1. Eventos abaixo da grade na Semana: sem cor, se misturam (o seed evidencia). A Semana é quase um dashboard: só a semana, nada de lista infinita. Os ícones à direita são bons.
+   - 3.2. Aba Eventos: rolar para ver todos os cards; cards de tipos sem nenhum evento vêm antes dos usados. Tarefas continua sempre primeiro.
+   - 3.3. Página de Tarefas: lista genérica, sem a personalidade das páginas dos outros tipos. É a to-do list do app, um dos charmes dele.
+4. Página de cada tipo: o layout (próximo em destaque, calendário, lista) é bom, mas a tela inteira rola por causa da lista. A lista deve mostrar principalmente o mês exibido no calendário.
+5. Partes do app minimalistas demais, sem vida.
+6. Atualizar o seed (dados de exemplo) com o que entrou da v1.3 à v1.10; desativar no futuro.
+
+### Ponto 1 — Ajustes (decidido)
+
+- A tela "Aparência" vira **Ajustes**: cabeçalho (nome do app, versão, mini-prévia ao vivo da grade nas cores atuais) e uma lista de seções, cada uma com ícone colorido, que abrem subpáginas. Entrada continua no topo da Semana (engrenagem no lugar do ícone atual).
+- O **sol/lua no topo da Semana fica** (atalho), além do tema em Ajustes → Aparência. Os dois mexem na mesma preferência. Hoje o tema não é salvo (volta ao do sistema ao reabrir o app); passa a ser.
+- Regras: seção só existe com 2+ opções reais (senão a opção vai para outra seção); cada opção mora num lugar só (exceção: sol/lua).
+
+| Seção | Opções |
+|---|---|
+| Aparência | tema (sistema/claro/escuro); cor do app (Material You ou uma de uma paleta curta: só a moldura do app, itens e tipos mantêm suas cores); densidade de cor (já existe) |
+| Semana | o que aparece abaixo da grade |
+| Eventos e Tarefas | esconder tipos não usados; mostrar tarefas concluídas (padrão: escondidas) |
+| Avisos | antecedência dos horários e avisar eventos (já existem); horário padrão do aviso de dia todo (hoje fixo em 7h, `kAvisoDiaTodoPadrao`; o evento ainda pode ter o seu); dias antes do lembrete de presente (hoje fixo em 7, `kDiasAvisoPresente`) |
+| Google Agenda | agendas do aparelho (já existe) |
+| Widget | a definir |
+| Dados | exportar/importar backup |
+| Sobre | versão, novidades da versão, rever a introdução |
+
+- **Semana começa no domingo ou na segunda** não fica em Ajustes: é configuração **da tabela** (folha de config da tabela, junto dos dias).
+
+Em aberto:
+- Seção Semana com uma opção só fere a regra das 2+: achar outra opção ou juntar com outra seção.
+- Calendários que não pertencem a uma tabela (calendário do mês, página do tipo) hoje começam na segunda: seguem a tabela ativa?
+- Opções do Widget.
+- Esconder tipo: o que acontece com eventos já existentes desse tipo (decidir junto do 3.2).
+- Mostrar concluídas: se o filtro sai da tela de Tarefas (decidir junto do 3.3).
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
