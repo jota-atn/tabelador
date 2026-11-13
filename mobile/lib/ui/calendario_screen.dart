@@ -205,15 +205,29 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 ),
               const SizedBox(height: 18),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  '${rotuloDoDia(_selecionado, DateTime.now())}'
-                  '${_selecionado == hoje || _selecionado == DateTime(hoje.year, hoje.month, hoje.day + 1) ? ' · ${diaMes(_selecionado)}' : ''}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                padding: const EdgeInsets.only(left: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${rotuloDoDia(_selecionado, DateTime.now())}'
+                        '${_selecionado == hoje || _selecionado == DateTime(hoje.year, hoje.month, hoje.day + 1) ? ' · ${diaMes(_selecionado)}' : ''}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        context.read<AppState>().mostrarSemana(_selecionado, irPraTela: true);
+                        Navigator.of(context).popUntil((r) => r.isFirst);
+                      },
+                      icon: const Icon(Icons.grid_view, size: 18),
+                      label: const Text('Ver na grade'),
+                    ),
+                  ],
                 ),
               ),
               if (doDia.isEmpty)

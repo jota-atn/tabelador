@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/tabela.dart';
 import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
+import '../util/formato_data.dart';
 import 'agendas_screen.dart';
 import 'aparencia_screen.dart';
 import 'calendario_screen.dart';
@@ -25,17 +26,6 @@ class SemanaScreen extends StatelessWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => DiaEditor(diaInicial: dia)));
   }
 
-  /// Troca pra próxima/anterior tabela na lista — o mesmo swipe horizontal
-  /// que o editor do dia usa pra trocar de dia, aqui trocando de tabela.
-  void _trocarTabela(BuildContext context, AppState state, int delta) {
-    final tabelas = state.tabelas;
-    if (tabelas.length < 2) return;
-    final indice = tabelas.indexWhere((t) => t.id == state.tabelaAtivaId);
-    if (indice == -1) return;
-    final novoIndice = (indice + delta + tabelas.length) % tabelas.length;
-    state.definirTabelaAtiva(tabelas[novoIndice].id);
-  }
-
   /// Início do slot nesta semana — ou na próxima, se nesta já passou. É a
   /// data que um evento criado pelo toque longo recebe: "prova no horário da
   /// aula" quase sempre é numa aula que ainda vai acontecer.
@@ -48,6 +38,8 @@ class SemanaScreen extends StatelessWidget {
     final d = dataDaColuna(segunda, dia);
     final hora = tabela.horaInicial + slot * tabela.intervalo;
     final nestaSemana = DateTime(d.year, d.month, d.day, hora);
+    // Outra semana na tela: a data é a daquela semana, sem pular.
+    if (segunda != segundaDaSemana(DateTime.now())) return nestaSemana;
     return nestaSemana.isBefore(DateTime.now())
         ? DateTime(d.year, d.month, d.day + 7, hora)
         : nestaSemana;
@@ -58,7 +50,7 @@ class SemanaScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final tabela = state.tabelaAtiva;
-    final segunda = segundaDaSemana(DateTime.now());
+    final segunda = state.segundaMostrada();
     final eventos = tabela == null
         ? null
         : distribuirEventos(
@@ -76,6 +68,16 @@ class SemanaScreen extends StatelessWidget {
             ? const Text('Tabelador')
             : _SeletorDeTabela(ativa: tabela, tabelas: state.tabelas),
         actions: [
+          // Sempre no mesmo lugar, longe das setas: tocar rápido em › pra
+          // avançar várias semanas não acerta o "Hoje" sem querer.
+          if (tabela != null)
+            IconButton(
+              onPressed: state.mostrandoSemanaAtual()
+                  ? null
+                  : () => state.mostrarSemana(DateTime.now()),
+              icon: const Icon(Icons.today_outlined),
+              tooltip: 'Voltar pra hoje',
+            ),
           IconButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
@@ -104,10 +106,12 @@ class SemanaScreen extends StatelessWidget {
       body: tabela == null
           ? const _SemTabela()
           : GestureDetector(
+              // Arrastar pro lado passa a semana, como as setas. Tabela se
+              // troca pelo menu do título.
               onHorizontalDragEnd: (d) {
                 final v = d.primaryVelocity ?? 0;
-                if (v < -200) _trocarTabela(context, state, 1);
-                if (v > 200) _trocarTabela(context, state, -1);
+                if (v < -200) state.andarSemanas(1);
+                if (v > 200) state.andarSemanas(-1);
               },
               child: SemanaCorpo(
                 tabela: tabela,
@@ -121,9 +125,10 @@ class SemanaScreen extends StatelessWidget {
                   slot: slot,
                   dataDoSlot: _proximaDataDoSlot(tabela, dia, slot, segunda),
                 ),
-                rodape: const Column(
+                cabecalho: const _BarraDaSemana(),
+                rodape: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [_CartaoGoogle(), ProximosEventos()],
+                  children: [const _CartaoGoogle(), ProximosEventos(segunda: segunda)],
                 ),
                 eventos: eventos,
               ),
@@ -133,6 +138,48 @@ class SemanaScreen extends StatelessWidget {
         tooltip: 'Novo evento',
         child: const Icon(Icons.event_outlined),
       ),
+    );
+  }
+}
+
+/// `‹  16 – 22 de novembro  ›` acima da grade. Nada aparece nem some nela,
+/// pra as setas nunca mudarem de lugar ("Hoje" fica na barra do topo).
+class _BarraDaSemana extends StatelessWidget {
+  const _BarraDaSemana();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final scheme = Theme.of(context).colorScheme;
+    final agora = DateTime.now();
+    final atual = state.mostrandoSemanaAtual(agora);
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => state.andarSemanas(-1),
+          icon: const Icon(Icons.chevron_left),
+          tooltip: 'Semana anterior',
+          visualDensity: VisualDensity.compact,
+        ),
+        Expanded(
+          child: Text(
+            rotuloDaSemana(state.segundaMostrada(agora), agora),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: atual ? scheme.onSurface : scheme.primary,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: () => state.andarSemanas(1),
+          icon: const Icon(Icons.chevron_right),
+          tooltip: 'Próxima semana',
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
     );
   }
 }

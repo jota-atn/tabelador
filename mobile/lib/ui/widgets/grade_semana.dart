@@ -53,7 +53,9 @@ class GradeSemana extends StatelessWidget {
   static const double _alturaFaixa = 24;
 
   double get _alturaCabecalho => eventos == null ? 26 : 36;
-  bool get _temFaixaDiaTodo => eventos?.temDiaTodo ?? false;
+  // Com datas, a faixa "dia todo" fica sempre reservada: aparecer e sumir
+  // conforme a semana empurraria os horários pra baixo e pra cima.
+  bool get _temFaixaDiaTodo => eventos != null;
   bool get _temFaixaFora => eventos?.temForaDoHorario ?? false;
 
   /// Índice de hoje dentro de [dias], ou -1 se hoje não é um dos dias da
@@ -87,8 +89,11 @@ class GradeSemana extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final agora = DateTime.now();
-    final hoje = indiceDeHoje(tabela.dias, agora);
-    final slotAgora = _slotCorrente(agora);
+    // Hoje e "agora" só existem na semana atual (ou na grade de molde, sem
+    // datas); noutra semana nenhuma coluna é hoje.
+    final semanaAtual = eventos == null || eventos!.segunda == segundaDaSemana(agora);
+    final hoje = semanaAtual ? indiceDeHoje(tabela.dias, agora) : -1;
+    final slotAgora = semanaAtual ? _slotCorrente(agora) : -1;
     final topoLinhaDoAgora = _topoLinhaDoAgora(agora, hoje);
 
     return Stack(

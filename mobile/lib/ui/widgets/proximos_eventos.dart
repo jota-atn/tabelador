@@ -17,8 +17,15 @@ import 'evento_tile.dart';
 /// Tarefas: as que vencem na semana entram como qualquer evento (com
 /// caixinha); concluída sai; atrasadas ficam sempre no topo, mesmo fechada.
 /// "Tarefas" no cabeçalho abre a página de tarefas.
+///
+/// Acompanha a semana da grade ([segunda]): noutra semana o título vira
+/// "Semana que vem"/"Semana de 23/11" e a lista traz a semana inteira, sem
+/// atrasadas (que são sobre hoje).
 class ProximosEventos extends StatelessWidget {
-  const ProximosEventos({super.key});
+  const ProximosEventos({super.key, this.segunda});
+
+  /// Segunda da semana mostrada; nulo = a atual.
+  final DateTime? segunda;
 
   /// Evento que já acabou não é "próximo"; dia todo vale até o fim do dia.
   static bool _naoPassou(Ocorrencia o, DateTime agora) =>
@@ -31,17 +38,22 @@ class ProximosEventos extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final agora = DateTime.now();
     final hoje = inicioDoDia(agora);
-    // Segunda que vem, meia-noite: fim de "esta semana".
-    final fimDaSemana = DateTime(hoje.year, hoje.month, hoje.day + (8 - hoje.weekday));
-    final ocorrencias = state
-        .ocorrenciasEntre(hoje, fimDaSemana)
-        .where((o) => _naoPassou(o, agora) && !o.feita)
-        .toList();
-    final atrasadas = state.tarefasAtrasadas(agora);
+    final segundaAtual = DateTime(hoje.year, hoje.month, hoje.day - (hoje.weekday - 1));
+    final inicio = segunda ?? segundaAtual;
+    final atual = inicio == segundaAtual;
+    // Segunda seguinte, meia-noite: fim da semana mostrada.
+    final fimDaSemana = DateTime(inicio.year, inicio.month, inicio.day + 7);
+    final ocorrencias = atual
+        ? state
+            .ocorrenciasEntre(hoje, fimDaSemana)
+            .where((o) => _naoPassou(o, agora) && !o.feita)
+            .toList()
+        : state.ocorrenciasEntre(inicio, fimDaSemana);
+    final atrasadas = atual ? state.tarefasAtrasadas(agora) : const <Ocorrencia>[];
     final aberta = state.semanaAberta;
 
     // Sábado e domingo: a semana está acabando, então vale apontar a próxima.
-    final fimDeSemana = hoje.weekday >= DateTime.saturday;
+    final fimDeSemana = atual && hoje.weekday >= DateTime.saturday;
     final proximaSemana = fimDeSemana
         ? state
             .ocorrenciasEntre(fimDaSemana, fimDaSemana.add(const Duration(days: 7)))
@@ -66,7 +78,7 @@ class ProximosEventos extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                'Esta semana',
+                tituloDaSemana(inicio, agora),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.onSurface),
               ),
               if (ocorrencias.isNotEmpty || atrasadas.isNotEmpty) ...[
@@ -119,7 +131,7 @@ class ProximosEventos extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
             child: Text(
-              'Nada até domingo.',
+              atual ? 'Nada até domingo.' : 'Nada nesta semana.',
               style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
             ),
           )
@@ -162,9 +174,7 @@ class ProximosEventos extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
-              ),
+              onPressed: () => state.andarSemanas(1),
               child: Text('Próxima semana · $proximaSemana'),
             ),
           ),

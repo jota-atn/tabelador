@@ -35,3 +35,41 @@ String rotuloDoDia(DateTime d, DateTime agora) {
   if (dias == 1) return 'Amanhã';
   return '${diaAbreviado(d).toLowerCase()} ${diaMes(d)}';
 }
+
+const _kMesesPorExtenso = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+/// A semana que começa em [segunda]: "16 – 22 de novembro", e quando
+/// atravessa o mês "30 nov – 6 dez". Ano só se não for o de [agora].
+String rotuloDaSemana(DateTime segunda, DateTime agora) {
+  final domingo = DateTime(segunda.year, segunda.month, segunda.day + 6);
+  String curto(DateTime d) => '${d.day} ${_kMesesPorExtenso[d.month - 1].substring(0, 3)}';
+  final outroAno = segunda.year != agora.year || domingo.year != agora.year;
+  if (segunda.month == domingo.month) {
+    final base = '${segunda.day} – ${domingo.day} de ${_kMesesPorExtenso[domingo.month - 1]}';
+    return outroAno ? '$base de ${domingo.year}' : base;
+  }
+  if (segunda.year != domingo.year) {
+    return '${curto(segunda)} ${segunda.year} – ${curto(domingo)} ${domingo.year}';
+  }
+  final base = '${curto(segunda)} – ${curto(domingo)}';
+  return outroAno ? '$base ${domingo.year}' : base;
+}
+
+/// "Esta semana", "Semana que vem", "Semana passada" ou "Semana de 23/11".
+String tituloDaSemana(DateTime segunda, DateTime agora) {
+  final atual = DateTime(agora.year, agora.month, agora.day - (agora.weekday - 1));
+  final semanas = (DateTime.utc(segunda.year, segunda.month, segunda.day)
+              .difference(DateTime.utc(atual.year, atual.month, atual.day))
+              .inDays /
+          7)
+      .round();
+  return switch (semanas) {
+    0 => 'Esta semana',
+    1 => 'Semana que vem',
+    -1 => 'Semana passada',
+    _ => 'Semana de ${diaMes(segunda)}',
+  };
+}
