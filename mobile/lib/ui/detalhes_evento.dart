@@ -43,6 +43,16 @@ String distanciaEmDias(DateTime d, DateTime agora) {
   };
 }
 
+/// "ter 17/11 – sex 20/11 · 4 dias".
+String _periodo(Ocorrencia o) {
+  String dia(DateTime d) => '${diaAbreviado(d).toLowerCase()} ${diaMes(d)}';
+  final n = (o.ultimoDia.difference(inicioDoDia(o.inicio)).inHours / 24).round() + 1;
+  final comHora = !o.evento.diaInteiro;
+  final texto = '${dia(o.inicio)}${comHora ? ' ${hora(o.inicio)}' : ''}'
+      ' – ${dia(o.ultimoDia)}${comHora ? ' ${hora(o.fim)}' : ''} · $n dias';
+  return texto[0].toUpperCase() + texto.substring(1);
+}
+
 /// 120 → "2 h", 90 → "1 h 30", 45 → "45 min".
 String _duracao(Duration d) {
   final m = d.inMinutes;
@@ -175,6 +185,8 @@ class DetalhesDoEvento extends StatelessWidget {
                                 if (e.tipo.isNotEmpty) e.tipo,
                                 if (feita)
                                   'Concluída'
+                                else if (ocorrencia.variosDias && ocorrencia.acontecendo(agora))
+                                  tipo == TipoEvento.viagem ? 'Em viagem' : 'Acontecendo'
                                 else if (!e.semData)
                                   distanciaEmDias(ocorrencia.inicio, agora),
                               ].join(' · '),
@@ -211,9 +223,13 @@ class DetalhesDoEvento extends StatelessWidget {
                   icone: Icons.calendar_today_outlined,
                   texto: e.semData
                       ? 'Sem data'
-                      : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
+                      : ocorrencia.variosDias
+                          ? _periodo(ocorrencia)
+                          : _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
                 ),
-                if (!e.semData) _Linha(icone: Icons.schedule, texto: horario),
+                // Vários dias com hora: a hora já está na linha da data.
+                if (!e.semData && !(ocorrencia.variosDias && !e.diaInteiro))
+                  _Linha(icone: Icons.schedule, texto: horario),
                 if (e.repeticao != Repeticao.nenhuma)
                   _Linha(icone: Icons.repeat, texto: e.repeticao.rotulo),
                 if (e.local != null) _Linha(icone: Icons.place_outlined, texto: e.local!),
@@ -258,10 +274,11 @@ class DetalhesDoEvento extends StatelessWidget {
                     ),
                 // Feriado do Google: o app não sabe se é folga (a agenda
                 // mistura feriado com data comemorativa) — a pessoa diz.
-                if (e.ehFeriado && e.externo && !e.embutido)
+                if ((e.ehFeriado || tipo == TipoEvento.viagem) && e.externo && !e.embutido)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: SeletorFolga(
+                      viagem: tipo == TipoEvento.viagem,
                       folga: !e.comemorativa,
                       aoMudar: (v) => state.definirFolgaExterna(e.id, v),
                     ),
@@ -331,40 +348,39 @@ class DetalhesDoEvento extends StatelessWidget {
 /// Folga ou data comemorativa — duas opções lado a lado, uma marcada. Usado
 /// no card de detalhes do feriado do Google e na folha de criar feriado.
 class SeletorFolga extends StatelessWidget {
-  const SeletorFolga({super.key, required this.folga, required this.aoMudar});
+  const SeletorFolga({super.key, required this.folga, required this.aoMudar, this.viagem = false});
 
   final bool folga;
+
+  /// Viagem: "Sem aula" / "Mantém as aulas" em vez de Folga/Comemorativa.
+  final bool viagem;
   final ValueChanged<bool> aoMudar;
 
+  // A explicação de cada opção fica no segurar (tooltip), não na tela —
+  // padrão do app pra informação que só serve a quem tem dúvida.
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(
-              value: true,
-              label: Text('Folga'),
-              icon: Icon(Icons.beach_access_outlined),
-            ),
-            ButtonSegment(
-              value: false,
-              label: Text('Comemorativa'),
-              icon: Icon(Icons.celebration_outlined),
-            ),
-          ],
-          selected: {folga},
-          onSelectionChanged: (s) => aoMudar(s.first),
+    return SegmentedButton<bool>(
+      segments: [
+        ButtonSegment(
+          value: true,
+          label: Text(viagem ? 'Sem aula' : 'Folga'),
+          icon: const Icon(Icons.beach_access_outlined),
+          tooltip: viagem
+              ? 'Os horários dos dias da viagem ficam apagados e sem aviso'
+              : 'Sem aula nesse dia: os horários ficam apagados e sem aviso',
         ),
-        const SizedBox(height: 6),
-        Text(
-          folga
-              ? 'Sem aula nesse dia: os horários ficam apagados e sem aviso.'
-              : 'Só uma data pra lembrar: as aulas seguem normais.',
-          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ButtonSegment(
+          value: false,
+          label: Text(viagem ? 'Mantém as aulas' : 'Comemorativa'),
+          icon: Icon(viagem ? Icons.school_outlined : Icons.celebration_outlined),
+          tooltip: viagem
+              ? 'As aulas seguem normais durante a viagem'
+              : 'Só uma data pra lembrar: as aulas seguem normais',
         ),
       ],
+      selected: {folga},
+      onSelectionChanged: (s) => aoMudar(s.first),
     );
   }
 }

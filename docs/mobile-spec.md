@@ -40,7 +40,7 @@
 | **v1.4** ✅ (2026-11-12) | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
 | **v1.5** ✅ (2026-11-12) | Nota em Prova (e Tarefa avaliada) |
 | **v1.6** ✅ (2026-11-12) | Link em Reunião (Entrar no card, na lista e no aviso; série do Google agrupada) |
-| **v1.7** | Viagem de vários dias (e qualquer evento de dia todo; sem aula durante a viagem) |
+| **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -757,7 +757,7 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
-## Viagem e eventos de vários dias (v1.7, em especificação 2026-11-12)
+## Viagem e eventos de vários dias (v1.7, implementado 2026-11-12, PR #7)
 
 **Decisões do usuário**:
 - **Qualquer evento de dia todo** pode durar vários dias (Viagem,
@@ -784,6 +784,34 @@ Google (`google_card_pending`) se ainda não configurou agendas.
 - **Card de detalhes**: "ter 17/11 – sex 20/11 · 4 dias".
 - **Aba Eventos, card Viagem**: "Em viagem · volta sex 20/11" durante;
   antes, a contagem até a ida como hoje.
+
+**Ajustes do teste no aparelho**:
+- Vários dias vira **um bloco só**: na grade, contorno e fundo leve na cor
+  do evento sobre todos os dias que ele ocupa, com o nome uma vez na faixa
+  "dia todo" (outros eventos de dia todo nesses dias: "+N", e entram no
+  toque). No calendário, faixa contínua por trás dos dias, arredondada no
+  começo, no fim e nas bordas da semana. As aulas continuam visíveis por
+  baixo; apagar ou não é a escolha Sem aula/Mantém.
+- **Padrão do app: explicação só no segurar.** Texto que explica uma opção
+  (o que "Sem aula" ou "Comemorativa" faz) não fica na tela; aparece ao
+  segurar a opção (tooltip). Vale pra features novas.
+
+**Ida e volta com hora** (pedido no teste, 2026-11-12):
+- **Um lugar só pra volta** (revisto no teste: "Outro dia…" escondido na
+  Duração confundia). Em "Quando": a data (ida) e a linha **Até** ("Mesmo
+  dia" / data da volta), sempre visível fora de Tarefa. Com volta noutro
+  dia, a linha seguinte é **Horário: Dia todo · Ida 18:00 · Volta 22:00**
+  (Duração some). Resumo: "sex 13 18:00 – dom 15/11 22:00". Vale pra
+  qualquer tipo.
+- "Sem aula" apaga só as aulas **entre a ida e a volta** (a de sexta 8h
+  continua). Dia inteiro dentro da viagem apaga o dia todo, como antes.
+- Grade: o bloco começa no horário da ida e termina no da volta. Calendário:
+  dias inteiros (não tem hora ali).
+- Lista/card/widget: "Em viagem · volta dom 15/11 22:00". Aviso antes da
+  ida, com a antecedência dos eventos com hora.
+- Evento com hora conta como "vários dias" se termina noutro dia **e** dura
+  12 h ou mais (festa das 22h às 2h continua sendo de um dia só).
+- Google: evento com hora de vários dias também aparece em todos os dias.
 
 **Técnico**:
 - Modelo: dia todo de vários dias guarda o **último dia** em `fim`

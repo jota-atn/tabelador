@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../model/evento.dart';
 import '../state/app_state.dart';
+import '../theme/tipo_evento_visual.dart';
 import '../util/formato_data.dart';
 import 'folha_evento.dart';
 import 'widgets/evento_tile.dart';
@@ -86,7 +87,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
     final porDia = <DateTime, List<Ocorrencia>>{};
     for (final o in state.ocorrenciasEntre(primeiroDia, fimDaGrade)) {
-      (porDia[inicioDoDia(o.inicio)] ??= []).add(o);
+      // Vários dias: aparece em cada dia que ocupa.
+      for (var d = inicioDoDia(o.inicio); !d.isAfter(o.ultimoDia); d = DateTime(d.year, d.month, d.day + 1)) {
+        (porDia[d] ??= []).add(o);
+      }
     }
     // Dia todo primeiro, depois por hora — mesma ordem da lista embaixo.
     for (final lista in porDia.values) {
@@ -281,10 +285,13 @@ class _CelulaDoDia extends StatelessWidget {
                 ? scheme.onSurface
                 : scheme.onSurfaceVariant.withValues(alpha: 0.5);
 
-    final visiveis = ocorrencias.take(_kMarcasPorDia).toList();
-    final excedente = ocorrencias.length - visiveis.length;
+    // Vários dias (viagem, recesso): faixa contínua por trás dos dias, no
+    // lugar da barrinha.
+    final bloco = ocorrencias.where((o) => o.variosDias).firstOrNull;
+    final visiveis = ocorrencias.where((o) => !o.variosDias).take(_kMarcasPorDia).toList();
+    final excedente = ocorrencias.length - visiveis.length - (bloco == null ? 0 : 1);
 
-    return GestureDetector(
+    final celula = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: aoTocar,
       // Toque longo, não duplo: com onDoubleTap o toque simples esperaria
@@ -347,6 +354,33 @@ class _CelulaDoDia extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (bloco == null) return celula;
+
+    // Pontas arredondadas no começo e no fim do evento e nas bordas da
+    // semana (onde a linha do calendário quebra).
+    final cor = corDoEvento(bloco.evento, state.itemPorId(bloco.evento.itemId), scheme);
+    final comeca = dia == inicioDoDia(bloco.inicio) || dia.weekday == DateTime.monday;
+    final termina = dia == bloco.ultimoDia || dia.weekday == DateTime.sunday;
+    const raio = Radius.circular(10);
+    // Por trás da célula, sem mudar a altura dela (as linhas do mês ficam
+    // alinhadas).
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Container(
+            margin: EdgeInsets.only(top: 1.5, bottom: 1.5, left: comeca ? 1.5 : 0, right: termina ? 1.5 : 0),
+            decoration: BoxDecoration(
+              color: cor.withValues(alpha: doMes ? (escuro ? 0.28 : 0.18) : 0.08),
+              borderRadius: BorderRadius.horizontal(
+                left: comeca ? raio : Radius.zero,
+                right: termina ? raio : Radius.zero,
+              ),
+            ),
+          ),
+        ),
+        celula,
+      ],
     );
   }
 }

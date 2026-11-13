@@ -74,21 +74,44 @@ String construirSnapshotJson({
   // o nativo filtra pelos de hoje na hora de desenhar. O chamador manda uma
   // janela de alguns dias pra frente, pra o widget continuar certo mesmo
   // sem o app abrir por um tempo.
+  // Vários dias (viagem): uma entrada por dia da janela que ela ocupa.
+  final base = hoje ?? DateTime.now();
+  final janela = [for (var d = 0; d < dias; d++) DateTime(base.year, base.month, base.day + d)];
   final events = <Map<String, dynamic>>[
     for (final o in ocorrencias)
       if (tabelaAtiva == null || eventoVisivelNaTabela(tabelaAtiva, o.evento))
-        _evento(o, itemPorId(o.evento.itemId), claro, escuro),
+        for (final dia in <DateTime?>[if (o.variosDias) ...janela.where(o.cobre) else null])
+          {
+            ..._evento(o, itemPorId(o.evento.itemId), claro, escuro),
+            if (dia != null) ..._diaDeVariosDias(o, dia),
+          },
   ];
 
   // Dias de folga (feriado) na mesma janela, por data: o nativo esmaece os
   // horários quando hoje é um deles.
   final folgas = <String, String>{};
   if (tabelaAtiva != null) {
-    final base = hoje ?? DateTime.now();
-    for (var d = 0; d < dias; d++) {
-      final dia = DateTime(base.year, base.month, base.day + d);
+    for (final dia in janela) {
       final nome = folgaNoDia(dia, tabelaAtiva, ocorrencias);
       if (nome != null) folgas[_iso(dia)] = nome;
+    }
+  }
+
+  // Viagem com hora no dia da ida ou da volta: só os horários dentro dela
+  // ficam apagados (data -> horários, como em `week`).
+  final apagados = <String, List<String>>{};
+  if (tabelaAtiva != null) {
+    for (final dia in janela) {
+      if (folgas.containsKey(_iso(dia))) continue;
+      final nomeDoDia = kTodosDias[dia.weekday - 1];
+      if (!tabelaAtiva.dias.contains(nomeDoDia)) continue;
+      final horarios = [
+        for (var slot = 0; slot < tabelaAtiva.qtdHorarios; slot++)
+          if (horarioDoSlot(tabelaAtiva, dia, slot) case (final de, final ate)
+              when viagemNoHorario(de, ate, ocorrencias) != null)
+            tabelaAtiva.horarios[slot],
+      ];
+      if (horarios.isNotEmpty) apagados[_iso(dia)] = horarios;
     }
   }
 
@@ -97,7 +120,26 @@ String construirSnapshotJson({
     'week': week,
     'events': events,
     if (folgas.isNotEmpty) 'folgas': folgas,
+    if (apagados.isNotEmpty) 'apagados': apagados,
   });
+}
+
+/// Campos de um dia de evento de vários dias: a data dele e, com hora,
+/// "18:00 →" na ida, "→ 22:00" na volta e dia todo no meio.
+Map<String, dynamic> _diaDeVariosDias(Ocorrencia o, DateTime dia) {
+  final primeiro = dia == DateTime(o.inicio.year, o.inicio.month, o.inicio.day);
+  final ultimo = dia == o.ultimoDia;
+  final comHora = !o.evento.diaInteiro;
+  final i = o.inicio;
+  final f = o.fim;
+  String hm(DateTime d) => '${_doisDigitos(d.hour)}:${_doisDigitos(d.minute)}';
+  if (comHora && primeiro) {
+    return {'date': _iso(dia), 'allDay': false, 'startMin': i.hour * 60 + i.minute, 'endMin': 24 * 60, 'time': '${hm(i)} →'};
+  }
+  if (comHora && ultimo) {
+    return {'date': _iso(dia), 'allDay': false, 'startMin': 0, 'endMin': f.hour * 60 + f.minute, 'time': '→ ${hm(f)}'};
+  }
+  return {'date': _iso(dia), 'allDay': true, 'startMin': 0, 'endMin': 0, 'time': 'Dia todo'};
 }
 
 String _doisDigitos(int n) => n.toString().padLeft(2, '0');

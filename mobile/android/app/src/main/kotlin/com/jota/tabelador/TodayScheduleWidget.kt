@@ -129,14 +129,19 @@ class TodayScheduleWidget : GlanceAppWidget() {
                 LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                     items(linhas) { linha ->
                         when (linha) {
-                            is Linha.DeSlot -> SlotRow(
-                                context,
-                                linha.slot,
-                                !folga && estaNoSlotAgora(linha.slot.time, agora),
-                                mostrarDetalhe,
-                                alturaLinha,
-                                folga,
-                            )
+                            is Linha.DeSlot -> {
+                                // Viagem com hora: só os horários dentro dela.
+                                val apagado = folga ||
+                                    snapshot.apagados[hojeIso]?.contains(linha.slot.time) == true
+                                SlotRow(
+                                    context,
+                                    linha.slot,
+                                    !apagado && estaNoSlotAgora(linha.slot.time, agora),
+                                    mostrarDetalhe,
+                                    alturaLinha,
+                                    apagado,
+                                )
+                            }
                             is Linha.DeEvento -> EventoRow(context, linha.evento, mostrarDetalhe, alturaLinha)
                         }
                     }

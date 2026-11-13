@@ -311,6 +311,10 @@ class _CardTipo extends StatelessWidget {
         ? (n == 1 ? 'próxima' : 'próximas')
         : (n == 1 ? 'próximo' : 'próximos');
     final p = proximas.first;
+    // Vários dias já começado: "Viagem a BH · Em viagem · volta sex 20/11".
+    if (p.variosDias && p.acontecendo(agora)) {
+      return ('$n $palavra', '${p.evento.titulo} · ${faixaDeDias(p, agora)}');
+    }
     return ('$n $palavra', '${rotuloDoDia(p.inicio, agora)} · ${p.evento.titulo}');
   }
 
@@ -320,7 +324,7 @@ class _CardTipo extends StatelessWidget {
     final hoje = inicioDoDia(agora);
     final fimDoAno = DateTime(agora.year + 1);
     final folgas = proximas.where((o) => ehFolga(o.evento, context.read<AppState>().tabelaAtiva) && o.inicio.isBefore(fimDoAno)).length;
-    final deHoje = proximas.where((o) => inicioDoDia(o.inicio) == hoje).toList();
+    final deHoje = proximas.where((o) => o.cobre(hoje)).toList();
     final contagem = folgas == 0
         ? 'Nenhum até o fim do ano'
         : folgas == 1

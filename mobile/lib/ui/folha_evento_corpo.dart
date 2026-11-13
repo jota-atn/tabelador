@@ -121,14 +121,26 @@ class CorpoDaFolha extends StatelessWidget {
                   filhos: [
                     _Quando(f: f),
                     if (!f.semData || !f.ehTarefa) ...[
-                      if (f.ehTarefa || !f.diaTodo) ...[
-                        const RotuloLinha('Horário'),
-                        _Horario(f: f),
-                      ],
                       if (!f.ehTarefa) ...[
-                        const RotuloLinha('Duração'),
-                        _Duracao(f: f),
+                        const RotuloLinha('Até'),
+                        _Ate(f: f),
                       ],
+                      // Vários dias: dia todo ou hora de ida e de volta,
+                      // tudo numa linha (duração não faz sentido aqui).
+                      if (f.variosDias) ...[
+                        const RotuloLinha('Horário'),
+                        _HorarioVariosDias(f: f),
+                      ] else ...[
+                        if (f.ehTarefa || !f.diaTodo) ...[
+                          const RotuloLinha('Horário'),
+                          _Horario(f: f),
+                        ],
+                        if (!f.ehTarefa) ...[
+                          const RotuloLinha('Duração'),
+                          _Duracao(f: f),
+                        ],
+                      ],
+
                       if (f.diaTodo) ...[
                         const RotuloLinha('Aviso'),
                         _Aviso(f: f),
@@ -153,8 +165,12 @@ class CorpoDaFolha extends StatelessWidget {
                   icone: Icons.tune,
                   titulo: 'Detalhes',
                   filhos: [
-                    if (f.tipo == TipoEvento.feriado) ...[
-                      SeletorFolga(folga: f.folga, aoMudar: f.escolherFolga),
+                    if (f.tipo == TipoEvento.feriado || f.tipo == TipoEvento.viagem) ...[
+                      SeletorFolga(
+                        viagem: f.tipo == TipoEvento.viagem,
+                        folga: f.folga,
+                        aoMudar: f.escolherFolga,
+                      ),
                       const SizedBox(height: 12),
                     ],
                     _Detalhes(f: f),
@@ -221,6 +237,13 @@ class CorpoDaFolha extends StatelessWidget {
   static String _resumoQuandoBase(FolhaDeEventoState f) {
     if (f.ehTarefa && f.semData) return 'sem data';
     final dia = '${diaAbreviado(f.data).toLowerCase()} ${diaMes(f.data)}';
+    if (f.variosDias) {
+      final ate = f.ate!;
+      final comeco = f.data.month == ate.month ? '${f.data.day}' : diaMes(f.data);
+      final ida = f.diaTodo ? '' : ' ${_hhmm(f.horaInicio)}';
+      final volta = f.diaTodo ? '' : ' ${_hhmm(f.horaVolta)}';
+      return '${diaAbreviado(f.data).toLowerCase()} $comeco$ida – ${diaAbreviado(ate).toLowerCase()} ${diaMes(ate)}$volta';
+    }
     if (f.diaTodo) return '$dia · ${f.ehTarefa ? 'sem hora' : 'dia todo'}';
     if (f.minutos == 0) return '$dia · ${_hhmm(f.horaInicio)}';
     final fim = f.horaInicio.hour * 60 + f.horaInicio.minute + f.minutos;
@@ -340,6 +363,61 @@ class _Quando extends StatelessWidget {
         icone: Icons.calendar_today_outlined,
         selecionado: dataLivre,
         aoTocar: f.escolherDataNoCalendario,
+      ),
+    ]);
+  }
+}
+
+/// Último dia de um evento de dia todo: um dia só ou até outra data.
+class _Ate extends StatelessWidget {
+  const _Ate({required this.f});
+
+  final FolhaDeEventoState f;
+
+  @override
+  Widget build(BuildContext context) {
+    final ate = f.ate;
+    return GradeDeChips(opcoes: [
+      OpcaoChip(
+        rotulo: 'Mesmo dia',
+        selecionado: !f.variosDias,
+        aoTocar: f.escolherUmDiaSo,
+      ),
+      OpcaoChip(
+        rotulo: f.variosDias ? '${diaAbreviado(ate!).toLowerCase()} ${diaMes(ate)}' : 'Outro dia…',
+        icone: Icons.date_range,
+        selecionado: f.variosDias,
+        aoTocar: f.escolherAte,
+      ),
+    ]);
+  }
+}
+
+/// Vários dias: dia todo, ou com hora de ida e de volta.
+class _HorarioVariosDias extends StatelessWidget {
+  const _HorarioVariosDias({required this.f});
+
+  final FolhaDeEventoState f;
+
+  @override
+  Widget build(BuildContext context) {
+    return GradeDeChips(opcoes: [
+      OpcaoChip(
+        rotulo: 'Dia todo',
+        selecionado: f.diaTodo,
+        aoTocar: f.escolherDiaTodoNaViagem,
+      ),
+      OpcaoChip(
+        rotulo: f.diaTodo ? 'Ida…' : 'Ida ${_hhmm(f.horaInicio)}',
+        icone: Icons.schedule,
+        selecionado: !f.diaTodo,
+        aoTocar: f.escolherHoraIda,
+      ),
+      OpcaoChip(
+        rotulo: f.diaTodo ? 'Volta…' : 'Volta ${_hhmm(f.horaVolta)}',
+        icone: Icons.schedule,
+        selecionado: !f.diaTodo,
+        aoTocar: f.escolherHoraVolta,
       ),
     ]);
   }
