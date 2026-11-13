@@ -97,9 +97,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   /// dia só.
   DateTime? ate;
 
-  /// Volta (data e hora) de um evento com hora que termina noutro dia;
-  /// nulo = termina no mesmo dia, pela duração em [minutos].
-  DateTime? fimOutroDia;
+  /// Hora da volta quando [ate] é outro dia e não é dia todo.
+  TimeOfDay horaVolta = const TimeOfDay(hour: 18, minute: 0);
 
   /// Hora do aviso quando é dia todo, em minutos desde a meia-noite.
   int avisoMin = kAvisoDiaTodoPadrao;
@@ -140,7 +139,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       minutos = o.diaInteiro ? 0 : o.duracao.inMinutes;
       if (o.variosDias && o.diaInteiro) ate = o.ultimoDia;
       if (o.variosDias && !o.diaInteiro) {
-        fimOutroDia = o.fim;
+        ate = inicioDoDia(o.fim!);
+        horaVolta = TimeOfDay.fromDateTime(o.fim!);
         minutos = 60;
       }
       repeticao = o.repeticao;
@@ -327,12 +327,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
           final novo = inicioDoDia(d);
           ate = DateTime(novo.year, novo.month, novo.day + n.round());
         }
-        final f = fimOutroDia;
-        if (f != null) {
-          final n = (inicioDoDia(f).difference(data).inHours / 24).round();
-          final novo = inicioDoDia(d);
-          fimOutroDia = DateTime(novo.year, novo.month, novo.day + n, f.hour, f.minute);
-        }
+
         data = inicioDoDia(d);
         semData = false;
         _quandoAuto = false;
@@ -389,7 +384,6 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   void escolherDuracao({bool diaInteiro = false, int? min}) => setState(() {
         diaTodo = diaInteiro;
         if (min != null) minutos = min;
-        fimOutroDia = null;
         _duracaoAuto = false;
       });
 
@@ -412,32 +406,34 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
 
   void escolherUmDiaSo() => setState(() => ate = null);
 
-  /// Evento com hora que termina noutro dia: data e depois hora da volta.
-  Future<void> escolherFimOutroDia() async {
-    final primeiro = DateTime(data.year, data.month, data.day + 1);
-    final atual = fimOutroDia;
-    final d = await showDatePicker(
-      context: context,
-      initialDate: atual == null ? primeiro : inicioDoDia(atual),
-      firstDate: primeiro,
-      lastDate: DateTime(2100),
-      helpText: 'Até que dia?',
-    );
-    if (d == null || !mounted) return;
-    final h = await showTimePicker(
-      context: context,
-      initialTime: atual == null ? horaInicio : TimeOfDay.fromDateTime(atual),
-      helpText: 'Até que horas?',
-    );
+  /// Vários dias: dia todo, ou com hora de ida e de volta.
+  void escolherDiaTodoNaViagem() => setState(() {
+        diaTodo = true;
+        _duracaoAuto = false;
+      });
+
+  Future<void> escolherHoraIda() async {
+    final h = await showTimePicker(context: context, initialTime: horaInicio, helpText: 'Ida a que horas?');
     if (h == null) return;
     setState(() {
-      fimOutroDia = DateTime(d.year, d.month, d.day, h.hour, h.minute);
+      horaInicio = h;
+      diaTodo = false;
+      _quandoAuto = false;
+      _duracaoAuto = false;
+    });
+  }
+
+  Future<void> escolherHoraVolta() async {
+    final h = await showTimePicker(context: context, initialTime: horaVolta, helpText: 'Volta a que horas?');
+    if (h == null) return;
+    setState(() {
+      horaVolta = h;
       diaTodo = false;
       _duracaoAuto = false;
     });
   }
 
-  /// Data final de um evento de dia todo (viagem, recesso).
+  /// Data final de um evento de vários dias (viagem, recesso).
   Future<void> escolherAte() async {
     final primeiro = DateTime(data.year, data.month, data.day + 1);
     final d = await showDatePicker(
@@ -450,8 +446,8 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
     if (d != null) setState(() => ate = inicioDoDia(d));
   }
 
-  /// O "Até" só vale pra dia todo com data (tarefa sem hora não dura dias).
-  bool get variosDias => diaTodo && !ehTarefa && ate != null && ate!.isAfter(data);
+  /// "Até" outro dia (tarefa não dura dias).
+  bool get variosDias => !ehTarefa && ate != null && ate!.isAfter(data);
 
   void escolherRepeticao(Repeticao r) => setState(() {
         repeticao = r;
@@ -521,10 +517,10 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       id: widget.original?.id ?? gerarId(),
       titulo: tituloFinal,
       inicio: inicio,
-      fim: diaTodoFinal
-          ? (variosDias && !semDataFinal ? ate : null)
-          : (fimOutroDia != null && fimOutroDia!.isAfter(inicio) && !ehTarefa)
-              ? fimOutroDia
+      fim: variosDias && !semDataFinal
+          ? (diaTodoFinal ? ate : DateTime(ate!.year, ate!.month, ate!.day, horaVolta.hour, horaVolta.minute))
+          : diaTodoFinal
+              ? null
               : inicio.add(Duration(minutes: minutos)),
       diaInteiro: diaTodoFinal,
       tipo: tipoTexto,

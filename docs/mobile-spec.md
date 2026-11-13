@@ -797,8 +797,12 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   segurar a opção (tooltip). Vale pra features novas.
 
 **Ida e volta com hora** (pedido no teste, 2026-11-12):
-- Com "Dia todo" desligado, a Duração ganha **"Outro dia…"** (data e hora
-  da volta): "sex 13 18:00 – dom 15/11 22:00". Vale pra qualquer tipo.
+- **Um lugar só pra volta** (revisto no teste: "Outro dia…" escondido na
+  Duração confundia). Em "Quando": a data (ida) e a linha **Até** ("Mesmo
+  dia" / data da volta), sempre visível fora de Tarefa. Com volta noutro
+  dia, a linha seguinte é **Horário: Dia todo · Ida 18:00 · Volta 22:00**
+  (Duração some). Resumo: "sex 13 18:00 – dom 15/11 22:00". Vale pra
+  qualquer tipo.
 - "Sem aula" apaga só as aulas **entre a ida e a volta** (a de sexta 8h
   continua). Dia inteiro dentro da viagem apaga o dia todo, como antes.
 - Grade: o bloco começa no horário da ida e termina no da volta. Calendário:

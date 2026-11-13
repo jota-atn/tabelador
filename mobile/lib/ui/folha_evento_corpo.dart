@@ -121,18 +121,26 @@ class CorpoDaFolha extends StatelessWidget {
                   filhos: [
                     _Quando(f: f),
                     if (!f.semData || !f.ehTarefa) ...[
-                      if (f.ehTarefa || !f.diaTodo) ...[
-                        const RotuloLinha('Horário'),
-                        _Horario(f: f),
-                      ],
                       if (!f.ehTarefa) ...[
-                        const RotuloLinha('Duração'),
-                        _Duracao(f: f),
-                      ],
-                      if (f.diaTodo && !f.ehTarefa) ...[
                         const RotuloLinha('Até'),
                         _Ate(f: f),
                       ],
+                      // Vários dias: dia todo ou hora de ida e de volta,
+                      // tudo numa linha (duração não faz sentido aqui).
+                      if (f.variosDias) ...[
+                        const RotuloLinha('Horário'),
+                        _HorarioVariosDias(f: f),
+                      ] else ...[
+                        if (f.ehTarefa || !f.diaTodo) ...[
+                          const RotuloLinha('Horário'),
+                          _Horario(f: f),
+                        ],
+                        if (!f.ehTarefa) ...[
+                          const RotuloLinha('Duração'),
+                          _Duracao(f: f),
+                        ],
+                      ],
+
                       if (f.diaTodo) ...[
                         const RotuloLinha('Aviso'),
                         _Aviso(f: f),
@@ -232,13 +240,9 @@ class CorpoDaFolha extends StatelessWidget {
     if (f.variosDias) {
       final ate = f.ate!;
       final comeco = f.data.month == ate.month ? '${f.data.day}' : diaMes(f.data);
-      return '${diaAbreviado(f.data).toLowerCase()} $comeco – ${diaAbreviado(ate).toLowerCase()} ${diaMes(ate)}';
-    }
-    final volta = f.fimOutroDia;
-    if (!f.diaTodo && volta != null) {
-      final comeco = f.data.month == volta.month ? '${f.data.day}' : diaMes(f.data);
-      return '${diaAbreviado(f.data).toLowerCase()} $comeco ${_hhmm(f.horaInicio)} – '
-          '${diaAbreviado(volta).toLowerCase()} ${diaMes(volta)} ${_hhmm(TimeOfDay.fromDateTime(volta))}';
+      final ida = f.diaTodo ? '' : ' ${_hhmm(f.horaInicio)}';
+      final volta = f.diaTodo ? '' : ' ${_hhmm(f.horaVolta)}';
+      return '${diaAbreviado(f.data).toLowerCase()} $comeco$ida – ${diaAbreviado(ate).toLowerCase()} ${diaMes(ate)}$volta';
     }
     if (f.diaTodo) return '$dia · ${f.ehTarefa ? 'sem hora' : 'dia todo'}';
     if (f.minutos == 0) return '$dia · ${_hhmm(f.horaInicio)}';
@@ -375,7 +379,7 @@ class _Ate extends StatelessWidget {
     final ate = f.ate;
     return GradeDeChips(opcoes: [
       OpcaoChip(
-        rotulo: 'Só este dia',
+        rotulo: 'Mesmo dia',
         selecionado: !f.variosDias,
         aoTocar: f.escolherUmDiaSo,
       ),
@@ -384,6 +388,36 @@ class _Ate extends StatelessWidget {
         icone: Icons.date_range,
         selecionado: f.variosDias,
         aoTocar: f.escolherAte,
+      ),
+    ]);
+  }
+}
+
+/// Vários dias: dia todo, ou com hora de ida e de volta.
+class _HorarioVariosDias extends StatelessWidget {
+  const _HorarioVariosDias({required this.f});
+
+  final FolhaDeEventoState f;
+
+  @override
+  Widget build(BuildContext context) {
+    return GradeDeChips(opcoes: [
+      OpcaoChip(
+        rotulo: 'Dia todo',
+        selecionado: f.diaTodo,
+        aoTocar: f.escolherDiaTodoNaViagem,
+      ),
+      OpcaoChip(
+        rotulo: f.diaTodo ? 'Ida…' : 'Ida ${_hhmm(f.horaInicio)}',
+        icone: Icons.schedule,
+        selecionado: !f.diaTodo,
+        aoTocar: f.escolherHoraIda,
+      ),
+      OpcaoChip(
+        rotulo: f.diaTodo ? 'Volta…' : 'Volta ${_hhmm(f.horaVolta)}',
+        icone: Icons.schedule,
+        selecionado: !f.diaTodo,
+        aoTocar: f.escolherHoraVolta,
       ),
     ]);
   }
@@ -461,8 +495,7 @@ class _Duracao extends StatelessWidget {
   Widget build(BuildContext context) {
     final minItem = f.minutosDoItem;
     final sigla = f.item?.sigla;
-    final outroDia = !f.diaTodo && f.fimOutroDia != null;
-    final livre = !f.diaTodo && !outroDia && f.minutos != 0 && f.minutos != 30 &&
+    final livre = !f.diaTodo && f.minutos != 0 && f.minutos != 30 &&
         f.minutos != 60 && f.minutos != 120 && f.minutos != minItem;
 
     final fim = f.horaInicio.hour * 60 + f.horaInicio.minute + f.minutos;
@@ -476,20 +509,20 @@ class _Duracao extends StatelessWidget {
       ),
       OpcaoChip(
         rotulo: 'Prazo',
-        selecionado: !f.diaTodo && !outroDia && f.minutos == 0,
+        selecionado: !f.diaTodo && f.minutos == 0,
         aoTocar: () => f.escolherDuracao(min: 0),
       ),
       if (minItem != null && sigla != null)
         OpcaoChip(
           rotulo: '$sigla · ${_duracaoCurta(minItem)}',
-          selecionado: !f.diaTodo && !outroDia && f.minutos == minItem,
+          selecionado: !f.diaTodo && f.minutos == minItem,
           aoTocar: () => f.escolherDuracao(min: minItem),
         ),
       for (final (m, r) in const [(30, '30 min'), (60, '1h'), (120, '2h')])
         if (m != minItem)
           OpcaoChip(
             rotulo: r,
-            selecionado: !f.diaTodo && !outroDia && f.minutos == m,
+            selecionado: !f.diaTodo && f.minutos == m,
             aoTocar: () => f.escolherDuracao(min: m),
           ),
       OpcaoChip(
@@ -497,14 +530,6 @@ class _Duracao extends StatelessWidget {
         icone: Icons.more_time,
         selecionado: livre,
         aoTocar: f.escolherDuracaoOutra,
-      ),
-      OpcaoChip(
-        rotulo: outroDia
-            ? 'até ${diaAbreviado(f.fimOutroDia!).toLowerCase()} ${diaMes(f.fimOutroDia!)} ${_hhmm(TimeOfDay.fromDateTime(f.fimOutroDia!))}'
-            : 'Outro dia…',
-        icone: Icons.date_range,
-        selecionado: outroDia,
-        aoTocar: f.escolherFimOutroDia,
       ),
     ]);
   }
