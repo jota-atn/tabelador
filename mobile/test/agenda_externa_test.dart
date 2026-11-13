@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabelador/agenda/agendas_do_aparelho.dart';
 import 'package:tabelador/data/tabelador_store.dart';
 import 'package:tabelador/model/evento.dart';
+import 'package:tabelador/model/nota.dart';
 import 'package:tabelador/state/app_state.dart';
 
 class _FonteFalsa implements FonteDeEventosExternos {
@@ -354,6 +355,23 @@ void main() {
           .evento;
       expect(tiradentes.embutido, isTrue);
       expect(state.eventoPorId(tiradentes.id), tiradentes);
+    });
+
+    test('nota em atividade do Classroom fica guardada no app', () async {
+      final fonte = _FonteFalsa([_externo('Lista 4', DateTime(2026, 11, 5), 'turma')]);
+      final state = AppState(fonteExterna: fonte);
+      await state.carregar();
+      await state.definirAgendas({'turma': const AgendaEscolhida(nome: 'turma')});
+
+      final lista = state.tarefas.single;
+      expect(lista.avaliavel, isTrue);
+      await state.lancarNota(Ocorrencia(lista, lista.inicio, lista.inicio), const Nota(9, 10));
+      expect(state.tarefas.single.notaEm(lista.inicio), const Nota(9, 10));
+
+      final outro = AppState(fonteExterna: fonte);
+      await outro.carregar();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(outro.tarefas.single.notaEm(lista.inicio), const Nota(9, 10));
     });
 
     test('feriado do Google chega comemorativo; marcar como folga persiste', () async {

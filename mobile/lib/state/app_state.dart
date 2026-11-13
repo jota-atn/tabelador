@@ -6,6 +6,7 @@ import '../agenda/agendas_do_aparelho.dart';
 import '../data/tabelador_store.dart';
 import '../model/evento.dart';
 import '../model/item.dart';
+import '../model/nota.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
 import '../util/feriados.dart';
@@ -48,6 +49,8 @@ class AppState extends ChangeNotifier {
   Set<String> _feitasExternas = {};
   Set<String> _ocultasExternas = {};
   Set<String> _folgasExternas = {};
+  Map<String, Nota> _notasExternas = {};
+  double _ultimoMaximo = 10;
   Map<String, AgendaEscolhida> _agendas = {};
   bool _agendasConfiguradas = false;
   String? _tabelaAtivaId;
@@ -78,6 +81,9 @@ class AppState extends ChangeNotifier {
   bool get notificarEventos => _notificarEventos;
   bool get carregado => _carregado;
   int get pedidosDeSemana => _pedidosDeSemana;
+
+  /// Máximo da última nota lançada — sugestão pra próxima.
+  double get ultimoMaximo => _ultimoMaximo;
 
   /// Segunda (meia-noite) da semana mostrada na tela inicial.
   DateTime segundaMostrada([DateTime? agora]) =>
@@ -169,6 +175,8 @@ class AppState extends ChangeNotifier {
     _feitasExternas = {...dados.feitasExternas};
     _ocultasExternas = {...dados.ocultasExternas};
     _folgasExternas = {...dados.folgasExternas};
+    _notasExternas = {...dados.notasExternas};
+    _ultimoMaximo = dados.ultimoMaximo;
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
     _semanaAberta = dados.semanaAberta;
@@ -725,6 +733,7 @@ class AppState extends ChangeNotifier {
         feito: _feitasExternas.contains(e.id),
         // Feriado do Google é comemorativo até a pessoa dizer que é folga.
         comemorativa: tipo == TipoEvento.feriado && !_folgasExternas.contains(e.id),
+        nota: _notasExternas[e.id],
       ));
     }
     return resultado;
@@ -738,6 +747,31 @@ class AppState extends ChangeNotifier {
     await _store.salvarAgendas(_agendas);
     _redecorar();
     notifyListeners();
+  }
+
+  /// Lança a nota da ocorrência [o] (null apaga). Evento externo guarda
+  /// no app, por id.
+  Future<void> lancarNota(Ocorrencia o, Nota? nota) async {
+    final e = o.evento;
+    if (nota != null && nota.maximo != _ultimoMaximo) {
+      _ultimoMaximo = nota.maximo;
+      await _store.salvarUltimoMaximo(_ultimoMaximo);
+    }
+    if (e.externo) {
+      if (nota == null) {
+        if (_notasExternas.remove(e.id) == null) return;
+      } else {
+        _notasExternas[e.id] = nota;
+      }
+      _redecorar();
+      await _store.salvarNotasExternas(_notasExternas);
+      return;
+    }
+    final novo = e.comNota(o.inicio, nota);
+    if (novo == e) return;
+    _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
+    notifyListeners();
+    await _store.salvarEventos(_eventos);
   }
 
   /// Marca (ou desmarca) um feriado do Google como folga: aí ele esmaece as
@@ -893,6 +927,13 @@ class AppState extends ChangeNotifier {
         'notificacoesAtivas': _notificacoesAtivas,
         'antecedenciaMinutos': _antecedenciaMinutos,
         'notificarEventos': _notificarEventos,
+        // O que o app guarda sobre eventos do Google (a agenda não guarda).
+        'externos': {
+          'feitas': _feitasExternas.toList()..sort(),
+          'ocultas': _ocultasExternas.toList()..sort(),
+          'folgas': _folgasExternas.toList()..sort(),
+          'notas': codificarNotasExternas(_notasExternas),
+        },
       };
 
   /// Substitui TUDO (itens, tabelas, eventos, tabela ativa, densidade) pelo conteúdo
@@ -932,6 +973,14 @@ class AppState extends ChangeNotifier {
     _notificacoesAtivas = dados['notificacoesAtivas'] as bool? ?? false;
     _antecedenciaMinutos = dados['antecedenciaMinutos'] as int? ?? 15;
     _notificarEventos = dados['notificarEventos'] as bool? ?? true;
+    // Backup de antes da v1.5 não tem a chave: tudo vazio.
+    final externos = dados['externos'] is Map ? dados['externos'] as Map : const {};
+    Set<String> ids(Object? l) => {if (l is List) for (final x in l) x as String};
+    _feitasExternas = ids(externos['feitas']);
+    _ocultasExternas = ids(externos['ocultas']);
+    _folgasExternas = ids(externos['folgas']);
+    _notasExternas = decodificarNotasExternas(externos['notas']);
+    _externos = _decorarExternos(_externosBrutos);
 
     notifyListeners();
     await _store.salvarItens(_itens);
@@ -942,5 +991,9 @@ class AppState extends ChangeNotifier {
     await _store.salvarNotificacoesAtivas(_notificacoesAtivas);
     await _store.salvarAntecedenciaMinutos(_antecedenciaMinutos);
     await _store.salvarNotificarEventos(_notificarEventos);
+    await _store.salvarFeitasExternas(_feitasExternas);
+    await _store.salvarOcultasExternas(_ocultasExternas);
+    await _store.salvarFolgasExternas(_folgasExternas);
+    await _store.salvarNotasExternas(_notasExternas);
   }
 }

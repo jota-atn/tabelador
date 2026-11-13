@@ -5,6 +5,7 @@ import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../util/formato_data.dart';
 import 'folha_evento.dart';
+import 'lancar_nota.dart';
 import '../theme/tipo_evento_visual.dart';
 import 'widgets/item_swatch.dart';
 
@@ -224,6 +225,23 @@ class DetalhesDoEvento extends StatelessWidget {
                     ),
                   ),
                 if (e.notas != null) _Linha(icone: Icons.notes, texto: e.notas!, multilinha: true),
+                // Nota: só depois que a avaliação aconteceu (ou a tarefa foi
+                // entregue). Lançada, a linha mostra e o toque edita.
+                if (e.avaliavel && (!ocorrencia.inicio.isAfter(agora) || feita))
+                  if (e.notaEm(ocorrencia.inicio) case final nota?)
+                    InkWell(
+                      onTap: () => abrirLancarNota(context, ocorrencia),
+                      child: _Linha(icone: Icons.grade_outlined, texto: 'Nota: ${nota.texto}'),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                      child: OutlinedButton.icon(
+                        onPressed: () => abrirLancarNota(context, ocorrencia),
+                        icon: const Icon(Icons.grade_outlined),
+                        label: const Text('Lançar nota'),
+                      ),
+                    ),
                 // Feriado do Google: o app não sabe se é folga (a agenda
                 // mistura feriado com data comemorativa) — a pessoa diz.
                 if (e.ehFeriado && e.externo && !e.embutido)

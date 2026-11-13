@@ -38,7 +38,7 @@
 | **v1.2** ✅ (2026-11-11) | Aba Eventos (cards por tipo), tipo padrão por agenda do Google |
 | **v1.3** ✅ (2026-11-12) | Feriados embutidos (folga/comemorativa, esmaecer aulas, ponto facultativo por tabela) |
 | **v1.4** ✅ (2026-11-12) | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
-| **v1.5** | Nota em Prova (e Tarefa avaliada) |
+| **v1.5** ✅ (2026-11-12) | Nota em Prova (e Tarefa avaliada) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -755,7 +755,7 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
-## Nota em Prova (v1.5, decidido 2026-11-12)
+## Nota em Prova (v1.5, implementado 2026-11-12, PR #5)
 
 Só o **lançamento** da nota. Média, pesos e "quanto preciso tirar" ficam
 pra Disciplina (v2.1) — o formato abaixo já é o que ela vai consumir.

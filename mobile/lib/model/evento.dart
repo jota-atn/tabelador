@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../util/id.dart';
+import 'nota.dart';
 
 /// Como um [Evento] se repete. De propósito sem editor de RRULE: os quatro
 /// casos cobrem prova (nenhuma), reunião (semanal), fatura (mensal) e
@@ -102,6 +103,7 @@ class Evento {
     this.feitas = const {},
     this.avisoMin,
     this.comemorativa = false,
+    this.notasLancadas = const {},
   });
 
   Evento.novo({
@@ -120,6 +122,7 @@ class Evento {
   })  : id = gerarId(),
         feito = false,
         feitas = const {},
+        notasLancadas = const {},
         agendaId = null,
         corExterna = null,
         idNoAparelho = null,
@@ -179,6 +182,30 @@ class Evento {
   /// esmaece as aulas nem conta em "N feriados até o fim do ano". Falso =
   /// folga, que é o caso de quem cria um feriado à mão.
   final bool comemorativa;
+
+  /// Nota de cada ocorrência avaliada (dia, meia-noite → nota). Por dia, como
+  /// [feitas]: tarefa semanal avaliada tem uma nota por semana. Não
+  /// confundir com [notas], que é o texto livre do evento.
+  final Map<DateTime, Nota> notasLancadas;
+
+  /// Recebe nota: Prova, Tarefa ligada a um item (trabalho avaliado) e
+  /// tarefa externa (atividade do Classroom, ainda sem vínculo com item).
+  bool get avaliavel =>
+      TipoEvento.doTexto(tipo) == TipoEvento.prova || (ehTarefa && (itemId != null || externo));
+
+  Nota? notaEm(DateTime inicioDaOcorrencia) => notasLancadas[_dia(inicioDaOcorrencia)];
+
+  /// Lança (ou, com null, apaga) a nota da ocorrência de [inicioDaOcorrencia].
+  Evento comNota(DateTime inicioDaOcorrencia, Nota? nota) {
+    final dia = _dia(inicioDaOcorrencia);
+    final novas = {...notasLancadas};
+    if (nota == null) {
+      novas.remove(dia);
+    } else {
+      novas[dia] = nota;
+    }
+    return _copiar(notasLancadas: novas);
+  }
 
   bool get externo => agendaId != null;
   bool get embutido => agendaId == kAgendaEmbutidos;
@@ -308,6 +335,10 @@ class Evento {
           'feitas': [for (final d in feitas.toList()..sort()) _diaIso(d)],
         if (avisoMin != null) 'avisoMin': avisoMin,
         if (comemorativa) 'comemorativa': true,
+        if (notasLancadas.isNotEmpty)
+          'notasLancadas': {
+            for (final d in notasLancadas.keys.toList()..sort()) _diaIso(d): notasLancadas[d]!.toJson(),
+          },
       };
 
   static String _diaIso(DateTime d) =>
@@ -337,6 +368,10 @@ class Evento {
       },
       avisoMin: (json['avisoMin'] as num?)?.toInt(),
       comemorativa: json['comemorativa'] as bool? ?? false,
+      notasLancadas: {
+        for (final entrada in (json['notasLancadas'] as Map<String, dynamic>? ?? const {}).entries)
+          if (DateTime.tryParse(entrada.key) case final d?) _dia(d): ?Nota.fromJson(entrada.value),
+      },
     );
   }
 
@@ -355,6 +390,7 @@ class Evento {
   Evento _copiar({
     String? tipo,
     bool? comemorativa,
+    Map<DateTime, Nota>? notasLancadas,
     String? Function()? itemId,
     String? Function()? idNoAparelho,
     String? Function()? agendaDestinoId,
@@ -381,11 +417,22 @@ class Evento {
         feitas: feitas ?? this.feitas,
         avisoMin: avisoMin,
         comemorativa: comemorativa ?? this.comemorativa,
+        notasLancadas: notasLancadas ?? this.notasLancadas,
       );
 
   /// Evento externo com o tipo da agenda e o "feito" guardado no app.
-  Evento decorado({required String tipo, required bool feito, bool comemorativa = false}) =>
-      _copiar(tipo: tipo, feito: feito, comemorativa: comemorativa);
+  Evento decorado({
+    required String tipo,
+    required bool feito,
+    bool comemorativa = false,
+    Nota? nota,
+  }) =>
+      _copiar(
+        tipo: tipo,
+        feito: feito,
+        comemorativa: comemorativa,
+        notasLancadas: nota == null ? const {} : {_dia(inicio): nota},
+      );
 
   /// Tipos que saíram da lista: "Entrega" vira Tarefa — e a que já passou
   /// conta como entregue, pra não chegar tudo como atrasada. Devolve o
@@ -417,7 +464,8 @@ class Evento {
       other.feito == feito &&
       setEquals(other.feitas, feitas) &&
       other.avisoMin == avisoMin &&
-      other.comemorativa == comemorativa;
+      other.comemorativa == comemorativa &&
+      mapEquals(other.notasLancadas, notasLancadas);
 
   @override
   int get hashCode => Object.hash(
@@ -440,6 +488,7 @@ class Evento {
         Object.hashAllUnordered(feitas),
         avisoMin,
         comemorativa,
+        Object.hashAllUnordered(notasLancadas.entries.map((e) => Object.hash(e.key, e.value))),
       );
 
   @override

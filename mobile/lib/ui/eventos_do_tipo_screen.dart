@@ -771,7 +771,23 @@ class _LinhaDoTempo extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (_kContaDias.contains(tipo) && !ocorrencia.inicio.isBefore(inicioDoDia(agora)))
+                      // Avaliação que já aconteceu: a nota, ou "sem nota" bem
+                      // discreto (registra, não cobra).
+                      if (e.avaliavel && ocorrencia.inicio.isBefore(agora))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: switch (e.notaEm(ocorrencia.inicio)) {
+                            final nota? => Text(
+                                nota.curto,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cor),
+                              ),
+                            null => Text(
+                                'sem nota',
+                                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                              ),
+                          },
+                        )
+                      else if (_kContaDias.contains(tipo) && !ocorrencia.inicio.isBefore(inicioDoDia(agora)))
                         Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: Container(
