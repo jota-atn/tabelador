@@ -40,7 +40,7 @@
 | **v1.4** ✅ (2026-11-12) | Navegar entre semanas na grade (barra com setas, lista acompanha, "Ver na grade" no calendário) |
 | **v1.5** ✅ (2026-11-12) | Nota em Prova (e Tarefa avaliada) |
 | **v1.6** ✅ (2026-11-12) | Link em Reunião (Entrar no card, na lista e no aviso; série do Google agrupada) |
-| **v1.7** | Viagem de vários dias (e qualquer evento de dia todo; sem aula durante a viagem) |
+| **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
 | **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -757,7 +757,7 @@ suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
 
-## Viagem e eventos de vários dias (v1.7, em especificação 2026-11-12)
+## Viagem e eventos de vários dias (v1.7, implementado 2026-11-12, PR #7)
 
 **Decisões do usuário**:
 - **Qualquer evento de dia todo** pode durar vários dias (Viagem,
