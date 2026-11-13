@@ -64,6 +64,7 @@ object AgendaChannel {
                         )
                         "appInstalado" -> appInstalado(app, call.argument<String>("pacote")!!)
                         "abrirApp" -> abrirApp(app, call.argument<String>("pacote")!!)
+                        "iconeDoApp" -> iconeDoApp(app, call.argument<String>("pacote")!!)
                         "geocodificar" -> geocodificar(app, call.argument<String>("endereco")!!)
                         "lerEventos" -> lerEventos(
                             app,
@@ -109,6 +110,23 @@ object AgendaChannel {
     /** Precisa do pacote em `<queries>` no manifesto (Android 11+). */
     private fun appInstalado(context: Context, pacote: String): Boolean =
         context.packageManager.getLaunchIntentForPackage(pacote) != null
+
+    /** Ícone do app instalado em PNG (bytes), pro botão usar o dele. */
+    private fun iconeDoApp(context: Context, pacote: String): ByteArray? {
+        val icone = try {
+            context.packageManager.getApplicationIcon(pacote)
+        } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+            return null
+        }
+        val lado = 96
+        val bitmap = android.graphics.Bitmap.createBitmap(lado, lado, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        icone.setBounds(0, 0, lado, lado)
+        icone.draw(canvas)
+        val saida = java.io.ByteArrayOutputStream()
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, saida)
+        return saida.toByteArray()
+    }
 
     private fun abrirApp(context: Context, pacote: String): Boolean {
         val intent = context.packageManager.getLaunchIntentForPackage(pacote) ?: return false

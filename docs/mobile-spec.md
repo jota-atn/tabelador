@@ -771,7 +771,7 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   certo; se não achar, abre com o texto.
 
 **Padrões (ajustáveis no teste)**:
-- Botões **Uber** e **99** lado a lado, cada um só se o app está
+- Botões com o **ícone do próprio app** (pedido no teste). Botões **Uber** e **99** lado a lado, cada um só se o app está
   instalado. Sem local, ou local que é link de videochamada: sem botões.
 - Link do Uber: `https://m.uber.com/ul/?action=setPickup&pickup=my_location`
   `&dropoff[latitude]…[longitude]…[nickname]…[formatted_address]…`.
@@ -869,6 +869,9 @@ Google (`google_card_pending`) se ainda não configurou agendas.
   segurar a opção (tooltip). Vale pra features novas.
 
 **Ida e volta com hora** (pedido no teste, 2026-11-12):
+- **Só Viagem, Feriado (recesso), Outro e sem tipo** têm "Até" (revisto na
+  v1.10: prova, consulta, reunião, compromisso não duram dias). Evento do
+  Google de vários dias continua aparecendo em todos os dias.
 - **Um lugar só pra volta** (revisto no teste: "Outro dia…" escondido na
   Duração confundia). Em "Quando": a data (ida) e a linha **Até** ("Mesmo
   dia" / data da volta), sempre visível fora de Tarefa. Com volta noutro

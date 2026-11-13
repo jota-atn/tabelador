@@ -33,6 +33,15 @@ Uri linkDoUber(String endereco, {String? apelido, double? lat, double? lng}) => 
       'dropoff[formatted_address]': endereco,
     });
 
+/// Ícone do app (PNG), ou null — nos testes, ou sem o app.
+Future<Uint8List?> iconeDoApp(String pacote) async {
+  try {
+    return await _canal.invokeMethod<Uint8List>('iconeDoApp', {'pacote': pacote});
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Falso nos testes (sem lado nativo) — aí os botões nem aparecem.
 Future<bool> appInstalado(String pacote) async {
   try {

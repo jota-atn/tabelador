@@ -452,8 +452,13 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
     if (d != null) setState(() => ate = inicioDoDia(d));
   }
 
-  /// "Até" outro dia (tarefa não dura dias).
-  bool get variosDias => !ehTarefa && ate != null && ate!.isAfter(data);
+  /// Só Viagem, Feriado (recesso), Outro e sem tipo duram dias — prova,
+  /// consulta, reunião, compromisso, tarefa e aniversário são de um dia.
+  bool get aceitaVariosDias =>
+      tipo == null || tipo == TipoEvento.viagem || tipo == TipoEvento.feriado || tipo == TipoEvento.outro;
+
+  /// "Até" outro dia.
+  bool get variosDias => aceitaVariosDias && ate != null && ate!.isAfter(data);
 
   void escolherRepeticao(Repeticao r) => setState(() {
         repeticao = r;

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -453,24 +455,36 @@ class _BotoesDeCarro extends StatefulWidget {
 
 class _BotoesDeCarroState extends State<_BotoesDeCarro> {
   /// Instalado não muda com o card aberto: pergunta uma vez por sessão.
-  static Future<(bool, bool)>? _instalados;
+  /// Ícone de cada app instalado (null = não instalado). Não muda com o
+  /// card aberto: pergunta uma vez por sessão.
+  static Future<(Uint8List?, Uint8List?)>? _icones;
 
-  static Future<(bool, bool)> _verificar() async =>
-      (await appInstalado(kPacoteUber), await appInstalado(kPacote99));
+  static Future<(Uint8List?, Uint8List?)> _verificar() async {
+    Future<Uint8List?> icone(String pacote) async =>
+        await appInstalado(pacote) ? (await iconeDoApp(pacote) ?? Uint8List(0)) : null;
+    return (await icone(kPacoteUber), await icone(kPacote99));
+  }
+
+  static Widget _icone(Uint8List bytes) => bytes.isEmpty
+      ? const Icon(Icons.local_taxi_outlined)
+      : ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: Image.memory(bytes, width: 20, height: 20),
+        );
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<(bool, bool)>(
-      future: _instalados ??= _verificar(),
+    return FutureBuilder<(Uint8List?, Uint8List?)>(
+      future: _icones ??= _verificar(),
       builder: (context, snap) {
-        final (uber, noventaENove) = snap.data ?? (false, false);
-        if (!uber && !noventaENove) return const SizedBox.shrink();
+        final (uber, noventaENove) = snap.data ?? (null, null);
+        if (uber == null && noventaENove == null) return const SizedBox.shrink();
         final messenger = ScaffoldMessenger.maybeOf(context);
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
           child: Row(
             children: [
-              if (uber)
+              if (uber != null)
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
@@ -478,12 +492,12 @@ class _BotoesDeCarroState extends State<_BotoesDeCarro> {
                         messenger?.showSnackBar(const SnackBar(content: Text('Não deu pra abrir o Uber.')));
                       }
                     },
-                    icon: const Icon(Icons.local_taxi_outlined),
+                    icon: _icone(uber),
                     label: const Text('Uber'),
                   ),
                 ),
-              if (uber && noventaENove) const SizedBox(width: 8),
-              if (noventaENove)
+              if (uber != null && noventaENove != null) const SizedBox(width: 8),
+              if (noventaENove != null)
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
@@ -492,7 +506,7 @@ class _BotoesDeCarroState extends State<_BotoesDeCarro> {
                         content: Text(abriu ? 'Endereço copiado' : 'Não deu pra abrir a 99.'),
                       ));
                     },
-                    icon: const Icon(Icons.local_taxi_outlined),
+                    icon: _icone(noventaENove),
                     label: const Text('99'),
                   ),
                 ),
