@@ -43,7 +43,7 @@
 | **v1.7** ✅ (2026-11-12) | Eventos de vários dias (Viagem e qualquer tipo; dia todo ou ida/volta com hora; bloco na grade e no calendário; Sem aula/Mantém) |
 | **v1.8** ✅ (2026-11-12) | Presente em Aniversário (ideia + comprado, aviso 7 dias antes; também no do Google) |
 | **v1.9** ✅ (2026-11-12) | Prioridade em Tarefa (alta/normal/baixa, ordem na seção, marca na linha; Classroom pelo card) |
-| **v1.x** | Particularidades por tipo, uma de cada vez (nota em Prova, Uber/99, link de Reunião, Viagem de vários dias, idade/presente, prioridade de Tarefa) |
+| **v1.10** | Uber/99 em Consulta e Compromisso (card de detalhes; destino pelo localizador do Android) |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
 | **v2.2** | Classroom nível 1 |
@@ -758,6 +758,29 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Uber/99 em Consulta e Compromisso (v1.10, em especificação 2026-11-12)
+
+**Decisões do usuário**:
+- **Só Consulta e Compromisso** ("local depende do tipo": reunião às
+  vezes é online; sala de aula não precisa de carro).
+- **No card de detalhes**, embaixo do local.
+- **99**: abre o app e **copia o endereço** ("Endereço copiado").
+- **Uber**: o app procura o endereço com o localizador do próprio Android
+  (grátis, sem conta) **na hora de tocar** e abre o Uber com o destino
+  certo; se não achar, abre com o texto.
+
+**Padrões (ajustáveis no teste)**:
+- Botões **Uber** e **99** lado a lado, cada um só se o app está
+  instalado. Sem local, ou local que é link de videochamada: sem botões.
+- Link do Uber: `https://m.uber.com/ul/?action=setPickup&pickup=my_location`
+  `&dropoff[latitude]…[longitude]…[nickname]…[formatted_address]…`.
+
+**Técnico**:
+- Canal Kotlin existente ganha `appInstalado`, `abrirApp` e
+  `geocodificar` (`android.location.Geocoder`, em thread de fundo).
+  Manifesto declara `<queries>` pros pacotes `com.ubercab` e
+  `com.taxis99` (Android 11+ esconde apps de quem não declara).
 
 ## Prioridade em Tarefa (v1.9, implementado 2026-11-12, PR #9)
 
