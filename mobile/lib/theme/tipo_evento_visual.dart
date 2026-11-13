@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../model/evento.dart';
+import '../model/item.dart';
 
 /// Ícone de cada tipo fixo — o mesmo na folha de criação, no card de
 /// detalhes e nas listas.
@@ -46,3 +47,13 @@ String pluralDoTipo(TipoEvento t) => switch (t) {
       TipoEvento.feriado => 'Feriados',
       TipoEvento.outro => 'Outros',
     };
+
+/// Cor de um evento, na mesma ordem do card: item vinculado → agenda do
+/// Google → tipo → neutra.
+Color corDoEvento(Evento e, Item? item, ColorScheme scheme) {
+  final escuro = scheme.brightness == Brightness.dark;
+  if (item != null) return item.cor.tone(escuro ? 80 : 40);
+  if (e.corExterna != null) return Color(e.corExterna!);
+  final tipo = TipoEvento.doTexto(e.tipo);
+  return tipo == null ? scheme.outline : corDoTipo(tipo, scheme.brightness);
+}

@@ -352,38 +352,31 @@ class SeletorFolga extends StatelessWidget {
   final bool viagem;
   final ValueChanged<bool> aoMudar;
 
+  // A explicação de cada opção fica no segurar (tooltip), não na tela —
+  // padrão do app pra informação que só serve a quem tem dúvida.
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SegmentedButton<bool>(
-          segments: [
-            ButtonSegment(
-              value: true,
-              label: Text(viagem ? 'Sem aula' : 'Folga'),
-              icon: const Icon(Icons.beach_access_outlined),
-            ),
-            ButtonSegment(
-              value: false,
-              label: Text(viagem ? 'Mantém as aulas' : 'Comemorativa'),
-              icon: Icon(viagem ? Icons.school_outlined : Icons.celebration_outlined),
-            ),
-          ],
-          selected: {folga},
-          onSelectionChanged: (s) => aoMudar(s.first),
+    return SegmentedButton<bool>(
+      segments: [
+        ButtonSegment(
+          value: true,
+          label: Text(viagem ? 'Sem aula' : 'Folga'),
+          icon: const Icon(Icons.beach_access_outlined),
+          tooltip: viagem
+              ? 'Os horários dos dias da viagem ficam apagados e sem aviso'
+              : 'Sem aula nesse dia: os horários ficam apagados e sem aviso',
         ),
-        const SizedBox(height: 6),
-        Text(
-          switch ((viagem, folga)) {
-            (false, true) => 'Sem aula nesse dia: os horários ficam apagados e sem aviso.',
-            (false, false) => 'Só uma data pra lembrar: as aulas seguem normais.',
-            (true, true) => 'Os horários dos dias da viagem ficam apagados e sem aviso.',
-            (true, false) => 'As aulas seguem normais durante a viagem.',
-          },
-          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ButtonSegment(
+          value: false,
+          label: Text(viagem ? 'Mantém as aulas' : 'Comemorativa'),
+          icon: Icon(viagem ? Icons.school_outlined : Icons.celebration_outlined),
+          tooltip: viagem
+              ? 'As aulas seguem normais durante a viagem'
+              : 'Só uma data pra lembrar: as aulas seguem normais',
         ),
       ],
+      selected: {folga},
+      onSelectionChanged: (s) => aoMudar(s.first),
     );
   }
 }

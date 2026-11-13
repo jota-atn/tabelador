@@ -785,6 +785,17 @@ Google (`google_card_pending`) se ainda não configurou agendas.
 - **Aba Eventos, card Viagem**: "Em viagem · volta sex 20/11" durante;
   antes, a contagem até a ida como hoje.
 
+**Ajustes do teste no aparelho**:
+- Vários dias vira **um bloco só**: na grade, contorno e fundo leve na cor
+  do evento sobre todos os dias que ele ocupa, com o nome uma vez na faixa
+  "dia todo" (outros eventos de dia todo nesses dias: "+N", e entram no
+  toque). No calendário, faixa contínua por trás dos dias, arredondada no
+  começo, no fim e nas bordas da semana. As aulas continuam visíveis por
+  baixo; apagar ou não é a escolha Sem aula/Mantém.
+- **Padrão do app: explicação só no segurar.** Texto que explica uma opção
+  (o que "Sem aula" ou "Comemorativa" faz) não fica na tela; aparece ao
+  segurar a opção (tooltip). Vale pra features novas.
+
 **Técnico**:
 - Modelo: dia todo de vários dias guarda o **último dia** em `fim`
   (meia-noite, inclusivo). `fim` nulo = um dia (todo evento já salvo

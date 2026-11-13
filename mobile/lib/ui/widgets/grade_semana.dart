@@ -7,6 +7,7 @@ import '../../model/evento.dart';
 import '../../model/item.dart';
 import '../../model/tabela.dart';
 import '../../theme/color_density.dart';
+import '../../theme/tipo_evento_visual.dart';
 import '../../util/eventos_na_grade.dart';
 import '../../util/formato_data.dart';
 import '../../util/horario_atual.dart' as horario_atual;
@@ -96,7 +97,8 @@ class GradeSemana extends StatelessWidget {
     final slotAgora = semanaAtual ? _slotCorrente(agora) : -1;
     final topoLinhaDoAgora = _topoLinhaDoAgora(agora, hoje);
 
-    return Stack(
+    return LayoutBuilder(
+      builder: (context, constraints) => Stack(
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,9 +196,14 @@ class GradeSemana extends StatelessWidget {
                             ),
                           ),
                         ),
+                        // Vários dias vão no bloco por cima (ver
+                        // [_blocos]); aqui só os de um dia.
                         if (_temFaixaDiaTodo)
                           _Faixa(
-                            ocorrencias: eventos!.diaTodo(tabela.dias[dia]),
+                            ocorrencias: [
+                              for (final o in eventos!.diaTodo(tabela.dias[dia]))
+                                if (!o.variosDias) o,
+                            ],
                             altura: _alturaFaixa,
                             titulo:
                                 'Dia todo · ${rotuloDoDia(eventos!.dataDe(tabela.dias[dia]), agora)}',
@@ -255,6 +262,7 @@ class GradeSemana extends StatelessWidget {
             ],
           ],
         ),
+        ..._blocos(context, constraints.maxWidth),
         if (topoLinhaDoAgora != null)
           Positioned(
             top: topoLinhaDoAgora,
@@ -265,7 +273,107 @@ class GradeSemana extends StatelessWidget {
             ),
           ),
       ],
+    ),
     );
+  }
+
+  /// Evento de vários dias (viagem, recesso) vira um bloco só sobre os dias
+  /// que ocupa nesta semana: contorno e fundo leve na cor dele por toda a
+  /// altura, e o nome uma vez na faixa "dia todo". As aulas continuam
+  /// visíveis por baixo (apagar ou não é escolha da viagem).
+  List<Widget> _blocos(BuildContext context, double largura) {
+    final ev = eventos;
+    if (ev == null) return const [];
+    final scheme = Theme.of(context).colorScheme;
+    final n = tabela.dias.length;
+    final larguraDia = (largura - _larguraHora - (n - 1)) / n;
+    final altura = _alturaCabecalho +
+        _alturaFaixa +
+        tabela.qtdHorarios * alturaLinha +
+        (_temFaixaFora ? _alturaFaixa : 0);
+
+    final vistos = <String>{};
+    final widgets = <Widget>[];
+    final todos = [for (final d in tabela.dias) ...ev.diaTodo(d)];
+    for (final o in todos) {
+      if (!o.variosDias || !vistos.add('${o.evento.id}|${o.inicio}')) continue;
+      final cor = corDoEvento(o.evento, itemPorId(o.evento.itemId), scheme);
+      // Trechos de colunas seguidas que a ocorrência cobre.
+      final cobertas = [
+        for (var i = 0; i < n; i++)
+          if (o.cobre(ev.dataDe(tabela.dias[i]))) i,
+      ];
+      var k = 0;
+      while (k < cobertas.length) {
+        var fimTrecho = k;
+        while (fimTrecho + 1 < cobertas.length && cobertas[fimTrecho + 1] == cobertas[fimTrecho] + 1) {
+          fimTrecho++;
+        }
+        final ini = cobertas[k];
+        final fim = cobertas[fimTrecho];
+        final esquerda = _larguraHora + ini * (larguraDia + 1);
+        final largo = (fim - ini + 1) * larguraDia + (fim - ini);
+        // Outros eventos de dia todo nesses dias: ficam embaixo do nome,
+        // então entram no toque e num "+N".
+        final outros = [
+          for (var i = ini; i <= fim; i++)
+            for (final x in ev.diaTodo(tabela.dias[i]))
+              if (!x.variosDias) x,
+        ];
+        widgets
+          ..add(Positioned(
+            left: esquerda,
+            top: 0,
+            width: largo,
+            height: altura,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: cor.withValues(alpha: 0.08),
+                  border: Border.all(color: cor.withValues(alpha: 0.55), width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ))
+          ..add(Positioned(
+            left: esquerda + 3,
+            top: _alturaCabecalho + 2,
+            width: largo - 6,
+            height: _alturaFaixa - 4,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => abrirFolhaDeEventos(
+                context,
+                titulo: o.evento.titulo,
+                ocorrencias: [o, ...outros],
+              ),
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: cor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  outros.isEmpty ? o.evento.titulo : '${o.evento.titulo} · +${outros.length}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: ThemeData.estimateBrightnessForColor(cor) == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ));
+        k = fimTrecho + 1;
+      }
+    }
+    return widgets;
   }
 }
 

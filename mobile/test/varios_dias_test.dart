@@ -7,6 +7,7 @@ import 'package:tabelador/model/evento.dart';
 import 'package:tabelador/model/tabela.dart';
 import 'package:tabelador/native_widget/today_schedule_snapshot.dart';
 import 'package:tabelador/theme/color_density.dart';
+import 'package:tabelador/ui/widgets/grade_semana.dart';
 import 'package:tabelador/util/eventos_na_grade.dart';
 import 'package:tabelador/util/formato_data.dart';
 
@@ -163,5 +164,23 @@ void main() {
     expect([for (final e in json['events'] as List) e['date']], ['2026-11-16', '2026-11-17', '2026-11-18']);
     // 20/11 é Consciência Negra (embutido); 19/11 já é depois da volta.
     expect((json['folgas'] as Map).keys, ['2026-11-16', '2026-11-17', '2026-11-18', '2026-11-20']);
+  });
+
+  testWidgets('grade: a viagem é um bloco só, com o nome uma vez', (tester) async {
+    final ocs = _viagem().ocorrenciasEntre(_proxima, _proxima.add(const Duration(days: 7)));
+    final tabela = Tabela.nova(nome: 'T');
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: GradeSemana(
+            tabela: tabela,
+            densidade: ColorDensity.suave,
+            itemPorId: (_) => null,
+            eventos: distribuirEventos(tabela: tabela, segunda: _proxima, ocorrencias: ocs),
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('Viagem a BH'), findsOneWidget);
   });
 }
