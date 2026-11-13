@@ -26,17 +26,6 @@ class SemanaScreen extends StatelessWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => DiaEditor(diaInicial: dia)));
   }
 
-  /// Troca pra próxima/anterior tabela na lista — o mesmo swipe horizontal
-  /// que o editor do dia usa pra trocar de dia, aqui trocando de tabela.
-  void _trocarTabela(BuildContext context, AppState state, int delta) {
-    final tabelas = state.tabelas;
-    if (tabelas.length < 2) return;
-    final indice = tabelas.indexWhere((t) => t.id == state.tabelaAtivaId);
-    if (indice == -1) return;
-    final novoIndice = (indice + delta + tabelas.length) % tabelas.length;
-    state.definirTabelaAtiva(tabelas[novoIndice].id);
-  }
-
   /// Início do slot nesta semana — ou na próxima, se nesta já passou. É a
   /// data que um evento criado pelo toque longo recebe: "prova no horário da
   /// aula" quase sempre é numa aula que ainda vai acontecer.
@@ -79,6 +68,16 @@ class SemanaScreen extends StatelessWidget {
             ? const Text('Tabelador')
             : _SeletorDeTabela(ativa: tabela, tabelas: state.tabelas),
         actions: [
+          // Sempre no mesmo lugar, longe das setas: tocar rápido em › pra
+          // avançar várias semanas não acerta o "Hoje" sem querer.
+          if (tabela != null)
+            IconButton(
+              onPressed: state.mostrandoSemanaAtual()
+                  ? null
+                  : () => state.mostrarSemana(DateTime.now()),
+              icon: const Icon(Icons.today_outlined),
+              tooltip: 'Voltar pra hoje',
+            ),
           IconButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const CalendarioScreen()),
@@ -107,10 +106,12 @@ class SemanaScreen extends StatelessWidget {
       body: tabela == null
           ? const _SemTabela()
           : GestureDetector(
+              // Arrastar pro lado passa a semana, como as setas. Tabela se
+              // troca pelo menu do título.
               onHorizontalDragEnd: (d) {
                 final v = d.primaryVelocity ?? 0;
-                if (v < -200) _trocarTabela(context, state, 1);
-                if (v > 200) _trocarTabela(context, state, -1);
+                if (v < -200) state.andarSemanas(1);
+                if (v > 200) state.andarSemanas(-1);
               },
               child: SemanaCorpo(
                 tabela: tabela,
@@ -141,8 +142,8 @@ class SemanaScreen extends StatelessWidget {
   }
 }
 
-/// `‹  16 – 22 de novembro  ›` acima da grade, e "Hoje" quando a semana
-/// mostrada não é a atual. Arrastar a grade continua trocando de tabela.
+/// `‹  16 – 22 de novembro  ›` acima da grade. Nada aparece nem some nela,
+/// pra as setas nunca mudarem de lugar ("Hoje" fica na barra do topo).
 class _BarraDaSemana extends StatelessWidget {
   const _BarraDaSemana();
 
@@ -178,11 +179,6 @@ class _BarraDaSemana extends StatelessWidget {
           tooltip: 'Próxima semana',
           visualDensity: VisualDensity.compact,
         ),
-        if (!atual)
-          TextButton(
-            onPressed: () => state.mostrarSemana(agora),
-            child: const Text('Hoje'),
-          ),
       ],
     );
   }

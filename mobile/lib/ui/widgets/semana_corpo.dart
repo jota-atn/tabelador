@@ -86,7 +86,12 @@ class SemanaCorpo extends StatelessWidget {
             constraints: BoxConstraints(
               minHeight: constraints.maxHeight - _padding.vertical,
             ),
-            child: Center(child: conteudo),
+            // Com a lista embaixo (tela inicial) a grade fica presa no topo:
+            // centralizar faria ela pular a cada semana com mais ou menos
+            // eventos. Sem lista, centraliza como antes.
+            child: rodape == null
+                ? Center(child: conteudo)
+                : Align(alignment: Alignment.topCenter, child: conteudo),
           ),
         );
       },

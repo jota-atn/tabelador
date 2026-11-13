@@ -10,6 +10,7 @@ import 'package:tabelador/model/tabela.dart';
 import 'package:tabelador/state/app_state.dart';
 import 'package:tabelador/theme/item_palette.dart';
 import 'package:tabelador/ui/widgets/grade_semana.dart';
+import 'package:tabelador/util/formato_data.dart';
 
 void semear({
   List<Item> itens = const [],
@@ -39,6 +40,12 @@ final _calc = Item(
   tipo: 'Aula',
   cor: ItemColor.oceano,
 );
+
+/// Segunda-feira daqui a [semanas] semanas.
+DateTime _segundaDaqui(int semanas) {
+  final h = DateTime.now();
+  return DateTime(h.year, h.month, h.day - (h.weekday - 1) + 7 * semanas);
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({'onboarding_seen': true}));
@@ -102,7 +109,7 @@ void main() {
       );
     });
 
-    testWidgets('arrastar a grade troca de tabela', (tester) async {
+    testWidgets('arrastar a grade passa a semana, não a tabela', (tester) async {
       final a = Tabela.nova(nome: 'Primeira');
       final b = Tabela.nova(nome: 'Segunda');
       semear(tabelas: [a, b], ativa: a.id);
@@ -110,34 +117,42 @@ void main() {
       await tester.pumpWidget(const TabeladorApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Primeira'), findsOneWidget);
-
       await tester.fling(find.byType(GradeSemana), const Offset(-400, 0), 1000);
       await tester.pumpAndSettle();
 
-      expect((await lerDoDisco()).tabelaAtiva?.nome, 'Segunda');
+      expect(find.text('Semana que vem'), findsOneWidget);
+      expect((await lerDoDisco()).tabelaAtiva?.nome, 'Primeira');
+
+      await tester.fling(find.byType(GradeSemana), const Offset(400, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('Esta semana'), findsOneWidget);
     });
 
-    testWidgets('setas trocam de semana; lista acompanha; Hoje volta', (tester) async {
+    testWidgets('setas trocam de semana sem mexer na grade; Hoje volta', (tester) async {
       final tabela = Tabela.nova(nome: '2026.1');
       semear(tabelas: [tabela], ativa: tabela.id);
 
       await tester.pumpWidget(const TabeladorApp());
       await tester.pumpAndSettle();
 
-      final hoje = find.widgetWithText(TextButton, 'Hoje');
+      IconButton hoje() => tester.widget<IconButton>(
+            find.ancestor(of: find.byTooltip('Voltar pra hoje'), matching: find.byType(IconButton)),
+          );
+      final topoDaGrade = tester.getTopLeft(find.byType(GradeSemana));
       expect(find.text('Esta semana'), findsOneWidget);
-      expect(hoje, findsNothing);
+      expect(hoje().onPressed, isNull); // já está em hoje
 
       await tester.tap(find.byTooltip('Próxima semana'));
+      await tester.tap(find.byTooltip('Próxima semana'));
       await tester.pumpAndSettle();
-      expect(find.text('Semana que vem'), findsOneWidget);
-      expect(hoje, findsOneWidget);
+      expect(find.text('Semana de ${diaMes(_segundaDaqui(2))}'), findsOneWidget);
+      expect(hoje().onPressed, isNotNull);
+      // A grade não sobe nem desce com a semana.
+      expect(tester.getTopLeft(find.byType(GradeSemana)), topoDaGrade);
 
-      await tester.tap(hoje);
+      await tester.tap(find.byTooltip('Voltar pra hoje'));
       await tester.pumpAndSettle();
       expect(find.text('Esta semana'), findsOneWidget);
-      expect(hoje, findsNothing);
     });
 
     testWidgets('destaca hoje só quando é um dos dias da tabela',

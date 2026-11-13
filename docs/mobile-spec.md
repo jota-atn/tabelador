@@ -760,9 +760,17 @@ Motivo: no teste da v1.3 não dava pra ver o feriado da sexta seguinte — a
 grade só mostrava a semana atual.
 
 **Decisões do usuário**:
-- **Barra com setas** acima da grade: `‹  16 – 22 de novembro  ›` e um
-  botão **Hoje** só quando a semana mostrada não é a atual. **Arrastar a
-  grade continua trocando de tabela** (nada do que já existe muda).
+- **Barra com setas** acima da grade: `‹  16 – 22 de novembro  ›`.
+- **Revisto após teste no aparelho (1.4.0+9)**:
+  - Arrastar a grade **passa a semana** (antes trocava de tabela — duas
+    funções pro mesmo gesto confundiam). Tabela só pelo menu do título;
+    o swipe de tabela foi abandonado.
+  - **Grade fixa**: presa no topo (não centraliza com a lista embaixo) e a
+    faixa "dia todo" sempre reservada — a grade não sobe/desce de uma
+    semana pra outra.
+  - **Hoje** virou ícone fixo na barra do topo (apagado na semana atual).
+    Do lado das setas ele aparecia/sumia e pegava toque sem querer ao
+    avançar várias semanas.
 - A lista **"Esta semana" acompanha** a semana mostrada.
 - No **calendário do mês**, o dia escolhido ganha **"Ver na grade"**, que
   pula pra semana daquele dia na tela inicial.
