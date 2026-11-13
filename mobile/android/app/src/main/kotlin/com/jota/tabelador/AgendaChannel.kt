@@ -2,7 +2,10 @@ package com.jota.tabelador
 
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.CalendarContract
@@ -54,6 +57,7 @@ object AgendaChannel {
                             apagarEvento(app, call.argument<String>("eventoId")!!.toLong())
                             null
                         }
+                        "abrirLink" -> abrirLink(app, call.argument<String>("url")!!)
                         "lerEventos" -> lerEventos(
                             app,
                             call.argument<List<String>>("ids")!!.map { it.toLong() },
@@ -74,6 +78,20 @@ object AgendaChannel {
             }
         }
     }
+
+    /**
+     * Abre um link no app que cuida dele (Meet, Zoom, Teams) ou no
+     * navegador. Mora aqui pra não precisar de plugin novo só pra isso.
+     */
+    private fun abrirLink(context: Context, url: String): Boolean =
+        try {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
 
     private fun listarAgendas(context: Context): List<Map<String, Any?>> {
         val projecao = arrayOf(

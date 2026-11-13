@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../model/evento.dart';
 import '../../state/app_state.dart';
 import '../../util/formato_data.dart';
+import '../../util/link_reuniao.dart';
 import '../../theme/tipo_evento_visual.dart';
 import '../detalhes_evento.dart';
 import '../tarefas_acoes.dart';
@@ -65,6 +66,7 @@ class EventoTile extends StatelessWidget {
             ? inicioDoDia(ocorrencia.inicio).isBefore(inicioDoDia(agora))
             : ocorrencia.inicio.isBefore(agora));
     final tipo = TipoEvento.doTexto(evento.tipo);
+    final link = linkDeReuniao(evento);
 
     final detalhes = [
       if (tarefa && evento.semData)
@@ -153,7 +155,20 @@ class EventoTile extends StatelessWidget {
             ),
       // A cor do item vinculado, na densidade do app — o mesmo sinal visual
       // que liga o evento à disciplina na grade.
-      trailing: item == null
+      // Reunião começando (10 min antes até o fim): o atalho de entrar
+      // toma o lugar do marcador.
+      trailing: link != null && horaDeEntrar(ocorrencia, agora)
+          ? IconButton.filledTonal(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                if (!await abrirLink(link)) {
+                  messenger?.showSnackBar(const SnackBar(content: Text('Não deu pra abrir o link.')));
+                }
+              },
+              icon: const Icon(Icons.videocam_outlined),
+              tooltip: 'Entrar',
+            )
+          : item == null
           ? (evento.externo && evento.corExterna != null
               ? CircleAvatar(
                   radius: 5,

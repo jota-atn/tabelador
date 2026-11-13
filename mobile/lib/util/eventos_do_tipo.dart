@@ -9,14 +9,53 @@ class GrupoDaLinha {
 }
 
 /// Uma série (evento que repete), com a próxima ocorrência.
+///
+/// Além do evento do app que repete, vira série o que **parece** uma: a
+/// série do Google (mesmo evento lá) e eventos separados com mesmo nome,
+/// dia da semana e horário (as reuniões do CAESI). Só pra mostrar: cada
+/// ocorrência continua sendo a sua, com o próprio link.
 class Serie {
-  const Serie(this.evento, this.proxima, this.vezes);
+  const Serie(this.evento, this.proxima, this.vezes, {this.padrao});
 
   final Evento evento;
   final Ocorrencia proxima;
 
   /// Quantas ocorrências na janela olhada (um ano).
   final int vezes;
+
+  /// "Segundas, 19:00" — pra série que não vem de uma repetição do app
+  /// (essa se descreve pela [Evento.repeticao]).
+  final String? padrao;
+}
+
+const _kDiasNoPlural = ['Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados', 'Domingos'];
+
+String _hhmm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+/// Mesmo evento recorrente no Google: id externo é `g:<EVENT_ID>:<início>`.
+String? _chaveDoGoogle(Evento e) {
+  if (!e.externo || !e.id.startsWith('g:')) return null;
+  final partes = e.id.split(':');
+  return partes.length >= 3 ? 'g:${partes[1]}' : null;
+}
+
+/// Mesmo nome (sem diferenciar maiúscula nem espaço sobrando), dia da
+/// semana e horário.
+String _chaveParecida(Ocorrencia o) {
+  final nome = o.evento.titulo.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  final quando = o.evento.diaInteiro ? 'dia' : _hhmm(o.inicio);
+  return 'p:$nome|${o.inicio.weekday}|$quando';
+}
+
+/// Descreve uma série sem repetição do app pelas datas que ela tem.
+String _padraoDe(List<Ocorrencia> l) {
+  final p = l.first;
+  final hora = p.evento.diaInteiro ? '' : ', ${_hhmm(p.inicio)}';
+  if (l.every((o) => o.inicio.weekday == p.inicio.weekday)) {
+    return '${_kDiasNoPlural[p.inicio.weekday - 1]}$hora';
+  }
+  if (l.every((o) => o.inicio.day == p.inicio.day)) return 'Todo dia ${p.inicio.day}$hora';
+  return 'Se repete';
 }
 
 /// A página de um tipo organizada.
@@ -80,20 +119,43 @@ PaginaDoTipo organizarPaginaDoTipo(List<Ocorrencia> ocorrencias, DateTime agora)
 
   final proxima = futuras.isEmpty ? null : futuras.first;
 
-  final porSerie = <String, List<Ocorrencia>>{};
+  // 1) Repetição do app: sempre série.
+  final doApp = <String, List<Ocorrencia>>{};
+  // 2) Série do Google; 3) parecidas — só com 2 ou mais.
+  final doGoogle = <String, List<Ocorrencia>>{};
   for (final o in futuras) {
-    if (o.evento.repeticao != Repeticao.nenhuma) (porSerie[o.evento.id] ??= []).add(o);
+    if (o.evento.repeticao != Repeticao.nenhuma) {
+      (doApp[o.evento.id] ??= []).add(o);
+    } else if (_chaveDoGoogle(o.evento) case final chave?) {
+      (doGoogle[chave] ??= []).add(o);
+    }
+  }
+  final agrupadas = <Ocorrencia>{
+    for (final l in doApp.values) ...l,
+    for (final l in doGoogle.values)
+      if (l.length > 1) ...l,
+  };
+  final parecidas = <String, List<Ocorrencia>>{};
+  for (final o in futuras) {
+    if (!agrupadas.contains(o)) (parecidas[_chaveParecida(o)] ??= []).add(o);
   }
   final series = [
-    for (final l in porSerie.values) Serie(l.first.evento, l.first, l.length),
-  ];
+    for (final l in doApp.values) Serie(l.first.evento, l.first, l.length),
+    for (final l in [...doGoogle.values, ...parecidas.values])
+      if (l.length > 1) Serie(l.first.evento, l.first, l.length, padrao: _padraoDe(l)),
+  ]..sort((a, b) => a.proxima.inicio.compareTo(b.proxima.inicio));
+  final emSerie = <Ocorrencia>{
+    ...agrupadas,
+    for (final l in parecidas.values)
+      if (l.length > 1) ...l,
+  };
 
   final semana = <Ocorrencia>[];
   final proximaSemana = <Ocorrencia>[];
   final porMes = <DateTime, List<Ocorrencia>>{};
   for (final o in futuras) {
     if (identical(o, proxima)) continue;
-    final repete = o.evento.repeticao != Repeticao.nenhuma;
+    final repete = emSerie.contains(o);
     if (o.inicio.isBefore(fimDaSemana)) {
       semana.add(o);
     } else if (repete) {
