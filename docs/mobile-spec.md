@@ -843,6 +843,16 @@ Hoje funciona (seções, deslizar pra concluir/apagar, seleção, pesquisa, filt
 - Descartado: faixa horizontal de dias (o filtro de período continua no menu de filtros); sequência de dias (gamificação) fica como possível opção futura em Ajustes.
 - Filtro de concluídas continua na tela (decidido no ponto 1).
 
+### Ponto 4 — Página de cada tipo (decidido)
+
+Hoje tudo rola junto e a lista de baixo é a linha do tempo de 12 meses (não segue o calendário).
+
+- **Topo fixo** (resumo, destaque, calendário); só a lista rola. Sobram ~3 linhas de lista: destaque mais baixo e calendário mais apertado. Plano B se ficar apertado: calendário encolhe pra uma linha da semana ao rolar.
+- **Destaque desliza** entre as próximas 3–4 ocorrências (card seguinte aparecendo na borda; com uma só, fica como hoje).
+- **Lista = mês do calendário**: troca junto com o mês; dias passados do mês apagados. Some o "Últimos 30 dias" (passado = voltar o mês). Mês vazio: "Nada em dezembro · próxima em janeiro ›".
+- **Tocar num dia filtra a lista** ("Sex 14 ×" volta ao mês), no lugar do painel do dia.
+- **Séries uma vez por mês** com contagem ("↻ Reunião do grupo · segundas 16h · 4× em novembro").
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
