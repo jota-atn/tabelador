@@ -832,6 +832,17 @@ Causa da rolagem: 8 cards quadrados (~170dp cada) em ordem fixa + card de Tarefa
 - Tarefas continua sempre no topo.
 - Carrossel com os cards dos tipos foi descartado (troca rolagem vertical por horizontal e esconde a visão geral).
 
+### Ponto 3.3 — Tela de Tarefas (decidido)
+
+Hoje funciona (seções, deslizar pra concluir/apagar, seleção, pesquisa, filtros), mas é só lista. Vira a to-do com cara do app:
+
+- **Topo com progresso do dia**: anel que enche com as de hoje ("Hoje: 2 de 5"), linha com atrasadas e o resto da semana. Sem tarefas hoje, vira uma frase e mostra a semana.
+- **Linhas com cor**: as mesmas linhas coloridas do resumo da Semana (sigla do item em chip na cor dele), mas a **faixa da esquerda é a cor da prioridade** (alta vermelha, normal neutra, baixa apagada), não a do tipo.
+- **Concluir com um pequeno momento**: círculo enche com um pulso curto (< 0,5 s), risca, o anel avança; ao zerar as de hoje, mensagem curta ("Dia limpo"). Sem confete, sem som.
+- **Adicionar rápido embaixo** no lugar do botão flutuante: campo "Nova tarefa…"; ao digitar aparecem chips (Hoje, Amanhã, data, item, prioridade); enter cria sem abrir folha. "Mais opções" abre a folha de evento com o que já foi digitado. Sem interpretar texto livre.
+- Descartado: faixa horizontal de dias (o filtro de período continua no menu de filtros); sequência de dias (gamificação) fica como possível opção futura em Ajustes.
+- Filtro de concluídas continua na tela (decidido no ponto 1).
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
