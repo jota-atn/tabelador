@@ -18,9 +18,11 @@ TipoEvento _tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
 /// linha, não só no destaque.
 const _kContaDias = {TipoEvento.prova, TipoEvento.viagem, TipoEvento.aniversario};
 
-/// A página de um tipo: o próximo em destaque com contagem regressiva, um
-/// calendário do mês com bolinhas na cor do tipo (tocar num dia mostra o
-/// dia), as séries que se repetem numa linha cada, e a linha do tempo.
+/// A página de um tipo. Topo fixo: o próximo em destaque com contagem
+/// regressiva (desliza pras seguintes) e o calendário do mês com bolinhas na
+/// cor do tipo. Embaixo, a única parte que rola: a lista do mês do
+/// calendário (séries uma vez, com quantas no mês) ou, tocando num dia, só
+/// aquele dia.
 class EventosDoTipoScreen extends StatefulWidget {
   const EventosDoTipoScreen({super.key, required this.tipo});
 
@@ -33,7 +35,6 @@ class EventosDoTipoScreen extends StatefulWidget {
 class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
   late DateTime _mes;
   DateTime? _diaEscolhido;
-  bool _passados = false;
 
   @override
   void initState() {
@@ -55,17 +56,37 @@ class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
     final agora = DateTime.now();
     final hoje = inicioDoDia(agora);
 
-    final pagina = organizarPaginaDoTipo(
-      _doTipo(state, hoje.subtract(const Duration(days: 30)), hoje.add(const Duration(days: 365))),
-      agora,
-    );
+    final pagina = organizarPaginaDoTipo(_doTipo(state, hoje, hoje.add(const Duration(days: 365))), agora);
     final doMes = _doTipo(state, _mes, DateTime(_mes.year, _mes.month + 1));
     final diasComEvento = {for (final o in doMes) o.inicio.day};
-    final doDia = _diaEscolhido == null
-        ? const <Ocorrencia>[]
-        : [for (final o in doMes) if (inicioDoDia(o.inicio) == _diaEscolhido) o];
+    final vazio = pagina.total == 0 && doMes.isEmpty;
 
-    final vazio = pagina.total == 0 && pagina.passadas.isEmpty;
+    final topo = <Widget>[
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+        child: Text(
+          _resumo(pagina, state, agora),
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+      ),
+      if (pagina.destaques.isNotEmpty)
+        _Destaques(ocorrencias: pagina.destaques, tipo: widget.tipo, cor: cor)
+      else if (vazio)
+        _Vazio(tipo: widget.tipo),
+      const SizedBox(height: 12),
+      _MiniCalendario(
+        mes: _mes,
+        cor: cor,
+        diasComEvento: diasComEvento,
+        escolhido: _diaEscolhido,
+        aoMudarMes: (m) => setState(() {
+          _mes = m;
+          _diaEscolhido = null;
+        }),
+        aoEscolher: (d) => setState(() => _diaEscolhido = _diaEscolhido == d ? null : d),
+      ),
+    ];
+    final lista = _lista(state, doMes, cor, agora);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,85 +98,85 @@ class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
           ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-            child: Text(
-              _resumo(pagina, state, agora),
-              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
-            ),
-          ),
-          if (pagina.proxima != null)
-            _Destaque(ocorrencia: pagina.proxima!, tipo: widget.tipo, cor: cor)
-          else if (vazio)
-            _Vazio(tipo: widget.tipo),
-          const SizedBox(height: 16),
-          _MiniCalendario(
-            mes: _mes,
-            cor: cor,
-            diasComEvento: diasComEvento,
-            escolhido: _diaEscolhido,
-            aoMudarMes: (m) => setState(() {
-              _mes = m;
-              _diaEscolhido = null;
-            }),
-            aoEscolher: (d) => setState(() => _diaEscolhido = _diaEscolhido == d ? null : d),
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: _diaEscolhido == null
-                ? const SizedBox(width: double.infinity)
-                : _PainelDoDia(
-                    dia: _diaEscolhido!,
-                    ocorrencias: doDia,
-                    tipo: widget.tipo,
-                    cor: cor,
-                    aoFechar: () => setState(() => _diaEscolhido = null),
-                  ),
-          ),
-          if (pagina.series.isNotEmpty) ...[
-            const _Rotulo('Se repetem'),
-            for (final s in pagina.series) _LinhaSerie(serie: s, cor: cor),
-          ],
-          for (final g in pagina.grupos) ...[
-            _Rotulo('${g.rotulo} · ${g.ocorrencias.length}'),
-            for (var i = 0; i < g.ocorrencias.length; i++)
-              _LinhaDoTempo(
-                ocorrencia: g.ocorrencias[i],
-                tipo: widget.tipo,
-                cor: cor,
-                ultima: i == g.ocorrencias.length - 1,
-              ),
-          ],
-          if (pagina.passadas.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => setState(() => _passados = !_passados),
-                icon: Icon(_passados ? Icons.expand_less : Icons.history),
-                label: Text(_passados ? 'Esconder os passados' : 'Últimos 30 dias (${pagina.passadas.length})'),
-              ),
-            ),
-            if (_passados)
-              for (var i = 0; i < pagina.passadas.length; i++)
-                Opacity(
-                  opacity: 0.6,
-                  child: _LinhaDoTempo(
-                    ocorrencia: pagina.passadas[i],
-                    tipo: widget.tipo,
-                    cor: scheme.outline,
-                    ultima: i == pagina.passadas.length - 1,
-                  ),
+      body: LayoutBuilder(
+        builder: (context, c) {
+          // Tela baixa (deitado, janela pequena): sobra quase nada pra lista
+          // com o topo fixo — aí rola tudo junto, como antes.
+          if (c.maxHeight < 620) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+              children: [...topo, ...lista],
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...topo,
+                Expanded(
+                  child: ListView(padding: const EdgeInsets.only(bottom: 32), children: lista),
                 ),
-          ],
-        ],
+              ],
+            ),
+          );
+        },
       ),
     );
+  }
+
+  /// A parte de baixo: o mês do calendário, ou só o dia tocado.
+  List<Widget> _lista(AppState state, List<Ocorrencia> doMes, Color cor, DateTime agora) {
+    final hoje = inicioDoDia(agora);
+    Widget linha(Ocorrencia o, bool ultima) {
+      final passou = inicioDoDia(o.inicio).isBefore(hoje);
+      final w = _LinhaDoTempo(ocorrencia: o, tipo: widget.tipo, cor: cor, ultima: ultima);
+      return passou ? Opacity(opacity: 0.55, child: w) : w;
+    }
+
+    if (_diaEscolhido case final dia?) {
+      final doDia = [for (final o in doMes) if (o.cobre(dia)) o];
+      return [
+        _Cabecalho(
+          texto: _capitalizar(dataPorExtenso(dia, agora)),
+          aoLimpar: () => setState(() => _diaEscolhido = null),
+        ),
+        if (doDia.isEmpty)
+          _Nada('Nada neste dia.')
+        else
+          for (var i = 0; i < doDia.length; i++) linha(doDia[i], i == doDia.length - 1),
+      ];
+    }
+
+    final mes = organizarMesDoTipo(doMes, agora);
+    final nome = nomeDoMes(_mes, agora);
+    final n = mes.series.length + mes.avulsas.length;
+    if (mes.vazio) {
+      // Pula pro próximo mês que tem algo (só olhando pra frente).
+      final fimDoMes = DateTime(_mes.year, _mes.month + 1);
+      final seguinte = _doTipo(state, fimDoMes, fimDoMes.add(const Duration(days: 365))).firstOrNull;
+      return [
+        _Cabecalho(texto: nome),
+        _Nada('Nada em ${nome.toLowerCase()}.'),
+        if (seguinte != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => setState(() => _mes = DateTime(seguinte.inicio.year, seguinte.inicio.month)),
+              icon: const Icon(Icons.chevron_right),
+              label: Text(
+                '${widget.tipo == TipoEvento.prova || widget.tipo == TipoEvento.consulta || widget.tipo == TipoEvento.reuniao || widget.tipo == TipoEvento.viagem ? 'Próxima' : 'Próximo'} em '
+                '${nomeDoMes(DateTime(seguinte.inicio.year, seguinte.inicio.month), agora).toLowerCase()}',
+              ),
+            ),
+          ),
+      ];
+    }
+    return [
+      _Cabecalho(texto: '$nome · $n'),
+      for (final serie in mes.series) _LinhaSerie(serie: serie, cor: cor, noMes: nome.toLowerCase()),
+      for (var i = 0; i < mes.avulsas.length; i++) linha(mes.avulsas[i], i == mes.avulsas.length - 1),
+    ];
   }
 
   /// A linha de cima: quantos, e o dado que importa pro tipo.
@@ -181,12 +202,94 @@ class _EventosDoTipoScreenState extends State<EventosDoTipoScreen> {
 
 // --------------------------------------------------------------- destaque
 
+/// Altura fixa do destaque — o topo da página não rola, e o PageView
+/// precisa de uma.
+const double _kAlturaDoDestaque = 126;
+
+/// O destaque desliza entre as próximas (uma por evento); o card seguinte
+/// aparece na borda pra mostrar que dá.
+class _Destaques extends StatefulWidget {
+  const _Destaques({required this.ocorrencias, required this.tipo, required this.cor});
+
+  final List<Ocorrencia> ocorrencias;
+  final TipoEvento tipo;
+  final Color cor;
+
+  @override
+  State<_Destaques> createState() => _DestaquesState();
+}
+
+class _DestaquesState extends State<_Destaques> {
+  late final PageController _controle = PageController(viewportFraction: 0.9);
+  int _pagina = 0;
+
+  @override
+  void dispose() {
+    _controle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.ocorrencias.length;
+    if (n == 1) {
+      return SizedBox(
+        height: _kAlturaDoDestaque,
+        child: _Destaque(ocorrencia: widget.ocorrencias.single, tipo: widget.tipo, cor: widget.cor, primeira: true),
+      );
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        SizedBox(
+          height: _kAlturaDoDestaque,
+          child: PageView.builder(
+            controller: _controle,
+            padEnds: false,
+            itemCount: n,
+            onPageChanged: (i) => setState(() => _pagina = i),
+            itemBuilder: (context, i) => Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: _Destaque(
+                ocorrencia: widget.ocorrencias[i],
+                tipo: widget.tipo,
+                cor: widget.cor,
+                primeira: i == 0,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < n; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _pagina ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == _pagina ? widget.cor : scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _Destaque extends StatelessWidget {
-  const _Destaque({required this.ocorrencia, required this.tipo, required this.cor});
+  const _Destaque({required this.ocorrencia, required this.tipo, required this.cor, required this.primeira});
 
   final Ocorrencia ocorrencia;
   final TipoEvento tipo;
   final Color cor;
+
+  /// "PRÓXIMA PROVA" só na primeira; as seguintes dizem "DEPOIS".
+  final bool primeira;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +310,9 @@ class _Destaque extends StatelessWidget {
       _ => ('${(dias / 30).round()}', 'meses'),
     };
 
-    final rotulo = switch (tipo) {
+    final rotulo = !primeira
+        ? 'DEPOIS'
+        : switch (tipo) {
       TipoEvento.prova => 'PRÓXIMA PROVA',
       TipoEvento.consulta => 'PRÓXIMA CONSULTA',
       TipoEvento.reuniao => 'PRÓXIMA REUNIÃO',
@@ -215,8 +320,8 @@ class _Destaque extends StatelessWidget {
       TipoEvento.aniversario => 'PRÓXIMO ANIVERSÁRIO',
       TipoEvento.feriado => 'PRÓXIMO FERIADO',
       TipoEvento.compromisso => 'PRÓXIMO COMPROMISSO',
-      _ => 'PRÓXIMO',
-    };
+          _ => 'PRÓXIMO',
+        };
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -244,21 +349,21 @@ class _Destaque extends StatelessWidget {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Contagem regressiva: o número grande é o que o olho pega.
                   Container(
-                    width: 76,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    width: 64,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(20)),
                     child: Column(
                       children: [
                         Text(
                           numero,
                           style: TextStyle(
-                            fontSize: numero.length > 3 ? 20 : 30,
+                            fontSize: numero.length > 3 ? 18 : 26,
                             fontWeight: FontWeight.w800,
                             color: sobre,
                             height: 1.1,
@@ -286,20 +391,23 @@ class _Destaque extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           e.titulo,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, height: 1.2),
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, height: 1.2),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           [
                             _capitalizar(dataPorExtenso(ocorrencia.inicio, agora)),
                             if (!e.diaInteiro) faixaHorario(ocorrencia),
                           ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
                         ),
-                        if (local != null) ...[
-                          const SizedBox(height: 8),
+                        // Uma linha a mais só: o item, ou (sem item) o local.
+                        if (local != null && item == null) ...[
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               Icon(Icons.place_outlined, size: tipo == TipoEvento.consulta ? 20 : 16, color: cor),
@@ -307,7 +415,7 @@ class _Destaque extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   local,
-                                  maxLines: 2,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: tipo == TipoEvento.consulta ? 14.5 : 13,
@@ -319,15 +427,15 @@ class _Destaque extends StatelessWidget {
                           ),
                         ],
                         if (item != null) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               ItemSwatch(
                                 cor: item.cor,
                                 densidade: state.densidade,
                                 texto: item.sigla,
-                                largura: 48,
-                                altura: 22,
+                                largura: 44,
+                                altura: 20,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -389,7 +497,7 @@ class _MiniCalendario extends StatelessWidget {
       color: scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
         child: Column(
           children: [
             Row(
@@ -430,7 +538,7 @@ class _MiniCalendario extends StatelessWidget {
               crossAxisCount: 7,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.45,
               children: [
                 for (var i = 0; i < vazios; i++) const SizedBox.shrink(),
                 for (var d = 1; d <= diasNoMes; d++)
@@ -447,8 +555,8 @@ class _MiniCalendario extends StatelessWidget {
                         children: [
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            width: 32,
-                            height: 32,
+                            width: 28,
+                            height: 28,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -472,10 +580,10 @@ class _MiniCalendario extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Container(
-                            width: 5,
-                            height: 5,
+                            width: 4,
+                            height: 4,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: tem && !sel ? cor : Colors.transparent,
@@ -494,91 +602,7 @@ class _MiniCalendario extends StatelessWidget {
   }
 }
 
-class _PainelDoDia extends StatelessWidget {
-  const _PainelDoDia({
-    required this.dia,
-    required this.ocorrencias,
-    required this.tipo,
-    required this.cor,
-    required this.aoFechar,
-  });
-
-  final DateTime dia;
-  final List<Ocorrencia> ocorrencias;
-  final TipoEvento tipo;
-  final Color cor;
-  final VoidCallback aoFechar;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final agora = DateTime.now();
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: cor.withValues(alpha: 0.5)),
-        ),
-        padding: const EdgeInsets.fromLTRB(12, 4, 4, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _capitalizar(dataPorExtenso(dia, agora)),
-                    style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface),
-                  ),
-                ),
-                IconButton(icon: const Icon(Icons.close, size: 20), tooltip: 'Fechar', onPressed: aoFechar),
-              ],
-            ),
-            if (ocorrencias.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Nada neste dia.',
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              )
-            else
-              for (var i = 0; i < ocorrencias.length; i++)
-                _LinhaDoTempo(
-                  ocorrencia: ocorrencias[i],
-                  tipo: tipo,
-                  cor: cor,
-                  ultima: i == ocorrencias.length - 1,
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ------------------------------------------------------------ séries e linha
-
-class _Rotulo extends StatelessWidget {
-  const _Rotulo(this.texto);
-
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 22, 4, 8),
-        child: Text(
-          texto.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11.5,
-            letterSpacing: 0.9,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
-}
 
 /// "Toda semana · qui 16:00" — o jeito curto de dizer quando a série cai.
 String _quandoRepete(Evento e) {
@@ -593,10 +617,13 @@ String _quandoRepete(Evento e) {
 }
 
 class _LinhaSerie extends StatelessWidget {
-  const _LinhaSerie({required this.serie, required this.cor});
+  const _LinhaSerie({required this.serie, required this.cor, required this.noMes});
 
   final Serie serie;
   final Color cor;
+
+  /// "novembro": a contagem é do mês da lista.
+  final String noMes;
 
   @override
   Widget build(BuildContext context) {
@@ -635,17 +662,18 @@ class _LinhaSerie extends StatelessWidget {
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
                       Text(
-                        '${serie.padrao ?? _quandoRepete(e)} · próxima ${rotuloDoDia(serie.proxima.inicio, agora).toLowerCase()}',
+                        [
+                          serie.padrao ?? _quandoRepete(e),
+                          '${serie.vezes}× em $noMes',
+                          if (naoPassou(serie.proxima, agora))
+                            'próxima ${rotuloDoDia(serie.proxima.inicio, agora).toLowerCase()}',
+                        ].join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
-                ),
-                Text(
-                  '${serie.vezes}×',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cor),
                 ),
               ],
             ),
@@ -838,4 +866,55 @@ class _Vazio extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cabeçalho da lista: "Novembro · 4", ou o dia tocado com um × pra voltar
+/// ao mês.
+class _Cabecalho extends StatelessWidget {
+  const _Cabecalho({required this.texto, this.aoLimpar});
+
+  final String texto;
+  final VoidCallback? aoLimpar;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rotulo = Text(
+      texto.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11.5,
+        letterSpacing: 0.9,
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurfaceVariant,
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 0, 6),
+      child: aoLimpar == null
+          ? rotulo
+          : Row(
+              children: [
+                Expanded(child: rotulo),
+                InputChip(
+                  label: const Text('Mês todo'),
+                  onPressed: aoLimpar,
+                  onDeleted: aoLimpar,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _Nada extends StatelessWidget {
+  const _Nada(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+        child: Text(texto, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      );
 }
