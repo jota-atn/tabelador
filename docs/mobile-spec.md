@@ -822,6 +822,16 @@ Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem co
 - **Tamanho fixo**: o resumo nunca cresce dentro da tela. Limite de linhas (tarefas e eventos; o que sobra de um vai pro outro), ordem: atrasadas, hoje, próximos dias. "Ver a semana toda" abre uma **folha por cima** com a lista completa; a rolagem acontece nela. Substitui o "Ver mais N eventos" que abria a lista ali mesmo.
 - O limite é provisório: o usuário quer testar e talvez mude.
 
+### Ponto 3.2 — Aba Eventos (decidido)
+
+Causa da rolagem: 8 cards quadrados (~170dp cada) em ordem fixa + card de Tarefas ≈ 1,4 tela.
+
+- **Usados primeiro, em ordem fixa entre si** (a ordem de `TipoEvento`); um card só muda de lugar quando o tipo ganha o primeiro evento ou perde o último. Ordenar pelo evento mais próximo foi descartado: o card mudaria de lugar toda semana.
+- **Vazios viram uma linha de chips** no fim ("Sem eventos: Consulta · Viagem · Outro"); tocar abre a página do tipo. Tipo escondido em Ajustes não aparece nem como chip. Com tudo vazio, um texto curto ensina a criar.
+- **Cards mais largos que altos** (~2/3 da altura atual): ícone, nome, contagem, próximo evento numa linha, quando.
+- Tarefas continua sempre no topo.
+- Carrossel com os cards dos tipos foi descartado (troca rolagem vertical por horizontal e esconde a visão geral).
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
