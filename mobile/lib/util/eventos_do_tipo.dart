@@ -1,13 +1,5 @@
 import '../model/evento.dart';
 
-/// Um grupo da linha do tempo: "Esta semana", "Próxima semana", "Dezembro"…
-class GrupoDaLinha {
-  const GrupoDaLinha(this.rotulo, this.ocorrencias);
-
-  final String rotulo;
-  final List<Ocorrencia> ocorrencias;
-}
-
 /// Uma série (evento que repete), com a próxima ocorrência.
 ///
 /// Além do evento do app que repete, vira série o que **parece** uma: a
@@ -20,7 +12,7 @@ class Serie {
   final Evento evento;
   final Ocorrencia proxima;
 
-  /// Quantas ocorrências na janela olhada (um ano).
+  /// Quantas ocorrências na janela olhada (o ano, ou o mês da lista).
   final int vezes;
 
   /// "Segundas, 19:00" — pra série que não vem de uma repetição do app
@@ -58,27 +50,40 @@ String _padraoDe(List<Ocorrencia> l) {
   return 'Se repete';
 }
 
-/// A página de um tipo organizada.
+/// A página de um tipo organizada (o topo; a lista é por mês, ver
+/// [organizarMesDoTipo]).
 class PaginaDoTipo {
   const PaginaDoTipo({
-    required this.proxima,
+    required this.destaques,
     required this.series,
-    required this.grupos,
-    required this.passadas,
     required this.total,
   });
 
-  /// O destaque do topo: a próxima que ainda não passou.
-  final Ocorrencia? proxima;
-  final List<Serie> series;
-  final List<GrupoDaLinha> grupos;
+  /// O destaque do topo, que desliza: as próximas que ainda não passaram,
+  /// uma por evento (a reunião semanal não ocupa os 4 lugares).
+  final List<Ocorrencia> destaques;
+  Ocorrencia? get proxima => destaques.firstOrNull;
 
-  /// Dos últimos 30 dias, mais recente primeiro, sem repetição.
-  final List<Ocorrencia> passadas;
+  /// Séries no ano olhado (pro resumo do topo).
+  final List<Serie> series;
 
   /// Quantas ocorrências pela frente (contando cada repetição).
   final int total;
 }
+
+/// Um mês da lista de baixo: cada série uma vez, com quantas vezes cai no
+/// mês, e o resto avulso em ordem.
+class MesDoTipo {
+  const MesDoTipo({required this.series, required this.avulsas});
+
+  final List<Serie> series;
+  final List<Ocorrencia> avulsas;
+
+  bool get vazio => series.isEmpty && avulsas.isEmpty;
+}
+
+/// Quantos cards o destaque desliza.
+const kDestaquesDoTipo = 4;
 
 const _kMeses = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -88,7 +93,7 @@ const _kMeses = [
 String nomeDoMes(DateTime m, DateTime agora) =>
     m.year == agora.year ? _kMeses[m.month - 1] : '${_kMeses[m.month - 1]} de ${m.year}';
 
-bool _naoPassou(Ocorrencia o, DateTime agora) {
+bool naoPassou(Ocorrencia o, DateTime agora) {
   if (o.evento.diaInteiro) {
     return !DateTime(o.inicio.year, o.inicio.month, o.inicio.day)
         .isBefore(DateTime(agora.year, agora.month, agora.day));
@@ -96,87 +101,62 @@ bool _naoPassou(Ocorrencia o, DateTime agora) {
   return o.fim.isAfter(o.inicio) ? o.fim.isAfter(agora) : !o.inicio.isBefore(agora);
 }
 
-/// Organiza as [ocorrencias] de um tipo (já filtradas, de 30 dias atrás até
-/// um ano à frente, em ordem):
-///
-/// - a **próxima** vai pro destaque e sai da linha do tempo;
-/// - quem repete vira uma **série** (uma linha só, em vez de 53) e na linha
-///   do tempo só aparece **nesta semana** — pra semana ficar completa;
-/// - o resto: "Esta semana", "Próxima semana", depois por mês.
-PaginaDoTipo organizarPaginaDoTipo(List<Ocorrencia> ocorrencias, DateTime agora) {
-  final hoje = DateTime(agora.year, agora.month, agora.day);
-  final fimDaSemana = DateTime(hoje.year, hoje.month, hoje.day + (8 - hoje.weekday));
-  final fimDaProxima = fimDaSemana.add(const Duration(days: 7));
+/// A que série [o] pertenceria: o próprio evento (repetição do app), o
+/// evento do Google, ou o "parecido" (nome, dia da semana, hora).
+String _chaveDeSerie(Ocorrencia o) => o.evento.repeticao != Repeticao.nenhuma
+    ? 'id:${o.evento.id}'
+    : _chaveDoGoogle(o.evento) ?? _chaveParecida(o);
 
+/// Agrupa [ocorrencias] (em ordem) em séries: repetição do app sempre (ou
+/// só com 2+, se [appSempre] for falso — no mês, o aniversário anual é uma
+/// linha comum); série do Google e parecidas só com 2 ou mais. Devolve as
+/// séries e quem ficou dentro delas.
+(List<Serie>, Set<Ocorrencia>) _agruparSeries(
+  List<Ocorrencia> ocorrencias,
+  DateTime agora, {
+  bool appSempre = true,
+}) {
+  final grupos = <String, List<Ocorrencia>>{};
+  for (final o in ocorrencias) {
+    (grupos[_chaveDeSerie(o)] ??= []).add(o);
+  }
+  final series = <Serie>[];
+  final emSerie = <Ocorrencia>{};
+  for (final MapEntry(:key, value: l) in grupos.entries) {
+    final doApp = key.startsWith('id:');
+    if (!(doApp && appSempre) && l.length < 2) continue;
+    final proxima = l.firstWhere((o) => naoPassou(o, agora), orElse: () => l.first);
+    series.add(Serie(l.first.evento, proxima, l.length, padrao: doApp ? null : _padraoDe(l)));
+    emSerie.addAll(l);
+  }
+  series.sort((a, b) => a.proxima.inicio.compareTo(b.proxima.inicio));
+  return (series, emSerie);
+}
+
+/// Organiza o topo da página a partir das [ocorrencias] do tipo de hoje até
+/// um ano à frente (em ordem).
+PaginaDoTipo organizarPaginaDoTipo(List<Ocorrencia> ocorrencias, DateTime agora) {
   final futuras = [
     for (final o in ocorrencias)
-      if (!o.feita && _naoPassou(o, agora)) o,
+      if (!o.feita && naoPassou(o, agora)) o,
   ];
-  final passadas = [
-    for (final o in ocorrencias.reversed)
-      if (!_naoPassou(o, agora) && o.evento.repeticao == Repeticao.nenhuma) o,
-  ];
-
-  final proxima = futuras.isEmpty ? null : futuras.first;
-
-  // 1) Repetição do app: sempre série.
-  final doApp = <String, List<Ocorrencia>>{};
-  // 2) Série do Google; 3) parecidas — só com 2 ou mais.
-  final doGoogle = <String, List<Ocorrencia>>{};
+  final vistos = <String>{};
+  final destaques = <Ocorrencia>[];
   for (final o in futuras) {
-    if (o.evento.repeticao != Repeticao.nenhuma) {
-      (doApp[o.evento.id] ??= []).add(o);
-    } else if (_chaveDoGoogle(o.evento) case final chave?) {
-      (doGoogle[chave] ??= []).add(o);
-    }
+    if (destaques.length == kDestaquesDoTipo) break;
+    if (vistos.add(_chaveDeSerie(o))) destaques.add(o);
   }
-  final agrupadas = <Ocorrencia>{
-    for (final l in doApp.values) ...l,
-    for (final l in doGoogle.values)
-      if (l.length > 1) ...l,
-  };
-  final parecidas = <String, List<Ocorrencia>>{};
-  for (final o in futuras) {
-    if (!agrupadas.contains(o)) (parecidas[_chaveParecida(o)] ??= []).add(o);
-  }
-  final series = [
-    for (final l in doApp.values) Serie(l.first.evento, l.first, l.length),
-    for (final l in [...doGoogle.values, ...parecidas.values])
-      if (l.length > 1) Serie(l.first.evento, l.first, l.length, padrao: _padraoDe(l)),
-  ]..sort((a, b) => a.proxima.inicio.compareTo(b.proxima.inicio));
-  final emSerie = <Ocorrencia>{
-    ...agrupadas,
-    for (final l in parecidas.values)
-      if (l.length > 1) ...l,
-  };
+  final (series, _) = _agruparSeries(futuras, agora);
+  return PaginaDoTipo(destaques: destaques, series: series, total: futuras.length);
+}
 
-  final semana = <Ocorrencia>[];
-  final proximaSemana = <Ocorrencia>[];
-  final porMes = <DateTime, List<Ocorrencia>>{};
-  for (final o in futuras) {
-    if (identical(o, proxima)) continue;
-    final repete = emSerie.contains(o);
-    if (o.inicio.isBefore(fimDaSemana)) {
-      semana.add(o);
-    } else if (repete) {
-      continue;
-    } else if (o.inicio.isBefore(fimDaProxima)) {
-      proximaSemana.add(o);
-    } else {
-      (porMes[DateTime(o.inicio.year, o.inicio.month)] ??= []).add(o);
-    }
-  }
-
-  return PaginaDoTipo(
-    proxima: proxima,
+/// Organiza a lista de um mês: séries uma vez (com [Serie.vezes] = quantas
+/// no mês), o resto avulso.
+MesDoTipo organizarMesDoTipo(List<Ocorrencia> doMes, DateTime agora) {
+  final (series, emSerie) = _agruparSeries(doMes, agora, appSempre: false);
+  return MesDoTipo(
     series: series,
-    grupos: [
-      if (semana.isNotEmpty) GrupoDaLinha('Esta semana', semana),
-      if (proximaSemana.isNotEmpty) GrupoDaLinha('Próxima semana', proximaSemana),
-      for (final m in porMes.entries) GrupoDaLinha(nomeDoMes(m.key, agora), m.value),
-    ],
-    passadas: passadas,
-    total: futuras.length,
+    avulsas: [for (final o in doMes) if (!emSerie.contains(o)) o],
   );
 }
 

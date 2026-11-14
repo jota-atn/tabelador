@@ -26,29 +26,47 @@ void main() {
         for (final e in es) ...e.ocorrenciasEntre(DateTime(2026, 10, 12), DateTime(2027, 11, 11)),
       ]..sort((a, b) => a.inicio.compareTo(b.inicio));
 
-  test('série vira uma linha; na linha do tempo só a desta semana', () {
-    final p = organizarPaginaDoTipo(
-      ocorrencias([
-        semanal,
-        unica('Alinhamento', DateTime(2026, 11, 14, 9)),
-        unica('Planejamento', DateTime(2026, 11, 18, 10)),
-        unica('Kickoff', DateTime(2026, 12, 2, 10)),
-        unica('Retro', DateTime(2026, 11, 3, 10)), // passou
-      ]),
-      agora,
-    );
+  final todas = [
+    semanal,
+    unica('Alinhamento', DateTime(2026, 11, 14, 9)),
+    unica('Planejamento', DateTime(2026, 11, 18, 10)),
+    unica('Kickoff', DateTime(2026, 12, 2, 10)),
+    unica('Retro', DateTime(2026, 11, 3, 10)), // passou
+  ];
+
+  test('topo: destaques um por evento; série conta no ano', () {
+    final p = organizarPaginaDoTipo(ocorrencias(todas), agora);
     expect(p.proxima!.evento.titulo, 'Grupo de pesquisa'); // qui 12
+    // A semanal entra uma vez só; o resto em ordem.
+    expect(p.destaques.map((o) => o.evento.titulo), ['Grupo de pesquisa', 'Alinhamento', 'Planejamento', 'Kickoff']);
     expect(p.series.single.evento.id, 'grupo');
     expect(p.series.single.vezes, greaterThan(50));
-    expect(
-      [for (final g in p.grupos) '${g.rotulo}: ${g.ocorrencias.map((o) => o.evento.titulo).join(', ')}'],
-      [
-        'Esta semana: Alinhamento',
-        'Próxima semana: Planejamento',
-        'Dezembro: Kickoff',
-      ],
+  });
+
+  test('lista do mês: série uma vez com quantas no mês; passadas também', () {
+    final novembro = [
+      for (final o in ocorrencias(todas))
+        if (o.inicio.month == 11 && o.inicio.year == 2026) o,
+    ];
+    final m = organizarMesDoTipo(novembro, agora);
+    expect(m.series.single.evento.id, 'grupo');
+    expect(m.series.single.vezes, 4); // 5, 12, 19, 26
+    expect(m.series.single.proxima.inicio.day, 12);
+    expect(m.avulsas.map((o) => o.evento.titulo), ['Retro', 'Alinhamento', 'Planejamento']);
+  });
+
+  test('no mês, repetição do app com uma vez só é linha comum (aniversário)', () {
+    final anual = Evento(
+      id: 'niver',
+      titulo: 'Aniversário',
+      inicio: DateTime(2020, 11, 20),
+      diaInteiro: true,
+      tipo: 'Aniversário',
+      repeticao: Repeticao.anual,
     );
-    expect(p.passadas.map((o) => o.evento.titulo), ['Retro']);
+    final m = organizarMesDoTipo(anual.ocorrenciasEntre(DateTime(2026, 11), DateTime(2026, 12)), agora);
+    expect(m.series, isEmpty);
+    expect(m.avulsas, hasLength(1));
   });
 
   test('reuniões separadas de mesmo nome, dia e hora viram série; cada uma com seu link', () {
@@ -74,10 +92,10 @@ void main() {
     expect(serie.vezes, 3);
     expect(serie.padrao, 'Segundas, 19:00');
     expect(serie.proxima.evento.id, 'c1');
-    // Fora da semana, as da série saem da linha do tempo; a solta fica.
-    final naLinha = [for (final g in p.grupos) for (final o in g.ocorrencias) o.evento.id];
-    expect(naLinha, isNot(contains('c2')));
-    expect(naLinha, contains('c4'));
+    // No mês: a série numa linha, a de outro horário avulsa.
+    final m = organizarMesDoTipo(ocorrencias(es), agora);
+    expect(m.series.single.vezes, 3);
+    expect(m.avulsas.map((o) => o.evento.id), ['c4']);
   });
 
   test('série do Google (mesmo evento lá) também agrupa', () {
@@ -103,7 +121,7 @@ void main() {
     expect(contagemRegressiva(DateTime(2027, 3, 11), agora), 'em 4 meses');
   });
 
-  testWidgets('tela: destaque, calendário, série e tocar num dia', (tester) async {
+  testWidgets('tela: destaque que desliza, calendário e tocar num dia', (tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.5;
@@ -130,17 +148,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PRÓXIMA REUNIÃO'), findsOneWidget);
-    expect(find.text('SE REPETEM'), findsOneWidget);
-    // A semanal aparece uma vez como série (+ destaque), não 53 vezes.
-    expect(find.text('Reunião semanal'), findsNWidgets(2));
+    // O card seguinte já aparece na borda.
+    expect(find.text('DEPOIS'), findsWidgets);
+    // A semanal não enche a tela: no máximo destaque + uma linha no mês.
+    expect(find.text('Reunião semanal').evaluate().length, lessThanOrEqualTo(2));
 
-    // Tocar no dia do Planejamento abre o painel do dia (se for este mês).
+    // Tocar no dia do Planejamento filtra a lista (se for este mês).
     if (daqui3.month == hoje.month) {
-      await tester.tap(find.text('${daqui3.day}').first);
+      await tester.tap(find.descendant(of: find.byType(GridView), matching: find.text('${daqui3.day}')));
       await tester.pumpAndSettle();
-      // Painel do dia aberto (com o botão de fechar) mostrando o evento.
-      expect(find.byTooltip('Fechar'), findsOneWidget);
+      expect(find.text('Mês todo'), findsOneWidget);
       expect(find.text('Planejamento'), findsWidgets);
+      await tester.tap(find.text('Mês todo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mês todo'), findsNothing);
     }
   });
 }

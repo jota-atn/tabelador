@@ -20,9 +20,10 @@ const _kJanela = Duration(days: 365);
 TipoEvento tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
 
 /// A aba Eventos: card largo de Tarefas no topo (3 próximas pendentes,
-/// marcáveis) e um card por tipo em grade de 2 colunas, ordem fixa; tipo sem
-/// nada aparece apagado. Tocar abre a lista do tipo. Sem botão de criar:
-/// criar continua pela tela Semana.
+/// marcáveis), um card por tipo **usado** em grade de 2 colunas (ordem fixa
+/// de [TipoEvento] entre eles) e os tipos sem nada pela frente numa linha
+/// de chips no fim. Tocar abre a página do tipo. Sem botão de criar: criar
+/// continua pela tela Semana.
 class EventosScreen extends StatelessWidget {
   const EventosScreen({super.key});
 
@@ -61,6 +62,10 @@ class EventosScreen extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, c) {
           final colunas = c.maxWidth >= 720 ? 4 : 2;
+          final tipos = [for (final t in TipoEvento.values) if (t != TipoEvento.tarefa) t];
+          final usados = [for (final t in tipos) if (porTipo[t]?.isNotEmpty ?? false) t];
+          final vazios = [for (final t in tipos) if (!usados.contains(t)) t];
+          final scheme = Theme.of(context).colorScheme;
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
@@ -72,13 +77,33 @@ class EventosScreen extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.0,
+                childAspectRatio: 1.5,
                 children: [
-                  for (final t in TipoEvento.values)
-                    if (t != TipoEvento.tarefa)
-                      _CardTipo(tipo: t, proximas: porTipo[t] ?? const [], agora: agora),
+                  for (final t in usados) _CardTipo(tipo: t, proximas: porTipo[t]!, agora: agora),
                 ],
               ),
+              if (usados.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                  child: Text(
+                    'Pra criar um evento, segure um horário na Semana.',
+                    style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              if (vazios.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
+                  child: Text(
+                    'Sem eventos',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [for (final t in vazios) _ChipTipo(tipo: t)],
+                ),
+              ],
             ],
           );
         },
@@ -143,19 +168,20 @@ Color _fundo(Color cor, ColorScheme scheme) => Color.alphaBlend(
     );
 
 class _Icone extends StatelessWidget {
-  const _Icone({required this.tipo, required this.cor});
+  const _Icone({required this.tipo, required this.cor, this.tamanho = 40});
 
   final TipoEvento tipo;
   final Color cor;
+  final double tamanho;
 
   @override
   Widget build(BuildContext context) {
     final sobre = ThemeData.estimateBrightnessForColor(cor) == Brightness.dark ? Colors.white : Colors.black;
     return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(12)),
-      child: Icon(iconeDoTipo(tipo), color: sobre, size: 22),
+      width: tamanho,
+      height: tamanho,
+      decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(tamanho * 0.3)),
+      child: Icon(iconeDoTipo(tipo), color: sobre, size: tamanho * 0.55),
     );
   }
 }
@@ -250,52 +276,58 @@ class _CardTipo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final cor = corDoTipo(tipo, scheme.brightness);
-    final (destaque, linha) = switch (tipo) {
+    var (destaque, linha) = switch (tipo) {
       TipoEvento.feriado => _feriados(context),
       TipoEvento.aniversario => _aniversarios(context),
       _ => _padrao(),
     };
-    final vazio = destaque == null;
+    // Aniversário sem nada este mês, mas com algum mais adiante.
+    if (destaque == null && linha == null) (destaque, linha) = _padrao();
 
-    return Opacity(
-      opacity: vazio ? 0.55 : 1,
-      child: Card.filled(
-        margin: EdgeInsets.zero,
-        color: vazio ? scheme.surfaceContainerLow : _fundo(cor, scheme),
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Icone(tipo: tipo, cor: vazio ? scheme.outline : cor),
-                const Spacer(),
-                Text(
-                  pluralDoTipo(tipo),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  destaque ?? 'Nada marcado',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
-                ),
-                if (linha != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    linha,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: _fundo(cor, scheme),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _Icone(tipo: tipo, cor: cor, tamanho: 32),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      pluralDoTipo(tipo),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
-              ],
-            ),
+              ),
+              const Spacer(),
+              if (linha != null)
+                Text(
+                  linha,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurface),
+                ),
+              if (destaque != null)
+                Text(
+                  destaque,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+            ],
           ),
         ),
       ),
@@ -362,5 +394,25 @@ class _CardTipo extends StatelessWidget {
       return (contagem ?? 'Nenhum este mês', '${rotuloDoDia(seguinte.inicio, agora)} · ${seguinte.evento.titulo}');
     }
     return (contagem, null);
+  }
+}
+
+/// Tipo sem nada pela frente: chip pequeno no fim da aba; tocar abre a
+/// página dele (onde dá pra ver o passado ou criar).
+class _ChipTipo extends StatelessWidget {
+  const _ChipTipo({required this.tipo});
+
+  final TipoEvento tipo;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(iconeDoTipo(tipo), size: 18, color: corDoTipo(tipo, scheme.brightness)),
+      label: Text(pluralDoTipo(tipo)),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
+      ),
+    );
   }
 }

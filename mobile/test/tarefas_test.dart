@@ -239,7 +239,7 @@ void main() {
       expect(state.eventoPorId('Renovar RG'), isNotNull);
     });
 
-    testWidgets('aba Eventos: card de tarefas, tipo vazio apagado, abre lista do tipo',
+    testWidgets('aba Eventos: card de tarefas, vazios em chips no fim, abre lista do tipo',
         (tester) async {
       final state = AppState(feriadosEmbutidos: false);
       await state.carregar();
@@ -259,11 +259,17 @@ void main() {
       expect(find.text('Renovar RG'), findsOneWidget);
       expect(find.text('1 próxima'), findsOneWidget);
       expect(find.text('Amanhã · Prova de SO'), findsOneWidget);
-      expect(find.text('Nada marcado'), findsNWidgets(7));
+      // Os 7 tipos sem nada viram chips, depois do card de Provas.
+      expect(find.text('Sem eventos'), findsOneWidget);
+      expect(find.byType(ActionChip), findsNWidgets(7));
+      expect(
+        tester.getTopLeft(find.text('Provas')).dy,
+        lessThan(tester.getTopLeft(find.text('Sem eventos')).dy),
+      );
 
       await tester.tap(find.text('Provas'));
       await tester.pumpAndSettle();
-      expect(find.text('Prova de SO'), findsOneWidget);
+      expect(find.text('Prova de SO'), findsWidgets); // destaque (e a lista do mês)
     });
   });
 }
