@@ -815,6 +815,13 @@ Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem co
 
 "Pular" sempre visível; Google e widget puláveis um a um; telas 2 e 4 de leitura rápida. Tirar o texto "muda em Aparência". Implementar **por último** na rodada, depois que 1, 3 e 4 mudarem as telas.
 
+### Ponto 3.1 — Resumo abaixo da grade na Semana (decidido, em teste)
+
+- **Cor**: faixa à esquerda e ícone na cor do **tipo**; fundo da linha clarinho puxado pro tipo; a intensidade segue a densidade de cor. Evento/tarefa ligado a item mostra a **sigla num chip na cor do item** (clarinho, como na grade).
+- **Tarefas separadas dos eventos**: um bloco "Tarefas" (contagem de hoje e atrasadas + as primeiras marcáveis ali) e, abaixo, os eventos agrupados por dia.
+- **Tamanho fixo**: o resumo nunca cresce dentro da tela. Limite de linhas (tarefas e eventos; o que sobra de um vai pro outro), ordem: atrasadas, hoje, próximos dias. "Ver a semana toda" abre uma **folha por cima** com a lista completa; a rolagem acontece nela. Substitui o "Ver mais N eventos" que abria a lista ali mesmo.
+- O limite é provisório: o usuário quer testar e talvez mude.
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
