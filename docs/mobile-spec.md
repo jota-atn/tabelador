@@ -28,6 +28,7 @@
   versão: resumo + diff) → merge (merge commit, não squash) → tag em
   `master` → apaga a branch.
 - Spec/ideias sem código podem ir direto em `master`.
+- **Onboarding**: toda versão que muda um conceito ou uma tela principal revê o onboarding (`onboarding_screen.dart`) antes do PR.
 
 **Plano**:
 
@@ -759,6 +760,115 @@ Passo 4 tem "Adicionar widget" (`requestPinWidget`, só se o launcher
 suporta) e os interruptores de aviso. Migração: chave `onboarding_seen`
 ausente + já tem tabela = usuário antigo → marca visto e liga o cartão do
 Google (`google_card_pending`) se ainda não configurou agendas.
+
+## Fase de uso — rodada 1 (em discussão, 2026-11-13)
+
+Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
+
+1. A tela "Aparência" mistura assuntos, tem pouca coisa configurável e nenhuma personalidade.
+2. O onboarding tem que ficar coerente com o app atual (Itens, Eventos, temas e cores, uso básico).
+3. Poluição de entidades:
+   - 3.1. Eventos abaixo da grade na Semana: sem cor, se misturam (o seed evidencia). A Semana é quase um dashboard: só a semana, nada de lista infinita. Os ícones à direita são bons.
+   - 3.2. Aba Eventos: rolar para ver todos os cards; cards de tipos sem nenhum evento vêm antes dos usados. Tarefas continua sempre primeiro.
+   - 3.3. Página de Tarefas: lista genérica, sem a personalidade das páginas dos outros tipos. É a to-do list do app, um dos charmes dele.
+4. Página de cada tipo: o layout (próximo em destaque, calendário, lista) é bom, mas a tela inteira rola por causa da lista. A lista deve mostrar principalmente o mês exibido no calendário.
+5. Partes do app minimalistas demais, sem vida.
+6. Atualizar o seed (dados de exemplo) com o que entrou da v1.3 à v1.10; desativar no futuro.
+
+### Ponto 1 — Ajustes (decidido)
+
+- A tela "Aparência" vira **Ajustes**: cabeçalho (nome do app, versão, mini-prévia ao vivo da grade nas cores atuais) e uma lista de seções, cada uma com ícone colorido, que abrem subpáginas. Entrada continua no topo da Semana (engrenagem no lugar do ícone atual).
+- O **sol/lua no topo da Semana fica** (atalho), além do tema em Ajustes → Aparência. Os dois mexem na mesma preferência. Hoje o tema não é salvo (volta ao do sistema ao reabrir o app); passa a ser.
+- Regras: seção só existe com 2+ opções reais (senão a opção vai para outra seção); cada opção mora num lugar só (exceção: sol/lua).
+
+| Seção | Opções |
+|---|---|
+| Aparência | tema (sistema/claro/escuro); cor do app (Material You ou uma de uma paleta curta: só a moldura do app, itens e tipos mantêm suas cores); densidade de cor (já existe) |
+| Eventos e Tarefas | o que aparece abaixo da grade da Semana; esconder tipos não usados |
+| Avisos | antecedência dos horários e avisar eventos (já existem); horário padrão do aviso de dia todo (hoje fixo em 7h, `kAvisoDiaTodoPadrao`; o evento ainda pode ter o seu); dias antes do lembrete de presente (hoje fixo em 7, `kDiasAvisoPresente`) |
+| Google Agenda | agendas do aparelho (já existe) |
+| Widget | fundo opaco ou translúcido; mostrar eventos; mostrar o dia seguinte quando os horários de hoje acabarem |
+| Dados | exportar/importar backup |
+| Sobre | versão, novidades da versão, rever a introdução |
+
+- **Semana começa no domingo ou na segunda** não fica em Ajustes: é configuração **da tabela** (folha de config da tabela, junto dos dias).
+
+Em aberto:
+
+Decidido depois:
+- Sem seção Semana (teria uma opção só); "abaixo da grade" vai para Eventos e Tarefas. A seção nasce quando houver opções reais da Semana.
+- Mostrar concluídas: filtro só na tela de Tarefas, lembrado entre aberturas; não aparece em Ajustes.
+- Calendários sem tabela (calendário do mês, página do tipo) começam no mesmo dia que a **tabela ativa**.
+- Esconder tipo: some o card da aba Eventos e o tipo na criação de evento; eventos já existentes desse tipo continuam na Semana e na grade.
+
+### Ponto 2 — Onboarding (decidido)
+
+Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem copiar telas do app, que mudam), faz a **configuração** que já existe, e as **telas vazias** do app ensinam o resto (também ataca o ponto 5).
+
+1. Bem-vindo
+2. Itens: animação de um chip colorido caindo na grade
+3. Sua tabela: cria ali mesmo (já existe)
+4. Eventos e Tarefas: os tipos com cor e ícone; Tarefas como a to-do
+5. Do seu jeito: tema, cor do app, densidade, com prévia ao vivo (o mesmo componente do cabeçalho de Ajustes)
+6. Google Agenda
+7. Widget e avisos
+
+"Pular" sempre visível; Google e widget puláveis um a um; telas 2 e 4 de leitura rápida. Tirar o texto "muda em Aparência". Implementar **por último** na rodada, depois que 1, 3 e 4 mudarem as telas.
+
+### Ponto 3.1 — Resumo abaixo da grade na Semana (decidido, em teste)
+
+- **Cor**: faixa à esquerda e ícone na cor do **tipo**; fundo da linha clarinho puxado pro tipo; a intensidade segue a densidade de cor. Evento/tarefa ligado a item mostra a **sigla num chip na cor do item** (clarinho, como na grade).
+- **Tarefas separadas dos eventos**: um bloco "Tarefas" (contagem de hoje e atrasadas + as primeiras marcáveis ali) e, abaixo, os eventos agrupados por dia.
+- **Tamanho fixo**: o resumo nunca cresce dentro da tela. Limite de linhas (tarefas e eventos; o que sobra de um vai pro outro), ordem: atrasadas, hoje, próximos dias. "Ver a semana toda" abre uma **folha por cima** com a lista completa; a rolagem acontece nela. Substitui o "Ver mais N eventos" que abria a lista ali mesmo.
+- O limite é provisório: o usuário quer testar e talvez mude.
+
+### Ponto 3.2 — Aba Eventos (decidido)
+
+Causa da rolagem: 8 cards quadrados (~170dp cada) em ordem fixa + card de Tarefas ≈ 1,4 tela.
+
+- **Usados primeiro, em ordem fixa entre si** (a ordem de `TipoEvento`); um card só muda de lugar quando o tipo ganha o primeiro evento ou perde o último. Ordenar pelo evento mais próximo foi descartado: o card mudaria de lugar toda semana.
+- **Vazios viram uma linha de chips** no fim ("Sem eventos: Consulta · Viagem · Outro"); tocar abre a página do tipo. Tipo escondido em Ajustes não aparece nem como chip. Com tudo vazio, um texto curto ensina a criar.
+- **Cards mais largos que altos** (~2/3 da altura atual): ícone, nome, contagem, próximo evento numa linha, quando.
+- Tarefas continua sempre no topo.
+- Carrossel com os cards dos tipos foi descartado (troca rolagem vertical por horizontal e esconde a visão geral).
+
+### Ponto 3.3 — Tela de Tarefas (decidido)
+
+Hoje funciona (seções, deslizar pra concluir/apagar, seleção, pesquisa, filtros), mas é só lista. Vira a to-do com cara do app:
+
+- **Topo com progresso do dia**: anel que enche com as de hoje ("Hoje: 2 de 5"), linha com atrasadas e o resto da semana. Sem tarefas hoje, vira uma frase e mostra a semana.
+- **Linhas com cor**: as mesmas linhas coloridas do resumo da Semana (sigla do item em chip na cor dele), mas a **faixa da esquerda é a cor da prioridade** (alta vermelha, normal neutra, baixa apagada), não a do tipo.
+- **Concluir com um pequeno momento**: círculo enche com um pulso curto (< 0,5 s), risca, o anel avança; ao zerar as de hoje, mensagem curta ("Dia limpo"). Sem confete, sem som.
+- **Adicionar rápido embaixo** no lugar do botão flutuante: campo "Nova tarefa…"; ao digitar aparecem chips (Hoje, Amanhã, data, item, prioridade); enter cria sem abrir folha. "Mais opções" abre a folha de evento com o que já foi digitado. Sem interpretar texto livre.
+- Descartado: faixa horizontal de dias (o filtro de período continua no menu de filtros); sequência de dias (gamificação) fica como possível opção futura em Ajustes.
+- Filtro de concluídas continua na tela (decidido no ponto 1).
+
+### Ponto 4 — Página de cada tipo (decidido)
+
+Hoje tudo rola junto e a lista de baixo é a linha do tempo de 12 meses (não segue o calendário).
+
+- **Topo fixo** (resumo, destaque, calendário); só a lista rola. Sobram ~3 linhas de lista: destaque mais baixo e calendário mais apertado. Plano B se ficar apertado: calendário encolhe pra uma linha da semana ao rolar.
+- **Destaque desliza** entre as próximas 3–4 ocorrências (card seguinte aparecendo na borda; com uma só, fica como hoje).
+- **Lista = mês do calendário**: troca junto com o mês; dias passados do mês apagados. Some o "Últimos 30 dias" (passado = voltar o mês). Mês vazio: "Nada em dezembro · próxima em janeiro ›".
+- **Tocar num dia filtra a lista** ("Sex 14 ×" volta ao mês), no lugar do painel do dia.
+- **Séries uma vez por mês** com contagem ("↻ Reunião do grupo · segundas 16h · 4× em novembro").
+
+### Ponto 5 — Partes sem vida (decidido)
+
+Boa parte vem dos pontos acima (Ajustes, resumo, aba Eventos, Tarefas, página do tipo, telas vazias que ensinam). Itens, Tabelas, folhas e card de detalhes: o usuário aponta, depois de testar, quais telas ainda parecem mortas, e cada uma é tratada a partir do que ela tem de concreto (nada de enfeite espalhado).
+
+### Ponto 6 — Seed (decidido)
+
+Acrescentar ao seed (`lib/dev/exemplos.dart`): Prova com nota lançada; Reunião com link e série semanal (mesmo nome/horário); Viagem de vários dias com ida e volta e um evento de dia todo de 3 dias; Aniversário com presente (ideia e comprado); tarefas com prioridade alta e baixa; Consulta e Compromisso com endereço; tarefas e eventos ligados a itens. No fim da rodada, o menu de exemplos fica **só em debug**.
+
+### Ordem de implementação
+
+1. v1.11 resumo da Semana (3.1)
+2. v1.12 seed atualizado (6)
+3. v1.13 aba Eventos (3.2) + página do tipo (4)
+4. v1.14 Tarefas (3.3)
+5. v1.15 Ajustes (1)
+6. v1.16 onboarding (2)
 
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 

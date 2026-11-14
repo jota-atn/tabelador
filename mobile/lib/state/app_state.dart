@@ -184,7 +184,6 @@ class AppState extends ChangeNotifier {
     _ultimoMaximo = dados.ultimoMaximo;
     _agendasConfiguradas = dados.agendasConfiguradas;
     _agendaDestinoPadrao = dados.agendaDestino;
-    _semanaAberta = dados.semanaAberta;
     _cartaoGoogle = dados.cartaoGooglePendente;
     if (dados.onboardingVisto != null) {
       _onboardingVisto = dados.onboardingVisto!;
@@ -875,9 +874,6 @@ class AppState extends ChangeNotifier {
     await recarregarEventosExternos();
   }
 
-  bool _semanaAberta = false;
-  bool get semanaAberta => _semanaAberta;
-
   // ------------------------------------------------------------ onboarding
 
   bool _onboardingVisto = true;
@@ -920,12 +916,6 @@ class AppState extends ChangeNotifier {
       await _lembrarDestino(agendaId);
     }
     notifyListeners();
-  }
-
-  Future<void> alternarSemanaAberta() async {
-    _semanaAberta = !_semanaAberta;
-    notifyListeners();
-    await _store.salvarSemanaAberta(_semanaAberta);
   }
 
   // --------------------------------------------------------- preferências
