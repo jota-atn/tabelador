@@ -853,6 +853,23 @@ Hoje tudo rola junto e a lista de baixo é a linha do tempo de 12 meses (não se
 - **Tocar num dia filtra a lista** ("Sex 14 ×" volta ao mês), no lugar do painel do dia.
 - **Séries uma vez por mês** com contagem ("↻ Reunião do grupo · segundas 16h · 4× em novembro").
 
+### Ponto 5 — Partes sem vida (decidido)
+
+Boa parte vem dos pontos acima (Ajustes, resumo, aba Eventos, Tarefas, página do tipo, telas vazias que ensinam). Itens, Tabelas, folhas e card de detalhes: o usuário aponta, depois de testar, quais telas ainda parecem mortas, e cada uma é tratada a partir do que ela tem de concreto (nada de enfeite espalhado).
+
+### Ponto 6 — Seed (decidido)
+
+Acrescentar ao seed (`lib/dev/exemplos.dart`): Prova com nota lançada; Reunião com link e série semanal (mesmo nome/horário); Viagem de vários dias com ida e volta e um evento de dia todo de 3 dias; Aniversário com presente (ideia e comprado); tarefas com prioridade alta e baixa; Consulta e Compromisso com endereço; tarefas e eventos ligados a itens. No fim da rodada, o menu de exemplos fica **só em debug**.
+
+### Ordem de implementação
+
+1. v1.11 resumo da Semana (3.1)
+2. v1.12 seed atualizado (6)
+3. v1.13 aba Eventos (3.2) + página do tipo (4)
+4. v1.14 Tarefas (3.3)
+5. v1.15 Ajustes (1)
+6. v1.16 onboarding (2)
+
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
 **Decisões do usuário**:
