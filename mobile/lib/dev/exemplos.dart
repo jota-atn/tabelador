@@ -1,5 +1,7 @@
 import '../model/evento.dart';
 import '../model/item.dart';
+import '../model/nota.dart';
+import '../model/presente.dart';
 
 /// Prefixo dos ids dos eventos de exemplo — é o que deixa removê-los sem
 /// tocar em nada do usuário.
@@ -28,12 +30,14 @@ List<Evento> eventosDeExemplo(DateTime agora, {List<Item> itens = const []}) {
     String? itemId,
     bool semData = false,
     bool feito = false,
+    DateTime? ate,
+    Prioridade prioridade = Prioridade.normal,
   }) =>
       Evento(
         id: '$kPrefixoExemplo${n++}',
         titulo: titulo,
         inicio: inicio,
-        fim: diaTodo || minutos == null ? null : inicio.add(Duration(minutes: minutos)),
+        fim: ate ?? (diaTodo || minutos == null ? null : inicio.add(Duration(minutes: minutos))),
         diaInteiro: diaTodo || semData,
         tipo: tipo.rotulo,
         repeticao: repeticao,
@@ -42,6 +46,7 @@ List<Evento> eventosDeExemplo(DateTime agora, {List<Item> itens = const []}) {
         itemId: itemId,
         semData: semData,
         feito: feito,
+        prioridade: prioridade,
       );
 
   final item1 = itens.isNotEmpty ? itens[0] : null;
@@ -52,12 +57,13 @@ List<Evento> eventosDeExemplo(DateTime agora, {List<Item> itens = const []}) {
   return [
     // ----------------------------------------------------------- tarefas
     ev('Entregar relatório', TipoEvento.tarefa, dia(-2), diaTodo: true, itemId: item1?.id),
-    ev('Pagar boleto da internet', TipoEvento.tarefa, dia(0), diaTodo: true),
+    ev('Pagar boleto da internet', TipoEvento.tarefa, dia(0), diaTodo: true, prioridade: Prioridade.alta),
     ev('Responder e-mail do orientador', TipoEvento.tarefa, dia(0, 18), minutos: 0),
     ev('Lista de exercícios 4', TipoEvento.tarefa, dia(3), diaTodo: true, itemId: item2?.id),
     ev('Levar o lixo reciclável', TipoEvento.tarefa, dia(1), diaTodo: true, repeticao: Repeticao.semanal),
-    ev('Renovar a CNH', TipoEvento.tarefa, dia(20), diaTodo: true),
-    ev('Trocar a lâmpada do banheiro', TipoEvento.tarefa, hoje, semData: true),
+    ev('Renovar a CNH', TipoEvento.tarefa, dia(20), diaTodo: true, prioridade: Prioridade.alta),
+    ev('Trocar a lâmpada do banheiro', TipoEvento.tarefa, hoje, semData: true, prioridade: Prioridade.baixa),
+    ev('Estudar pra prova', TipoEvento.tarefa, dia(1), diaTodo: true, itemId: item1?.id),
     ev('Ler o artigo que o grupo mandou', TipoEvento.tarefa, hoje, semData: true),
     ev('Comprar ração', TipoEvento.tarefa, dia(-1), diaTodo: true, feito: true),
 
@@ -67,10 +73,16 @@ List<Evento> eventosDeExemplo(DateTime agora, {List<Item> itens = const []}) {
     ev('Prova final${item2 == null ? '' : ' · ${item2.sigla}'}', TipoEvento.prova, dia(16, 8),
         minutos: 120, itemId: item2?.id),
     ev('Simulado', TipoEvento.prova, dia(35, 14), minutos: 180),
+    // Passada, com nota lançada.
+    ev('Prova 1${item1 == null ? '' : ' · ${item1.sigla}'}', TipoEvento.prova, dia(-12, 10),
+            minutos: 120, itemId: item1?.id)
+        .comNota(dia(-12, 10), const Nota(8.5, 10)),
 
     // ------------------------------------------------------- compromissos
     ev('Almoço com a Ana', TipoEvento.compromisso, dia(1, 12, 30), minutos: 90, local: 'Restaurante do centro'),
-    ev('Cortar o cabelo', TipoEvento.compromisso, dia(5, 17), minutos: 60),
+    ev('Cortar o cabelo', TipoEvento.compromisso, dia(5, 17), minutos: 60, local: 'Av. Paulista, 1000'),
+    ev('Monitoria${item2 == null ? '' : ' · ${item2.sigla}'}', TipoEvento.compromisso, dia(3, 14),
+        minutos: 60, itemId: item2?.id),
     ev('Show no sábado', TipoEvento.compromisso, dia(9, 21), minutos: 180),
 
     // ---------------------------------------------------------- consultas
@@ -81,20 +93,29 @@ List<Evento> eventosDeExemplo(DateTime agora, {List<Item> itens = const []}) {
     ev('Reunião do grupo de pesquisa', TipoEvento.reuniao, dia(1, 16), minutos: 60,
         repeticao: Repeticao.semanal, local: 'meet.google.com/abc-defg-hij'),
     ev('Planejamento do projeto', TipoEvento.reuniao, dia(6, 10), minutos: 90),
+    // Eventos separados com mesmo nome, dia da semana e hora: viram série
+    // na página do tipo, cada um com o seu link.
+    for (final (d, link) in [(2, 'meet.google.com/caa-aaaa-aaa'), (9, 'meet.google.com/cbb-bbbb-bbb'), (16, 'meet.google.com/ccc-cccc-ccc')])
+      ev('Reunião do centro acadêmico', TipoEvento.reuniao, dia(d, 19), minutos: 60, notas: 'Link: https://$link'),
 
     // ------------------------------------------------------------ viagens
-    ev('Viagem pra casa dos pais', TipoEvento.viagem, dia(12), diaTodo: true),
+    // Ida e volta com hora.
+    ev('Viagem pra casa dos pais', TipoEvento.viagem, dia(12, 8), ate: dia(15, 18)),
 
     // -------------------------------------------------------- aniversários
     ev('Aniversário da Júlia', TipoEvento.aniversario, aniversarioPassado, diaTodo: true,
         repeticao: Repeticao.anual),
-    ev('Aniversário do Pedro', TipoEvento.aniversario, dia(8), diaTodo: true, repeticao: Repeticao.anual),
-    ev('Aniversário da vó', TipoEvento.aniversario, mesQueVem, diaTodo: true, repeticao: Repeticao.anual),
+    ev('Aniversário do Pedro', TipoEvento.aniversario, dia(8), diaTodo: true, repeticao: Repeticao.anual)
+        .comPresente(dia(8), const Presente('Fone de ouvido')),
+    ev('Aniversário da vó', TipoEvento.aniversario, mesQueVem, diaTodo: true, repeticao: Repeticao.anual)
+        .comPresente(mesQueVem, const Presente('Manta de tricô', comprado: true)),
 
     // ------------------------------------------------------------ feriado
     ev('Recesso da universidade', TipoEvento.feriado, dia(7), diaTodo: true),
 
     // ------------------------------------------------------------- outros
     ev('Fatura do cartão', TipoEvento.outro, dia(10), diaTodo: true, repeticao: Repeticao.mensal),
+    // Dia todo, três dias.
+    ev('Semana acadêmica', TipoEvento.outro, dia(18), diaTodo: true, ate: dia(20)),
   ];
 }
