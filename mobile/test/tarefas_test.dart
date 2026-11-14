@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabelador/dev/exemplos.dart';
 import 'package:tabelador/model/evento.dart';
+import 'package:tabelador/util/link_reuniao.dart';
 import 'package:tabelador/state/app_state.dart';
 import 'package:tabelador/ui/eventos_screen.dart';
 import 'package:tabelador/ui/folha_evento.dart';
@@ -119,6 +120,13 @@ void main() {
       await state.adicionarEvento(tarefa('Minha', semData: true));
       final exemplos = eventosDeExemplo(DateTime(2026, 11, 12));
       expect({for (final e in exemplos) e.tipo}, {for (final t in TipoEvento.values) t.rotulo});
+      // O que entrou da v1.5 à v1.10 também aparece.
+      expect(exemplos.any((e) => e.notasLancadas.isNotEmpty), isTrue);
+      expect(exemplos.any((e) => e.presentes.values.any((p) => p.comprado)), isTrue);
+      expect(exemplos.any((e) => e.presentes.values.any((p) => !p.comprado)), isTrue);
+      expect({for (final e in exemplos) e.prioridade}, Prioridade.values.toSet());
+      expect(exemplos.where((e) => e.variosDias).map((e) => e.diaInteiro).toSet(), {true, false});
+      expect(exemplos.where((e) => linkDeReuniao(e) != null).length, greaterThanOrEqualTo(4));
       await state.adicionarEventos(exemplos);
       expect(state.eventos, hasLength(exemplos.length + 1));
       expect(await state.removerEventosOnde(ehExemplo), exemplos.length);
