@@ -26,7 +26,6 @@ class DadosSalvos {
     this.agendas = const {},
     this.agendasConfiguradas = false,
     this.agendaDestino,
-    this.semanaAberta = false,
     this.onboardingVisto,
     this.cartaoGooglePendente = false,
     this.feitasExternas = const {},
@@ -93,8 +92,6 @@ class DadosSalvos {
   /// Última agenda usada em "salvar também em".
   final String? agendaDestino;
 
-  /// Acordeão "Esta semana" da tela inicial aberto ou recolhido.
-  final bool semanaAberta;
 
   static const DadosSalvos vazio = DadosSalvos(
     itens: [],
@@ -198,7 +195,6 @@ class TabeladorStore {
   static const _kNotificarEventos = 'notifications_events';
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
-  static const _kSemanaAberta = 'week_list_open';
   static const _kOnboarding = 'onboarding_seen';
   static const _kCartaoGoogle = 'google_card_pending';
   static const _kFeitasExternas = 'external_done_ids';
@@ -224,7 +220,6 @@ class TabeladorStore {
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
-      semanaAberta: prefs.getBool(_kSemanaAberta) ?? false,
       onboardingVisto: prefs.getBool(_kOnboarding),
       cartaoGooglePendente: prefs.getBool(_kCartaoGoogle) ?? false,
       feitasExternas: {...?prefs.getStringList(_kFeitasExternas)},
@@ -341,11 +336,6 @@ class TabeladorStore {
   Future<void> salvarOcultasExternas(Set<String> ids) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_kOcultasExternas, ids.toList()..sort());
-  }
-
-  Future<void> salvarSemanaAberta(bool aberta) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kSemanaAberta, aberta);
   }
 
   Future<void> salvarAgendaDestino(String? id) async {
