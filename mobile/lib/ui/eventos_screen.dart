@@ -16,6 +16,14 @@ import 'widgets/evento_tile.dart';
 /// Quanto à frente a aba conta "próximos" (o Google é lido até ~400 dias).
 const _kJanela = Duration(days: 365);
 
+/// Medidas do orçamento de altura da aba (dp).
+const double _kEspaco = 12;
+const double _kCardMin = 92;
+const double _kChipAltura = 40;
+const double _kRotuloChips = 40;
+const double _kTarefasBase = 72;
+const double _kTarefaLinha = 76;
+
 /// Tipo de uma ocorrência pra aba: evento sem tipo conta como Outro.
 TipoEvento tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
 
@@ -66,45 +74,88 @@ class EventosScreen extends StatelessWidget {
           final usados = [for (final t in tipos) if (porTipo[t]?.isNotEmpty ?? false) t];
           final vazios = [for (final t in tipos) if (!usados.contains(t)) t];
           final scheme = Theme.of(context).colorScheme;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              const _CardTarefas(),
-              const SizedBox(height: 12),
-              GridView.count(
+
+          // Orçamento de altura: chips e grade com altura mínima; o card de
+          // Tarefas mostra quantas tarefas couberem (até 3) e o que sobra
+          // estica os cards. Só rola se nem assim couber (tela minúscula).
+          final linhasGrade = (usados.length / colunas).ceil();
+          final gradeMin = linhasGrade == 0 ? 0.0 : linhasGrade * _kCardMin + (linhasGrade - 1) * _kEspaco;
+          final linhasChips = (vazios.length / colunas).ceil();
+          final chipsAltura = vazios.isEmpty
+              ? 0.0
+              : _kRotuloChips + linhasChips * _kChipAltura + (linhasChips - 1) * 8;
+          final livre = c.maxHeight - 8 - 16 - _kEspaco - gradeMin - chipsAltura - _kTarefasBase;
+          final cabe = livre >= 0;
+          final nTarefas = cabe ? (livre / _kTarefaLinha).floor().clamp(0, 3) : 3;
+
+          final chips = [
+            if (vazios.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
+                child: Text(
+                  'Sem eventos',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                ),
+              ),
+              _ChipsAlinhados(tipos: vazios, colunas: colunas),
+            ],
+          ];
+          final dica = Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+            child: Text(
+              'Pra criar um evento, segure um horário na Semana.',
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+            ),
+          );
+          Widget grade(double proporcao) => GridView.count(
                 crossAxisCount: colunas,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.5,
+                padding: EdgeInsets.zero,
+                mainAxisSpacing: _kEspaco,
+                crossAxisSpacing: _kEspaco,
+                childAspectRatio: proporcao,
                 children: [
                   for (final t in usados) _CardTipo(tipo: t, proximas: porTipo[t]!, agora: agora),
                 ],
-              ),
-              if (usados.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
-                  child: Text(
-                    'Pra criar um evento, segure um horário na Semana.',
-                    style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-              if (vazios.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
-                  child: Text(
-                    'Sem eventos',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [for (final t in vazios) _ChipTipo(tipo: t)],
-                ),
+              );
+
+          if (!cabe) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              children: [
+                _CardTarefas(maxTarefas: nTarefas),
+                const SizedBox(height: _kEspaco),
+                grade(1.5),
+                if (usados.isEmpty) dica,
+                ...chips,
               ],
-            ],
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CardTarefas(maxTarefas: nTarefas),
+                const SizedBox(height: _kEspaco),
+                Expanded(
+                  child: usados.isEmpty
+                      ? Align(alignment: Alignment.topLeft, child: dica)
+                      : LayoutBuilder(
+                          builder: (context, g) {
+                            final largura = (g.maxWidth - (colunas - 1) * _kEspaco) / colunas;
+                            // Cards esticam até ~1,5 de proporção; acima disso
+                            // sobra espaço embaixo em vez de card gigante.
+                            final altura = ((g.maxHeight - (linhasGrade - 1) * _kEspaco) / linhasGrade)
+                                .clamp(_kCardMin, largura / 1.1);
+                            return Align(alignment: Alignment.topCenter, child: grade(largura / altura));
+                          },
+                        ),
+                ),
+                ...chips,
+              ],
+            ),
           );
         },
       ),
@@ -187,7 +238,10 @@ class _Icone extends StatelessWidget {
 }
 
 class _CardTarefas extends StatelessWidget {
-  const _CardTarefas();
+  const _CardTarefas({required this.maxTarefas});
+
+  /// Quantas tarefas cabem na tela sem rolar (0 a 3).
+  final int maxTarefas;
 
   @override
   Widget build(BuildContext context) {
@@ -248,15 +302,8 @@ class _CardTarefas extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              for (final l in pendentes.take(3)) EventoTile(ocorrencia: l.ocorrencia),
-              if (pendentes.length > 3)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: abrir,
-                    child: Text('Ver todas (${pendentes.length})'),
-                  ),
-                ),
+              // O total já está no cabeçalho, que abre a página de Tarefas.
+              for (final l in pendentes.take(maxTarefas)) EventoTile(ocorrencia: l.ocorrencia),
             ],
           ),
         ),
@@ -397,6 +444,34 @@ class _CardTipo extends StatelessWidget {
   }
 }
 
+/// Os tipos sem nada pela frente em colunas iguais às dos cards: cada
+/// linha ocupa a largura toda, alinhada com a grade acima.
+class _ChipsAlinhados extends StatelessWidget {
+  const _ChipsAlinhados({required this.tipos, required this.colunas});
+
+  final List<TipoEvento> tipos;
+  final int colunas;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < tipos.length; i += colunas) ...[
+          if (i > 0) const SizedBox(height: 8),
+          Row(
+            children: [
+              for (var j = i; j < i + colunas; j++) ...[
+                if (j > i) const SizedBox(width: _kEspaco),
+                Expanded(child: j < tipos.length ? _ChipTipo(tipo: tipos[j]) : const SizedBox()),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 /// Tipo sem nada pela frente: chip pequeno no fim da aba; tocar abre a
 /// página dele (onde dá pra ver o passado ou criar).
 class _ChipTipo extends StatelessWidget {
@@ -407,11 +482,37 @@ class _ChipTipo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ActionChip(
-      avatar: Icon(iconeDoTipo(tipo), size: 18, color: corDoTipo(tipo, scheme.brightness)),
-      label: Text(pluralDoTipo(tipo)),
-      onPressed: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
+    return Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => EventosDoTipoScreen(tipo: tipo)),
+        ),
+        child: SizedBox(
+          height: _kChipAltura,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                Icon(iconeDoTipo(tipo), size: 18, color: corDoTipo(tipo, scheme.brightness)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pluralDoTipo(tipo),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

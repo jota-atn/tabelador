@@ -261,7 +261,9 @@ void main() {
       expect(find.text('Amanhã · Prova de SO'), findsOneWidget);
       // Os 7 tipos sem nada viram chips, depois do card de Provas.
       expect(find.text('Sem eventos'), findsOneWidget);
-      expect(find.byType(ActionChip), findsNWidgets(7));
+      for (final t in ['Consultas', 'Reuniões', 'Viagens', 'Outros']) {
+        expect(find.text(t), findsOneWidget);
+      }
       expect(
         tester.getTopLeft(find.text('Provas')).dy,
         lessThan(tester.getTopLeft(find.text('Sem eventos')).dy),
@@ -270,6 +272,34 @@ void main() {
       await tester.tap(find.text('Provas'));
       await tester.pumpAndSettle();
       expect(find.text('Prova de SO'), findsWidgets); // destaque (e a lista do mês)
+    });
+
+    testWidgets('aba Eventos cabe na tela do celular sem rolar', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(384, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final state = AppState(feriadosEmbutidos: false);
+      await state.carregar();
+      final amanha = DateTime.now().add(const Duration(days: 1));
+      for (var i = 0; i < 5; i++) {
+        await state.adicionarEvento(tarefa('Tarefa $i', semData: true));
+      }
+      // Um evento de cada tipo, menos um (que vira chip).
+      final tipos = [for (final t in TipoEvento.values) if (t != TipoEvento.tarefa) t];
+      for (final t in tipos.skip(1)) {
+        await state.adicionarEvento(Evento(
+          id: t.name,
+          titulo: t.rotulo,
+          inicio: DateTime(amanha.year, amanha.month, amanha.day, 10),
+          fim: DateTime(amanha.year, amanha.month, amanha.day, 11),
+          tipo: t.rotulo,
+        ));
+      }
+      await montar(tester, state, const EventosScreen());
+      await tester.pump();
+
+      expect(find.byType(ListView), findsNothing);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Sem eventos'), findsOneWidget);
     });
   });
 }

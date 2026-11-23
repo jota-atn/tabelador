@@ -832,6 +832,7 @@ Causa da rolagem: 8 cards quadrados (~170dp cada) em ordem fixa + card de Tarefa
 - **Cards mais largos que altos** (~2/3 da altura atual): ícone, nome, contagem, próximo evento numa linha, quando.
 - Tarefas continua sempre no topo.
 - Carrossel com os cards dos tipos foi descartado (troca rolagem vertical por horizontal e esconde a visão geral).
+- **Ajuste após teste (2026-11-23)**: ainda rolava no celular. Agora a aba mede a tela: chips e grade têm altura mínima, o card de Tarefas mostra quantas tarefas couberem (até 3; o total já está no cabeçalho, sem "Ver todas") e o que sobra estica os cards. Só rola se nem assim couber. Chips **alinhados em colunas iguais às dos cards**, cada linha ocupando a largura toda.
 
 ### Ponto 3.3 — Tela de Tarefas (decidido)
 
