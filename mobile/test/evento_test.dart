@@ -189,6 +189,31 @@ void main() {
       expect(find.text('Evento ${kLinhasDoResumo + 1}'), findsOneWidget);
     });
 
+    testWidgets('a seta de Eventos recolhe e mostra os eventos do resumo', (tester) async {
+      final state = await montar(tester, const SingleChildScrollView(
+        child: ProximosEventos(),
+      ));
+      final logo = DateTime.now().add(const Duration(minutes: 5));
+      await state.adicionarEvento(Evento.novo(titulo: 'Reunião', inicio: logo));
+      await state.adicionarEvento(Evento.novo(
+        titulo: 'Pagar boleto',
+        tipo: TipoEvento.tarefa.rotulo,
+        inicio: logo,
+      ));
+      await tester.pump();
+      expect(find.text('Reunião'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.expand_less));
+      await tester.pump();
+      expect(find.text('Reunião'), findsNothing);
+      expect(find.text('Pagar boleto'), findsOneWidget);
+      expect(state.eventosDoResumoOcultos, isTrue);
+
+      await tester.tap(find.byIcon(Icons.expand_more));
+      await tester.pump();
+      expect(find.text('Reunião'), findsOneWidget);
+    });
+
     testWidgets('tela do item separa próximos de passados', (tester) async {
       final item = Item.novo(nome: 'Sistemas Operacionais', sigla: 'SO');
       final state = AppState();

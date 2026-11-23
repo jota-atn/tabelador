@@ -61,6 +61,7 @@ class AppState extends ChangeNotifier {
   bool _notificacoesAtivas = false;
   int _antecedenciaMinutos = 15;
   bool _notificarEventos = true;
+  bool _eventosDoResumoOcultos = false;
   bool _carregado = false;
 
   /// Segunda-feira da semana que a tela inicial mostra; nulo = a atual. Só
@@ -82,6 +83,7 @@ class AppState extends ChangeNotifier {
   bool get notificacoesAtivas => _notificacoesAtivas;
   int get antecedenciaMinutos => _antecedenciaMinutos;
   bool get notificarEventos => _notificarEventos;
+  bool get eventosDoResumoOcultos => _eventosDoResumoOcultos;
   bool get carregado => _carregado;
   int get pedidosDeSemana => _pedidosDeSemana;
 
@@ -174,6 +176,7 @@ class AppState extends ChangeNotifier {
     _notificacoesAtivas = dados.notificacoesAtivas;
     _antecedenciaMinutos = dados.antecedenciaMinutos;
     _notificarEventos = dados.notificarEventos;
+    _eventosDoResumoOcultos = dados.eventosDoResumoOcultos;
     _agendas = {...dados.agendas};
     _feitasExternas = {...dados.feitasExternas};
     _ocultasExternas = {...dados.ocultasExternas};
@@ -946,6 +949,13 @@ class AppState extends ChangeNotifier {
     _notificarEventos = ativo;
     notifyListeners();
     await _store.salvarNotificarEventos(ativo);
+  }
+
+  Future<void> definirEventosDoResumoOcultos(bool ocultos) async {
+    if (_eventosDoResumoOcultos == ocultos) return;
+    _eventosDoResumoOcultos = ocultos;
+    notifyListeners();
+    await _store.salvarEventosDoResumoOcultos(ocultos);
   }
 
   // ------------------------------------------------------------- backup

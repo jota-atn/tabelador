@@ -23,6 +23,7 @@ class DadosSalvos {
     required this.notificacoesAtivas,
     required this.antecedenciaMinutos,
     this.notificarEventos = true,
+    this.eventosDoResumoOcultos = false,
     this.agendas = const {},
     this.agendasConfiguradas = false,
     this.agendaDestino,
@@ -80,6 +81,10 @@ class DadosSalvos {
   final bool notificacoesAtivas;
   final int antecedenciaMinutos;
   final bool notificarEventos;
+
+  /// Eventos do resumo da Semana recolhidos (só a seta fica). Do aparelho,
+  /// fora do backup.
+  final bool eventosDoResumoOcultos;
 
   /// Agendas do aparelho escolhidas: id -> (nome, cor). Nome e cor ficam
   /// guardados pra mostrar evento externo sem consultar o Android de novo.
@@ -193,6 +198,7 @@ class TabeladorStore {
   static const _kNotificacoesAtivas = 'notifications_enabled';
   static const _kAntecedenciaMinutos = 'notifications_lead_minutes';
   static const _kNotificarEventos = 'notifications_events';
+  static const _kEventosDoResumoOcultos = 'summary_events_hidden';
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
   static const _kOnboarding = 'onboarding_seen';
@@ -217,6 +223,7 @@ class TabeladorStore {
       notificacoesAtivas: prefs.getBool(_kNotificacoesAtivas) ?? false,
       antecedenciaMinutos: prefs.getInt(_kAntecedenciaMinutos) ?? 15,
       notificarEventos: prefs.getBool(_kNotificarEventos) ?? true,
+      eventosDoResumoOcultos: prefs.getBool(_kEventosDoResumoOcultos) ?? false,
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
@@ -283,6 +290,11 @@ class TabeladorStore {
   Future<void> salvarNotificarEventos(bool ativo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotificarEventos, ativo);
+  }
+
+  Future<void> salvarEventosDoResumoOcultos(bool ocultos) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kEventosDoResumoOcultos, ocultos);
   }
 
   Future<void> salvarAgendas(Map<String, AgendaEscolhida> agendas) async {

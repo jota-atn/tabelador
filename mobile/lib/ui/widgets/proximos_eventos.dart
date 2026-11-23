@@ -82,10 +82,12 @@ class ProximosEventos extends StatelessWidget {
 
     // Orçamento: tarefas pegam até kTarefasNoResumo, eventos o resto; o que
     // um lado não usa vai pro outro.
+    // Eventos recolhidos: as tarefas ficam com o orçamento todo.
+    final ocultos = state.eventosDoResumoOcultos && semana.eventos.isNotEmpty;
     var nTarefas = min(semana.tarefas.length, kTarefasNoResumo);
-    final nEventos = min(semana.eventos.length, kLinhasDoResumo - nTarefas);
+    final nEventos = ocultos ? 0 : min(semana.eventos.length, kLinhasDoResumo - nTarefas);
     nTarefas = min(semana.tarefas.length, kLinhasDoResumo - nEventos);
-    final escondidos = semana.total - nTarefas - nEventos;
+    final escondidos = semana.tarefas.length - nTarefas + (ocultos ? 0 : semana.eventos.length - nEventos);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,6 +148,12 @@ class ProximosEventos extends StatelessWidget {
           _CabecalhoTarefas(texto: semana.resumoDasTarefas()),
           for (final o in semana.tarefas.take(nTarefas)) EventoTile(ocorrencia: o, colorido: true),
         ],
+        if (semana.eventos.isNotEmpty)
+          _CabecalhoEventos(
+            quantos: semana.eventos.length,
+            ocultos: ocultos,
+            aoTocar: () => state.definirEventosDoResumoOcultos(!ocultos),
+          ),
         ..._eventosPorDia(semana, semana.eventos.take(nEventos).toList(), scheme),
         if (escondidos > 0)
           Align(
@@ -232,6 +240,42 @@ class _CabecalhoTarefas extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Eventos · 5  ⌄" — a seta recolhe e mostra os eventos do resumo.
+class _CabecalhoEventos extends StatelessWidget {
+  const _CabecalhoEventos({required this.quantos, required this.ocultos, required this.aoTocar});
+
+  final int quantos;
+  final bool ocultos;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: aoTocar,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+        child: Row(
+          children: [
+            Icon(Icons.event, size: 16, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text('Eventos', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '$quantos',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ),
+            Icon(ocultos ? Icons.expand_more : Icons.expand_less, size: 20, color: scheme.onSurfaceVariant),
           ],
         ),
       ),
