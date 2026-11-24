@@ -20,6 +20,9 @@ const int kLinhasDoResumo = 6;
 /// eventos, as tarefas ficam com o espaço todo (e vice-versa).
 const int kTarefasNoResumo = 2;
 
+/// Abrir/fechar os blocos do resumo.
+const _kAnimacao = Duration(milliseconds: 300);
+
 /// O que a semana [segunda] tem pra mostrar: tarefas pendentes (atrasadas
 /// primeiro) e eventos, cada um em ordem de início.
 class _Semana {
@@ -145,8 +148,22 @@ class ProximosEventos extends StatelessWidget {
             ),
           ),
         if (semana.tarefas.isNotEmpty) ...[
-          _CabecalhoTarefas(texto: semana.resumoDasTarefas()),
-          for (final o in semana.tarefas.take(nTarefas)) EventoTile(ocorrencia: o, colorido: true),
+          _CabecalhoTarefas(key: const ValueKey('cabecalho-tarefas'), texto: semana.resumoDasTarefas()),
+          // Recolher os eventos dá linhas às tarefas: elas crescem no mesmo
+          // ritmo em que os eventos fecham, em vez de pular.
+          AnimatedSize(
+            key: const ValueKey('lista-tarefas'),
+            duration: _kAnimacao,
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final o in semana.tarefas.take(nTarefas))
+                  EventoTile(key: ValueKey('${o.evento.id}@${o.inicio}'), ocorrencia: o, colorido: true),
+              ],
+            ),
+          ),
         ],
         if (semana.eventos.isNotEmpty)
           _CabecalhoEventos(
@@ -160,7 +177,7 @@ class ProximosEventos extends StatelessWidget {
         // Abre e fecha deslizando; recolhido, a lista some de vez.
         AnimatedSize(
           key: const ValueKey('lista-eventos'),
-          duration: const Duration(milliseconds: 250),
+          duration: _kAnimacao,
           curve: Curves.easeInOut,
           alignment: Alignment.topCenter,
           child: Column(
@@ -225,7 +242,7 @@ List<Widget> _eventosPorDia(_Semana semana, List<Ocorrencia> eventos, ColorSchem
 
 /// "Tarefas · 1 atrasada · 3 hoje  ›" — tocar abre a página de Tarefas.
 class _CabecalhoTarefas extends StatelessWidget {
-  const _CabecalhoTarefas({required this.texto});
+  const _CabecalhoTarefas({super.key, required this.texto});
 
   final String texto;
 
@@ -299,7 +316,7 @@ class _CabecalhoEventos extends StatelessWidget {
                 decoration: BoxDecoration(color: scheme.secondaryContainer, shape: BoxShape.circle),
                 child: AnimatedRotation(
                   turns: ocultos ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 250),
+                  duration: _kAnimacao,
                   curve: Curves.easeInOut,
                   child: Icon(
                     Icons.expand_less,
