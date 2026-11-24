@@ -45,6 +45,8 @@
 | **v1.8** ✅ (2026-11-12) | Presente em Aniversário (ideia + comprado, aviso 7 dias antes; também no do Google) |
 | **v1.9** ✅ (2026-11-12) | Prioridade em Tarefa (alta/normal/baixa, ordem na seção, marca na linha; Classroom pelo card) |
 | **v1.10** ✅ (2026-11-12) | Uber/99 em Consulta e Compromisso (card de detalhes, ícone dos apps; destino pelo localizador do Android); "Até" só em Viagem/Feriado/Outro |
+| **v1.11–v1.13** ✅ (2026-11-23) | Rodada 1 de uso: resumo da Semana (só eventos, recolhível), seed, aba Eventos sem rolagem, página do tipo |
+| **v1.14** (2026-11-23) | Tela de Tarefas: progresso do dia, linhas com prioridade, adicionar rápido |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -844,6 +846,7 @@ Hoje funciona (seções, deslizar pra concluir/apagar, seleção, pesquisa, filt
 - **Adicionar rápido embaixo** no lugar do botão flutuante: campo "Nova tarefa…"; ao digitar aparecem chips (Hoje, Amanhã, data, item, prioridade); enter cria sem abrir folha. "Mais opções" abre a folha de evento com o que já foi digitado. Sem interpretar texto livre.
 - Descartado: faixa horizontal de dias (o filtro de período continua no menu de filtros); sequência de dias (gamificação) fica como possível opção futura em Ajustes.
 - Filtro de concluídas continua na tela (decidido no ponto 1).
+- **Implementado (v1.14, 2026-11-23)**: topo com anel (número no meio = quantas faltam hoje; ✓ e "Dia limpo" quando zera) e linha de atrasadas/resto da semana, escondido durante pesquisa ou filtro; com a lista vazia sem filtro o topo continua (o "Dia limpo" aparece). Linhas no modo colorido com faixa da prioridade e fundo neutro (o ícone de prioridade continua: cor não é a única informação). Caixinha pulsa ao concluir (~0,36 s) e a linha riscada não troca de lugar com a vizinha (desempate fixo na ordem). Adicionar rápido fixo embaixo no lugar do botão flutuante: chips Hoje/Amanhã/Data/Item/Prioridade ao digitar (sem chip de dia = sem data, dia todo com data); Enter ou a seta cria e o campo fica pronto pra próxima; "Mais opções" é o ícone ao lado do campo (fora da fila de chips, que rola) e leva título, dia, item e prioridade pra folha. Tarefa com data segue a agenda padrão de gravação, como na folha.
 
 ### Ponto 4 — Página de cada tipo (decidido)
 

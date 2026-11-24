@@ -239,6 +239,76 @@ void main() {
       expect(state.eventoPorId('Renovar RG'), isNotNull);
     });
 
+    testWidgets('página: topo com o progresso de hoje', (tester) async {
+      final state = AppState(feriadosEmbutidos: false);
+      await state.carregar();
+      final hoje = DateTime.now();
+      final dia = DateTime(hoje.year, hoje.month, hoje.day);
+      await state.adicionarEvento(tarefa('Lavar louça', inicio: dia));
+      await state.adicionarEvento(tarefa('Ler cap. 3', inicio: dia));
+      await montar(tester, state, const TarefasScreen());
+      await tester.pump();
+      expect(find.text('Hoje: 0 de 2'), findsOneWidget);
+
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Hoje: 1 de 2'), findsOneWidget);
+      // A concluída fica riscada no mesmo lugar (não troca com a vizinha).
+      final valores = [for (final c in tester.widgetList<Checkbox>(find.byType(Checkbox))) c.value];
+      expect(valores, [true, false]);
+      await tester.tap(find.byType(Checkbox).last);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Dia limpo'), findsOneWidget);
+      expect(find.text('Mostrar 2 concluídas'), findsOneWidget);
+    });
+
+    testWidgets('adicionar rápido: Enter cria sem data; chip Hoje dá o dia', (tester) async {
+      final state = AppState(feriadosEmbutidos: false);
+      await state.carregar();
+      await montar(tester, state, const TarefasScreen());
+      await tester.pump();
+      expect(find.byType(FloatingActionButton), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'Comprar pilha');
+      await tester.pump();
+      expect(find.text('Amanhã'), findsOneWidget); // chips aparecem ao digitar
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      final semData = state.tarefas.single;
+      expect(semData.titulo, 'Comprar pilha');
+      expect(semData.semData, isTrue);
+
+      await tester.enterText(find.byType(TextField), 'Ligar pro banco');
+      await tester.pump();
+      await tester.pumpAndSettle(); // chips terminam de abrir
+      await tester.tap(find.text('Hoje'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Criar'));
+      await tester.pumpAndSettle();
+      final comData = state.tarefas.firstWhere((t) => t.titulo == 'Ligar pro banco');
+      final hoje = DateTime.now();
+      expect(comData.semData, isFalse);
+      expect(comData.inicio, DateTime(hoje.year, hoje.month, hoje.day));
+      expect(comData.diaInteiro, isTrue);
+    });
+
+    testWidgets('adicionar rápido: "Mais opções" leva o texto pra folha', (tester) async {
+      final state = AppState(feriadosEmbutidos: false);
+      await state.carregar();
+      await montar(tester, state, const TarefasScreen());
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Trocar resistência');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Mais opções'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FolhaDeEvento), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(FolhaDeEvento), matching: find.text('Trocar resistência')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('aba Eventos: card de tarefas, vazios em chips no fim, abre lista do tipo',
         (tester) async {
       final state = AppState(feriadosEmbutidos: false);
