@@ -1,9 +1,15 @@
 /// Versão mostrada em Ajustes. Um teste confere que bate com o
 /// `pubspec.yaml` (sem pacote nativo só pra ler isso).
-const String kVersao = '1.15.0';
+const String kVersao = '1.16.0';
 
 /// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
 const List<(String, List<String>)> kNovidades = [
+  (
+    '1.16',
+    [
+      'Introdução nova: itens, eventos e tarefas, e o visual do app escolhido ali mesmo.',
+    ],
+  ),
   (
     '1.15',
     [

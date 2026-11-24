@@ -88,7 +88,7 @@ class AjustesScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _Miniatura(densidade: state.densidade, largura: 110, altura: 14),
+                  MiniaturaDaGrade(densidade: state.densidade, largura: 110, altura: 14),
                 ],
               ),
             ),
@@ -249,13 +249,13 @@ class _AparenciaPagina extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            _BolinhaDeCor(
+            BolinhaDeCor(
               rotulo: 'Material You',
               selecionada: state.corDoApp == null,
               aoEscolher: () => state.definirCorDoApp(null),
             ),
             for (final e in kCoresDoApp.entries)
-              _BolinhaDeCor(
+              BolinhaDeCor(
                 rotulo: e.value.nome,
                 cor: e.value.cor,
                 selecionada: state.corDoApp == e.key,
@@ -279,8 +279,8 @@ class _AparenciaPagina extends StatelessWidget {
 
 /// Uma cor da paleta (ou o Material You, sem [cor]: as cores do papel de
 /// parede, num círculo dividido). O nome aparece ao segurar.
-class _BolinhaDeCor extends StatelessWidget {
-  const _BolinhaDeCor({required this.rotulo, this.cor, required this.selecionada, required this.aoEscolher});
+class BolinhaDeCor extends StatelessWidget {
+  const BolinhaDeCor({super.key, required this.rotulo, this.cor, required this.selecionada, required this.aoEscolher});
 
   final String rotulo;
   final Color? cor;
@@ -664,7 +664,7 @@ class _Opcao extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _Miniatura(densidade: densidade),
+            MiniaturaDaGrade(densidade: densidade),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -702,8 +702,8 @@ class _Opcao extends StatelessWidget {
 }
 
 /// Uma semana em miniatura, com a repetição e os vazios que a grade real tem.
-class _Miniatura extends StatelessWidget {
-  const _Miniatura({required this.densidade, this.largura = 82, this.altura = 10});
+class MiniaturaDaGrade extends StatelessWidget {
+  const MiniaturaDaGrade({super.key, required this.densidade, this.largura = 82, this.altura = 10});
 
   final ColorDensity densidade;
   final double largura;
