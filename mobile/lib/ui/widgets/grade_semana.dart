@@ -14,6 +14,7 @@ import '../../util/formato_data.dart';
 import '../../util/horario_atual.dart' as horario_atual;
 import 'folha_eventos.dart';
 import 'item_swatch.dart';
+import '../../util/semana.dart';
 
 /// A grade N×M em chrome neutro — a cara do projeto, o `fancy_grid` do script
 /// virando UI. N colunas de acordo com [Tabela.dias], não fixo em 5.
@@ -93,7 +94,7 @@ class GradeSemana extends StatelessWidget {
     final agora = DateTime.now();
     // Hoje e "agora" só existem na semana atual (ou na grade de molde, sem
     // datas); noutra semana nenhuma coluna é hoje.
-    final semanaAtual = eventos == null || eventos!.segunda == segundaDaSemana(agora);
+    final semanaAtual = eventos == null || eventos!.inicio == inicioDaSemana(agora, eventos!.inicio.weekday);
     final hoje = semanaAtual ? indiceDeHoje(tabela.dias, agora) : -1;
     final slotAgora = semanaAtual ? _slotCorrente(agora) : -1;
     final topoLinhaDoAgora = _topoLinhaDoAgora(agora, hoje);

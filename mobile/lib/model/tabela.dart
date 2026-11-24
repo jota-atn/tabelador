@@ -37,12 +37,14 @@ const List<String> kDiasPadrao = [
   'SEXTA',
 ];
 
-/// Ordena um subconjunto de dias na ordem do calendário — pra quem marca as
+/// Ordena um subconjunto de dias na ordem da semana — pra quem marca as
 /// colunas fora de ordem na tela de configuração continuar vendo segunda
-/// antes de terça, não a ordem em que tocou.
-List<String> ordenarDias(Iterable<String> dias) {
+/// antes de terça, não a ordem em que tocou. [domingoPrimeiro] põe o
+/// domingo na frente (tabela com a semana começando no domingo).
+List<String> ordenarDias(Iterable<String> dias, {bool domingoPrimeiro = false}) {
   final conjunto = dias.toSet();
-  return [for (final d in kTodosDias) if (conjunto.contains(d)) d];
+  final ordem = domingoPrimeiro ? ['DOMINGO', ...kTodosDias.take(6)] : kTodosDias;
+  return [for (final d in ordem) if (conjunto.contains(d)) d];
 }
 
 /// Uma tabela de horários — "2026.1", "Estágio", "Academia".
@@ -60,9 +62,10 @@ class Tabela {
     Map<String, List<String?>>? celulas,
     this.mostrarEventos = true,
     this.pontoFacultativoFolga = true,
+    this.comecaNoDomingo = false,
     required this.criadaEm,
     required this.atualizadaEm,
-  })  : dias = ordenarDias(dias ?? kDiasPadrao),
+  })  : dias = ordenarDias(dias ?? kDiasPadrao, domingoPrimeiro: comecaNoDomingo),
         celulas = _normalizar(celulas, ordenarDias(dias ?? kDiasPadrao), qtdHorarios);
 
   factory Tabela.nova({
@@ -111,6 +114,13 @@ class Tabela {
   /// Ligado por padrão — universidade costuma parar —, mas a do estágio
   /// pode desligar.
   final bool pontoFacultativoFolga;
+
+  /// Semana de domingo a sábado (domingo é a primeira coluna). Com esta
+  /// tabela ativa, a navegação, "Esta semana" e os calendários seguem.
+  final bool comecaNoDomingo;
+
+  /// `DateTime.sunday` ou `DateTime.monday`.
+  int get primeiroDia => comecaNoDomingo ? DateTime.sunday : DateTime.monday;
 
   final DateTime criadaEm;
   final DateTime atualizadaEm;
@@ -214,6 +224,7 @@ class Tabela {
     Map<String, List<String?>>? celulas,
     bool? mostrarEventos,
     bool? pontoFacultativoFolga,
+    bool? comecaNoDomingo,
     DateTime? atualizadaEm,
   }) {
     return Tabela(
@@ -226,6 +237,7 @@ class Tabela {
       celulas: celulas ?? this.celulas,
       mostrarEventos: mostrarEventos ?? this.mostrarEventos,
       pontoFacultativoFolga: pontoFacultativoFolga ?? this.pontoFacultativoFolga,
+      comecaNoDomingo: comecaNoDomingo ?? this.comecaNoDomingo,
       criadaEm: criadaEm,
       atualizadaEm: atualizadaEm ?? DateTime.now(),
     );
@@ -241,6 +253,7 @@ class Tabela {
         'celulas': celulas,
         if (!mostrarEventos) 'mostrarEventos': false,
         if (!pontoFacultativoFolga) 'pontoFacultativoFolga': false,
+        if (comecaNoDomingo) 'comecaNoDomingo': true,
         'criadaEm': criadaEm.toIso8601String(),
         'atualizadaEm': atualizadaEm.toIso8601String(),
       };
@@ -270,6 +283,7 @@ class Tabela {
       },
       mostrarEventos: json['mostrarEventos'] as bool? ?? true,
       pontoFacultativoFolga: json['pontoFacultativoFolga'] as bool? ?? true,
+      comecaNoDomingo: json['comecaNoDomingo'] as bool? ?? false,
       criadaEm: DateTime.tryParse(json['criadaEm'] as String? ?? '') ?? agora,
       atualizadaEm:
           DateTime.tryParse(json['atualizadaEm'] as String? ?? '') ?? agora,

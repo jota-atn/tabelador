@@ -256,7 +256,7 @@ class _CardTarefas extends StatelessWidget {
     final cor = corDoTipo(TipoEvento.tarefa, scheme.brightness);
     final agora = DateTime.now();
     final pendentes = [
-      for (final l in organizarTarefas(state.tarefas, agora))
+      for (final l in organizarTarefas(state.tarefas, agora, state.primeiroDiaDaSemana))
         if (l.secao != SecaoTarefa.concluidas) l,
     ];
     final atrasadas = pendentes.where((l) => l.secao == SecaoTarefa.atrasadas).length;

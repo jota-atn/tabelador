@@ -1,4 +1,5 @@
 import '../model/evento.dart';
+import 'semana.dart';
 
 /// Onde uma tarefa cai na página de Tarefas, na ordem em que as seções
 /// aparecem.
@@ -47,7 +48,7 @@ Ocorrencia? ocorrenciaDaTarefa(Evento e, DateTime agora) {
 
 /// Em que seção a ocorrência [o] cai, sem olhar se está concluída (a
 /// página usa isso pra deixar a recém-concluída riscada no lugar dela).
-SecaoTarefa secaoPelaData(Ocorrencia o, DateTime agora) {
+SecaoTarefa secaoPelaData(Ocorrencia o, DateTime agora, [int primeiroDia = DateTime.monday]) {
   final e = o.evento;
   if (e.semData) return SecaoTarefa.semData;
   final hoje = DateTime(agora.year, agora.month, agora.day);
@@ -55,8 +56,10 @@ SecaoTarefa secaoPelaData(Ocorrencia o, DateTime agora) {
   final passou = e.diaInteiro ? dia.isBefore(hoje) : o.inicio.isBefore(agora);
   if (passou) return SecaoTarefa.atrasadas;
   if (dia == hoje) return SecaoTarefa.hoje;
-  // Segunda que vem, meia-noite: fim de "esta semana" (igual à tela Semana).
-  final fimDaSemana = DateTime(hoje.year, hoje.month, hoje.day + (8 - hoje.weekday));
+  // Começo da semana que vem (segunda ou domingo, conforme a tabela ativa):
+  // fim de "esta semana", igual à tela Semana.
+  final inicio = inicioDaSemana(hoje, primeiroDia);
+  final fimDaSemana = DateTime(inicio.year, inicio.month, inicio.day + 7);
   if (dia.isBefore(fimDaSemana)) return SecaoTarefa.semana;
   return SecaoTarefa.depois;
 }
@@ -64,12 +67,12 @@ SecaoTarefa secaoPelaData(Ocorrencia o, DateTime agora) {
 /// Todas as tarefas organizadas: pendentes por data, sem data, concluídas
 /// por último (mais recente primeiro). Dentro de cada seção, pela
 /// prioridade e depois pela data.
-List<LinhaTarefa> organizarTarefas(Iterable<Evento> tarefas, DateTime agora) {
+List<LinhaTarefa> organizarTarefas(Iterable<Evento> tarefas, DateTime agora, [int primeiroDia = DateTime.monday]) {
   final linhas = <LinhaTarefa>[];
   for (final e in tarefas) {
     final o = ocorrenciaDaTarefa(e, agora);
     if (o == null) continue;
-    linhas.add(LinhaTarefa(o, o.feita ? SecaoTarefa.concluidas : secaoPelaData(o, agora)));
+    linhas.add(LinhaTarefa(o, o.feita ? SecaoTarefa.concluidas : secaoPelaData(o, agora, primeiroDia)));
   }
   linhas.sort(compararLinhas);
   return linhas;

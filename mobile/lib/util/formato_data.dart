@@ -1,5 +1,6 @@
 import '../model/evento.dart';
 import '../model/tabela.dart';
+import 'semana.dart';
 
 /// Formatação de data/hora à mão em vez de `intl`: o app só precisa de três
 /// formatos curtos, sempre em português.
@@ -60,27 +61,28 @@ const _kMesesPorExtenso = [
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ];
 
-/// A semana que começa em [segunda]: "16 – 22 de novembro", e quando
+/// A semana que começa em [inicio] (segunda ou domingo): "16 – 22 de novembro", e quando
 /// atravessa o mês "30 nov – 6 dez". Ano só se não for o de [agora].
-String rotuloDaSemana(DateTime segunda, DateTime agora) {
-  final domingo = DateTime(segunda.year, segunda.month, segunda.day + 6);
+String rotuloDaSemana(DateTime inicio, DateTime agora) {
+  final fim = DateTime(inicio.year, inicio.month, inicio.day + 6);
   String curto(DateTime d) => '${d.day} ${_kMesesPorExtenso[d.month - 1].substring(0, 3)}';
-  final outroAno = segunda.year != agora.year || domingo.year != agora.year;
-  if (segunda.month == domingo.month) {
-    final base = '${segunda.day} – ${domingo.day} de ${_kMesesPorExtenso[domingo.month - 1]}';
-    return outroAno ? '$base de ${domingo.year}' : base;
+  final outroAno = inicio.year != agora.year || fim.year != agora.year;
+  if (inicio.month == fim.month) {
+    final base = '${inicio.day} – ${fim.day} de ${_kMesesPorExtenso[fim.month - 1]}';
+    return outroAno ? '$base de ${fim.year}' : base;
   }
-  if (segunda.year != domingo.year) {
-    return '${curto(segunda)} ${segunda.year} – ${curto(domingo)} ${domingo.year}';
+  if (inicio.year != fim.year) {
+    return '${curto(inicio)} ${inicio.year} – ${curto(fim)} ${fim.year}';
   }
-  final base = '${curto(segunda)} – ${curto(domingo)}';
-  return outroAno ? '$base ${domingo.year}' : base;
+  final base = '${curto(inicio)} – ${curto(fim)}';
+  return outroAno ? '$base ${fim.year}' : base;
 }
 
 /// "Esta semana", "Semana que vem", "Semana passada" ou "Semana de 23/11".
-String tituloDaSemana(DateTime segunda, DateTime agora) {
-  final atual = DateTime(agora.year, agora.month, agora.day - (agora.weekday - 1));
-  final semanas = (DateTime.utc(segunda.year, segunda.month, segunda.day)
+String tituloDaSemana(DateTime inicio, DateTime agora) {
+  // O próprio início diz em que dia a semana começa (inicio ou fim).
+  final atual = inicioDaSemana(agora, inicio.weekday);
+  final semanas = (DateTime.utc(inicio.year, inicio.month, inicio.day)
               .difference(DateTime.utc(atual.year, atual.month, atual.day))
               .inDays /
           7)
@@ -89,6 +91,6 @@ String tituloDaSemana(DateTime segunda, DateTime agora) {
     0 => 'Esta semana',
     1 => 'Semana que vem',
     -1 => 'Semana passada',
-    _ => 'Semana de ${diaMes(segunda)}',
+    _ => 'Semana de ${diaMes(inicio)}',
   };
 }

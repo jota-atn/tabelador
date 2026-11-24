@@ -11,6 +11,7 @@ import '../model/nota.dart';
 import '../model/presente.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
+import '../util/semana.dart';
 import '../util/feriados.dart';
 
 /// Estado do app: a biblioteca de itens, as tabelas e as preferências.
@@ -75,7 +76,7 @@ class AppState extends ChangeNotifier {
 
   /// Segunda-feira da semana que a tela inicial mostra; nulo = a atual. Só
   /// em memória: abrir o app de novo volta pra semana de hoje.
-  DateTime? _segundaMostrada;
+  DateTime? _inicioMostrado;
 
   /// Sobe a cada pedido de "ir pra tela inicial" (o "Ver na grade" do
   /// calendário, que também abre pela aba Eventos).
@@ -125,29 +126,35 @@ class AppState extends ChangeNotifier {
   /// Máximo da última nota lançada — sugestão pra próxima.
   double get ultimoMaximo => _ultimoMaximo;
 
-  /// Segunda (meia-noite) da semana mostrada na tela inicial.
-  DateTime segundaMostrada([DateTime? agora]) =>
-      _segundaMostrada ?? _segundaDe(agora ?? DateTime.now());
+  /// Primeiro dia da semana segundo a tabela ativa: domingo ou segunda.
+  /// Navegação, "Esta semana" e calendários seguem isso.
+  int get primeiroDiaDaSemana => tabelaAtiva?.primeiroDia ?? DateTime.monday;
+
+  /// Primeiro dia (meia-noite) da semana mostrada na tela inicial. Trocar
+  /// pra uma tabela que começa em outro dia leva junto (a semana que
+  /// contém o dia guardado).
+  DateTime inicioMostrado([DateTime? agora]) =>
+      _inicioDe(_inicioMostrado ?? agora ?? DateTime.now());
 
   bool mostrandoSemanaAtual([DateTime? agora]) {
     final a = agora ?? DateTime.now();
-    return segundaMostrada(a) == _segundaDe(a);
+    return inicioMostrado(a) == _inicioDe(a);
   }
 
-  static DateTime _segundaDe(DateTime d) => DateTime(d.year, d.month, d.day - (d.weekday - 1));
+  DateTime _inicioDe(DateTime d) => inicioDaSemana(d, primeiroDiaDaSemana);
 
   /// Mostra a semana de [dia] na tela inicial. [irPraTela] também pede
   /// pra navegação trocar pra aba Semana.
   void mostrarSemana(DateTime dia, {bool irPraTela = false}) {
-    final s = _segundaDe(dia);
-    _segundaMostrada = s == _segundaDe(DateTime.now()) ? null : s;
+    final s = _inicioDe(dia);
+    _inicioMostrado = s == _inicioDe(DateTime.now()) ? null : s;
     if (irPraTela) _pedidosDeSemana++;
     notifyListeners();
   }
 
   /// Anda [semanas] pra frente (negativo = pra trás).
   void andarSemanas(int semanas) {
-    final s = segundaMostrada();
+    final s = inicioMostrado();
     mostrarSemana(DateTime(s.year, s.month, s.day + 7 * semanas));
   }
 

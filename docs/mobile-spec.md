@@ -49,8 +49,8 @@
 | **v1.14** ✅ (2026-11-23) | Tela de Tarefas: progresso do dia, linhas com prioridade, adicionar rápido |
 | **v1.15** ✅ (2026-11-23) | Ajustes em seções; tema e cor do app salvos; resumo da Semana configurável; Sobre com novidades |
 | **v1.16** ✅ (2026-11-23) | Introdução nova (itens, eventos e tarefas, visual do app); menu de exemplos só em debug — fecha a rodada 1 |
-| **v1.17** (2026-11-23) | Hora do aviso de dia todo, dias do lembrete de presente, esconder tipos de evento |
-| **v1.18** | Semana começando no domingo (por tabela) |
+| **v1.17** ✅ (2026-11-23) | Hora do aviso de dia todo, dias do lembrete de presente, esconder tipos de evento |
+| **v1.18** (2026-11-23) | Semana começando no domingo (por tabela) |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -800,6 +800,7 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 - **v1.15 implementado (2026-11-23)**: tela Ajustes (engrenagem na Semana) com cabeçalho (nome, versão, miniatura da grade na densidade atual) e seções com ícone colorido e resumo dos valores atuais: Aparência (tema Sistema/Claro/Escuro em botões segmentados, cor do app = Material You ou uma de 6 — Azul, Verde, Roxo, Terracota, Rosa, Grafite — com o nome ao segurar, densidade), Eventos e Tarefas (resumo de eventos liga/desliga e quantos: 3, 4, 5, 6, 8, 10), Avisos (o que já existia; a explicação de "Avisar eventos também" foi pro toque longo), Google Agenda (abre direto as agendas: uma opção só), Dados (backup), Sobre (versão, novidades por versão em `lib/novidades.dart`, rever a introdução). Tema, cor, resumo e "Mostrar concluídas" são preferências **do aparelho, fora do backup**. Versão vem de `kVersao` (teste confere com o `pubspec.yaml`, sem pacote nativo). Ficam pra depois: aviso padrão de dia todo e dias do lembrete de presente, esconder tipos, opções do widget, semana começando no domingo.
 - **v1.17 implementado (2026-11-23)**: Avisos ganha "Aviso de dia todo" (seletor de hora; evento sem hora própria segue o padrão, e mudar o padrão muda esses avisos) e "Lembrete de presente" (1, 2, 3, 5, 7, 10 ou 14 dias antes), os dois visíveis com os avisos ligados. Eventos e Tarefas ganha "Tipos de evento": um interruptor por tipo (menos Tarefa); escondido some dos cards/chips da aba Eventos e dos chips de tipo da folha (ao editar um evento desse tipo, o chip dele continua). Os três entram no backup, junto das outras preferências de aviso.
 - **Semana começa no domingo ou na segunda** não fica em Ajustes: é configuração **da tabela** (folha de config da tabela, junto dos dias).
+- **v1.18 implementado (2026-11-23)**: `Tabela.comecaNoDomingo` (JSON só quando ligado) e "Semana começa: Segunda · Domingo" logo abaixo dos dias na folha da tabela (os chips de dia seguem a ordem). Com domingo, a coluna DOMINGO vem primeiro. `AppState.primeiroDiaDaSemana` segue a tabela ativa (sem tabela = segunda) e um só cálculo (`util/semana.dart`: `inicioDaSemana`, `ultimoDiaDaSemana`, `iniciaisDaSemana`) substitui as contas de "segunda da semana" espalhadas: semana mostrada (trocar de tabela leva a semana que contém o dia), data de cada coluna, título "Esta semana", resumo e "Próxima semana" (nos dois últimos dias da semana), seções de Tarefas ("Esta semana" vai até o sábado), calendário do mês (começo, iniciais, pontas dos blocos de vários dias) e mini-calendário da página do tipo.
 
 Em aberto:
 

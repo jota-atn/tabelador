@@ -371,6 +371,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
   late Set<String> _dias;
   late bool _mostrarEventos;
   late bool _pontoFacultativoFolga;
+  late bool _comecaNoDomingo;
 
   @override
   void initState() {
@@ -383,6 +384,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
     _dias = (o?.dias ?? kDiasPadrao).toSet();
     _mostrarEventos = o?.mostrarEventos ?? true;
     _pontoFacultativoFolga = o?.pontoFacultativoFolga ?? true;
+    _comecaNoDomingo = o?.comecaNoDomingo ?? false;
   }
 
   @override
@@ -391,7 +393,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
     super.dispose();
   }
 
-  List<String> get _diasSelecionados => ordenarDias(_dias);
+  List<String> get _diasSelecionados => ordenarDias(_dias, domingoPrimeiro: _comecaNoDomingo);
 
   /// Quantas células o usuário perde se confirmar — soma o que se perde
   /// encolhendo a quantidade de horários com o que se perde tirando um dia
@@ -423,6 +425,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
       ).copyWith(
         mostrarEventos: _mostrarEventos,
         pontoFacultativoFolga: _pontoFacultativoFolga,
+        comecaNoDomingo: _comecaNoDomingo,
       );
       await state.adicionarTabela(nova);
       // Tabela recém-criada vira a ativa mesmo já havendo outra — é a que
@@ -453,6 +456,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
         dias: _diasSelecionados,
         mostrarEventos: _mostrarEventos,
         pontoFacultativoFolga: _pontoFacultativoFolga,
+        comecaNoDomingo: _comecaNoDomingo,
       ),
     );
     navigator.pop();
@@ -505,7 +509,7 @@ class ConfigTabelaState extends State<ConfigTabela> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final dia in kTodosDias)
+              for (final dia in ordenarDias(kTodosDias, domingoPrimeiro: _comecaNoDomingo))
                 FilterChip(
                   label: Text(kDiaAbreviado[dia]!),
                   selected: _dias.contains(dia),
@@ -519,6 +523,35 @@ class ConfigTabelaState extends State<ConfigTabela> {
                     }
                   }),
                 ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Semana começa',
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    label: Text('Segunda'),
+                    tooltip: 'Semana de segunda a domingo.',
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: Text('Domingo'),
+                    tooltip: 'Semana de domingo a sábado: a grade, a navegação, "Esta semana" e os calendários seguem, com esta tabela ativa.',
+                  ),
+                ],
+                selected: {_comecaNoDomingo},
+                showSelectedIcon: false,
+                style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                onSelectionChanged: (s) => setState(() => _comecaNoDomingo = s.single),
+              ),
             ],
           ),
           const SizedBox(height: 20),

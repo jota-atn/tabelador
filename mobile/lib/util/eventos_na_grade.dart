@@ -64,14 +64,11 @@ String? viagemNoHorario(DateTime de, DateTime ate, Iterable<Ocorrencia> ocorrenc
   );
 }
 
-/// Segunda-feira (meia-noite) da semana de [d].
-DateTime segundaDaSemana(DateTime d) =>
-    DateTime(d.year, d.month, d.day - (d.weekday - 1));
-
-/// Data de uma coluna da grade: a [segunda] da semana mostrada mais o
-/// deslocamento do dia (`kTodosDias` é segunda-primeiro, igual a weekday-1).
-DateTime dataDaColuna(DateTime segunda, String dia) =>
-    DateTime(segunda.year, segunda.month, segunda.day + kTodosDias.indexOf(dia));
+/// Data de uma coluna da grade: o [inicio] da semana mostrada (inicio ou
+/// domingo, ver `inicioDaSemana`) mais quantos dias o [dia] fica depois
+/// dele.
+DateTime dataDaColuna(DateTime inicio, String dia) =>
+    DateTime(inicio.year, inicio.month, inicio.day + (kTodosDias.indexOf(dia) + 1 - inicio.weekday) % 7);
 
 /// Onde cada evento de uma semana cai na grade de uma tabela — calculado
 /// uma vez, fora do widget, pra ser testável sem montar UI.
@@ -80,7 +77,7 @@ DateTime dataDaColuna(DateTime segunda, String dia) =>
 /// em cima, faixa "fora do horário" embaixo, e nenhum (dia que a tabela não
 /// tem — esse só aparece na lista "Próximos").
 class EventosDaSemana {
-  EventosDaSemana._(this.segunda, this._celulas, this._diaTodo, this._fora,
+  EventosDaSemana._(this.inicio, this._celulas, this._diaTodo, this._fora,
       [this._folgas = const {}, this._apagados = const {}]);
 
   static final EventosDaSemana vazio =
@@ -97,7 +94,7 @@ class EventosDaSemana {
   /// A aula desse horário não acontece (folga do dia ou viagem)?
   bool apagado(String dia, int slot) => _folgas.containsKey(dia) || _apagados.contains('$dia/$slot');
 
-  final DateTime segunda;
+  final DateTime inicio;
   final Map<String, List<Ocorrencia>> _celulas;
   final Map<String, List<Ocorrencia>> _diaTodo;
   final Map<String, List<Ocorrencia>> _fora;
@@ -110,11 +107,11 @@ class EventosDaSemana {
   bool get temDiaTodo => _diaTodo.isNotEmpty;
   bool get temForaDoHorario => _fora.isNotEmpty;
 
-  DateTime dataDe(String dia) => dataDaColuna(segunda, dia);
+  DateTime dataDe(String dia) => dataDaColuna(inicio, dia);
 }
 
 /// Distribui [ocorrencias] (já filtradas pra semana que começa em
-/// [segunda]) pela grade de [tabela].
+/// [inicio]) pela grade de [tabela].
 ///
 /// Evento com faixa ocupa todo slot que ela sobrepõe — uma prova de 10h às
 /// 13h numa tabela de blocos de 2h marca 10-12 e 12-14. Evento pontual (sem
@@ -123,7 +120,7 @@ class EventosDaSemana {
 /// que esta tabela usa.
 EventosDaSemana distribuirEventos({
   required Tabela tabela,
-  required DateTime segunda,
+  required DateTime inicio,
   required Iterable<Ocorrencia> ocorrencias,
 }) {
   final celulas = <String, List<Ocorrencia>>{};
@@ -137,7 +134,7 @@ EventosDaSemana distribuirEventos({
     // viagem de ter a sex aparece nos quatro.
     if (o.evento.diaInteiro || o.variosDias) {
       for (final dia in tabela.dias) {
-        if (o.cobre(dataDaColuna(segunda, dia))) (diaTodo[dia] ??= []).add(o);
+        if (o.cobre(dataDaColuna(inicio, dia))) (diaTodo[dia] ??= []).add(o);
       }
       continue;
     }
@@ -147,7 +144,7 @@ EventosDaSemana distribuirEventos({
     // Fora da semana mostrada (o chamador deveria ter filtrado, mas uma
     // ocorrência de outra semana no mesmo dia da semana iria pra coluna
     // errada sem esta checagem).
-    if (inicioDoDia(o.inicio) != dataDaColuna(segunda, dia)) continue;
+    if (inicioDoDia(o.inicio) != dataDaColuna(inicio, dia)) continue;
 
     final minIni = o.inicio.hour * 60 + o.inicio.minute;
     final pontual = !o.fim.isAfter(o.inicio);
@@ -175,19 +172,19 @@ EventosDaSemana distribuirEventos({
 
   final folgas = <String, String>{
     for (final dia in tabela.dias)
-      dia: ?folgaNoDia(dataDaColuna(segunda, dia), tabela, ocorrencias),
+      dia: ?folgaNoDia(dataDaColuna(inicio, dia), tabela, ocorrencias),
   };
 
   final apagados = <String>{
     for (final dia in tabela.dias)
       if (!folgas.containsKey(dia))
         for (var slot = 0; slot < tabela.qtdHorarios; slot++)
-          if (horarioDoSlot(tabela, dataDaColuna(segunda, dia), slot) case (final de, final ate)
+          if (horarioDoSlot(tabela, dataDaColuna(inicio, dia), slot) case (final de, final ate)
               when viagemNoHorario(de, ate, ocorrencias) != null)
             '$dia/$slot',
   };
 
-  return EventosDaSemana._(segunda, celulas, diaTodo, fora, folgas, apagados);
+  return EventosDaSemana._(inicio, celulas, diaTodo, fora, folgas, apagados);
 }
 
 /// Próximo horário (a partir de [agora]) em que [itemId] ocupa uma célula de

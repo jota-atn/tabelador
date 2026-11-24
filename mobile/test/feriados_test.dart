@@ -118,7 +118,7 @@ void main() {
     Ocorrencia oc(Evento e) => Ocorrencia(e, e.inicio, e.inicio);
 
     test('embutido esmaece o dia mesmo sem ocorrências', () {
-      final semana = distribuirEventos(tabela: tabela, segunda: segunda, ocorrencias: const []);
+      final semana = distribuirEventos(tabela: tabela, inicio: segunda, ocorrencias: const []);
       expect(semana.folga('SEXTA'), 'Dia da Consciência Negra');
       expect(semana.folga('SEGUNDA'), isNull);
     });
@@ -139,7 +139,7 @@ void main() {
       final comemorativa = Evento.fromJson({...festa.toJson(), 'comemorativa': true});
       final semana = distribuirEventos(
         tabela: tabela,
-        segunda: segunda,
+        inicio: segunda,
         ocorrencias: [oc(recesso), oc(comemorativa)],
       );
       expect(semana.folga('TERÇA'), 'Recesso');

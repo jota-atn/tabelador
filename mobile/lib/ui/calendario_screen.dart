@@ -8,13 +8,13 @@ import '../util/formato_data.dart';
 import 'folha_evento.dart';
 import 'widgets/evento_tile.dart';
 import 'widgets/largura_maxima.dart';
+import '../util/semana.dart';
 
 const List<String> _kMeses = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-const List<String> _kIniciais = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
 /// Quantas marcas cabem numa célula de dia antes de virar "+N".
 const int _kMarcasPorDia = 3;
@@ -80,9 +80,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     final scheme = Theme.of(context).colorScheme;
     final hoje = inicioDoDia(DateTime.now());
 
-    // Sempre 6 semanas a partir da segunda que abre a grade: altura fixa,
-    // sem a grade pular de tamanho entre meses de 4, 5 ou 6 linhas.
-    final primeiroDia = DateTime(_mes.year, _mes.month, 1 - (_mes.weekday - 1));
+    // Sempre 6 semanas a partir do começo da semana (segunda ou domingo,
+    // como a tabela ativa) que abre a grade: altura fixa, sem a grade
+    // pular de tamanho entre meses de 4, 5 ou 6 linhas.
+    final primeiroDia = inicioDaSemana(_mes, state.primeiroDiaDaSemana);
     final fimDaGrade = DateTime(primeiroDia.year, primeiroDia.month, primeiroDia.day + 42);
 
     final porDia = <DateTime, List<Ocorrencia>>{};
@@ -165,7 +166,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  for (final l in _kIniciais)
+                  for (final l in iniciaisDaSemana(state.primeiroDiaDaSemana))
                     Expanded(
                       child: Center(
                         child: Text(
@@ -360,8 +361,9 @@ class _CelulaDoDia extends StatelessWidget {
     // Pontas arredondadas no começo e no fim do evento e nas bordas da
     // semana (onde a linha do calendário quebra).
     final cor = corDoEvento(bloco.evento, state.itemPorId(bloco.evento.itemId), scheme);
-    final comeca = dia == inicioDoDia(bloco.inicio) || dia.weekday == DateTime.monday;
-    final termina = dia == bloco.ultimoDia || dia.weekday == DateTime.sunday;
+    final primeiro = state.primeiroDiaDaSemana;
+    final comeca = dia == inicioDoDia(bloco.inicio) || dia.weekday == primeiro;
+    final termina = dia == bloco.ultimoDia || dia.weekday == ultimoDiaDaSemana(primeiro);
     const raio = Radius.circular(10);
     // Por trás da célula, sem mudar a altura dela (as linhas do mês ficam
     // alinhadas).

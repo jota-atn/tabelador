@@ -13,6 +13,7 @@ import 'folha_evento.dart';
 import 'widgets/celula_picker.dart';
 import 'widgets/proximos_eventos.dart';
 import 'widgets/semana_corpo.dart';
+import '../util/semana.dart';
 
 /// A tela inicial: a semana inteira da tabela ativa, só leitura.
 class SemanaScreen extends StatelessWidget {
@@ -33,13 +34,13 @@ class SemanaScreen extends StatelessWidget {
     Tabela tabela,
     String dia,
     int slot,
-    DateTime segunda,
+    DateTime inicio,
   ) {
-    final d = dataDaColuna(segunda, dia);
+    final d = dataDaColuna(inicio, dia);
     final hora = tabela.horaInicial + slot * tabela.intervalo;
     final nestaSemana = DateTime(d.year, d.month, d.day, hora);
     // Outra semana na tela: a data é a daquela semana, sem pular.
-    if (segunda != segundaDaSemana(DateTime.now())) return nestaSemana;
+    if (inicio != inicioDaSemana(DateTime.now(), inicio.weekday)) return nestaSemana;
     return nestaSemana.isBefore(DateTime.now())
         ? DateTime(d.year, d.month, d.day + 7, hora)
         : nestaSemana;
@@ -50,15 +51,15 @@ class SemanaScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     final tabela = state.tabelaAtiva;
-    final segunda = state.segundaMostrada();
+    final inicio = state.inicioMostrado();
     final eventos = tabela == null
         ? null
         : distribuirEventos(
             tabela: tabela,
-            segunda: segunda,
+            inicio: inicio,
             ocorrencias: state.ocorrenciasEntre(
-              segunda,
-              DateTime(segunda.year, segunda.month, segunda.day + 7),
+              inicio,
+              DateTime(inicio.year, inicio.month, inicio.day + 7),
             ),
           );
 
@@ -123,12 +124,12 @@ class SemanaScreen extends StatelessWidget {
                   tabela: tabela,
                   dia: dia,
                   slot: slot,
-                  dataDoSlot: _proximaDataDoSlot(tabela, dia, slot, segunda),
+                  dataDoSlot: _proximaDataDoSlot(tabela, dia, slot, inicio),
                 ),
                 cabecalho: const _BarraDaSemana(),
                 rodape: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [const _CartaoGoogle(), if (state.resumoVisivel) ProximosEventos(segunda: segunda)],
+                  children: [const _CartaoGoogle(), if (state.resumoVisivel) ProximosEventos(inicio: inicio)],
                 ),
                 eventos: eventos,
               ),
@@ -164,7 +165,7 @@ class _BarraDaSemana extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            rotuloDaSemana(state.segundaMostrada(agora), agora),
+            rotuloDaSemana(state.inicioMostrado(agora), agora),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13.5,
