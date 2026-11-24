@@ -8,10 +8,12 @@ import '../model/item.dart';
 import '../state/app_state.dart';
 import '../theme/color_density.dart';
 import '../theme/tipo_evento_visual.dart';
+import '../util/formato_data.dart';
 import '../util/tarefas.dart';
 import 'folha_evento.dart';
 import 'tarefas_acoes.dart';
 import 'widgets/evento_tile.dart';
+import 'widgets/item_swatch.dart';
 
 /// Filtro de período da página (opções de listagem).
 enum PeriodoTarefas {
@@ -266,6 +268,17 @@ class _TarefasScreenState extends State<TarefasScreen> {
       for (final l in todas) _recentesPorEvento(l) ?? l,
     ];
     final concluidasTotal = todas.where((l) => l.secao == SecaoTarefa.concluidas).length;
+    final hoje = inicioDoDia(agora);
+    final deHoje = [
+      for (final l in todas)
+        if (!l.ocorrencia.evento.semData && inicioDoDia(l.ocorrencia.inicio) == hoje) l,
+    ];
+    final progresso = _Progresso(
+      feitas: deHoje.where((l) => l.ocorrencia.feita).length,
+      total: deHoje.length,
+      atrasadas: todas.where((l) => l.secao == SecaoTarefa.atrasadas).length,
+      semana: todas.where((l) => l.secao == SecaoTarefa.semana).length,
+    );
     final linhas = [
       for (final l in todas)
         if ((l.secao != SecaoTarefa.concluidas || _mostrarConcluidas) &&
@@ -274,7 +287,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
             _origem.aceita(l.ocorrencia.evento) &&
             (termo.isEmpty || l.ocorrencia.evento.titulo.toLowerCase().contains(termo)))
           l,
-    ]..sort((a, b) => a.secao.index.compareTo(b.secao.index));
+    ]..sort(compararLinhas);
 
     final porSecao = <SecaoTarefa, List<LinhaTarefa>>{};
     for (final l in linhas) {
@@ -348,14 +361,28 @@ class _TarefasScreenState extends State<TarefasScreen> {
                   ),
                 ],
               ),
-        floatingActionButton: _selecionando
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () => abrirFolhaDeEvento(context, tipo: TipoEvento.tarefa),
-                icon: const Icon(Icons.add_task),
-                label: const Text('Nova tarefa'),
-              ),
-        body: linhas.isEmpty
+        body: Column(
+          children: [
+            Expanded(child: _corpo(linhas, porSecao, tarefas, concluidasTotal, progresso, scheme)),
+            if (!_selecionando) const _AdicionarRapido(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _corpo(
+    List<LinhaTarefa> linhas,
+    Map<SecaoTarefa, List<LinhaTarefa>> porSecao,
+    List<Evento> tarefas,
+    int concluidasTotal,
+    _Progresso progresso,
+    ColorScheme scheme,
+  ) {
+    // Sem filtro, a lista vazia ainda mostra o topo ("Dia limpo"): o vazio
+    // genérico fica pra quando não há tarefa nenhuma ou o filtro esconde.
+    final vazioDeVerdade = linhas.isEmpty && (tarefas.isEmpty || _filtrando || _buscando);
+    return vazioDeVerdade
             ? _Vazio(
                 temTarefas: tarefas.isNotEmpty,
                 concluidas: concluidasTotal,
@@ -364,8 +391,9 @@ class _TarefasScreenState extends State<TarefasScreen> {
                     : null,
               )
             : ListView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
                 children: [
+                  if (!_buscando && !_filtrando) _TopoDoDia(p: progresso),
                   for (final secao in porSecao.entries) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(8, 14, 8, 2),
@@ -396,9 +424,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                       ),
                     ),
                 ],
-              ),
-      ),
-    );
+              );
   }
 
   /// Recém-concluída: enquanto o timer corre, a linha mostra a ocorrência
@@ -446,6 +472,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
       onDismissed: (_) => apagarTarefas(context, [e]),
       child: EventoTile(
         ocorrencia: l.ocorrencia,
+        colorido: true,
         selecionado: _selecionados.contains(e.id),
         aoMarcar: (v) => _marcar(l, v),
         aoSegurar: () => _alternarSelecao(e.id),
@@ -524,6 +551,357 @@ class _Vazio extends StatelessWidget {
                 child: Text(concluidas == 1 ? 'Mostrar 1 concluída' : 'Mostrar $concluidas concluídas'),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Números do topo: as de hoje (feitas e total), atrasadas e o resto da
+/// semana.
+class _Progresso {
+  const _Progresso({required this.feitas, required this.total, required this.atrasadas, required this.semana});
+
+  final int feitas;
+  final int total;
+  final int atrasadas;
+  final int semana;
+}
+
+/// Anel que enche com as de hoje ("Hoje: 2 de 5"; todas feitas = "Dia
+/// limpo") e uma linha com atrasadas e o resto da semana. Sem nada hoje,
+/// vira uma frase.
+class _TopoDoDia extends StatelessWidget {
+  const _TopoDoDia({required this.p});
+
+  final _Progresso p;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final verde = corDoTipo(TipoEvento.tarefa, scheme.brightness);
+    final limpo = p.total > 0 && p.feitas == p.total;
+    final titulo = p.total == 0
+        ? 'Nada pra hoje'
+        : limpo
+            ? 'Dia limpo'
+            : 'Hoje: ${p.feitas} de ${p.total}';
+    final resto = [
+      if (p.atrasadas > 0) p.atrasadas == 1 ? '1 atrasada' : '${p.atrasadas} atrasadas',
+      if (p.semana > 0) '${p.semana} no resto da semana',
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      child: Row(
+        children: [
+          if (p.total > 0) ...[
+            SizedBox.square(
+              dimension: 52,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(end: p.feitas / p.total),
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeOutCubic,
+                builder: (context, v, _) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: v,
+                      strokeWidth: 6,
+                      strokeCap: StrokeCap.round,
+                      color: verde,
+                      backgroundColor: verde.withValues(alpha: 0.18),
+                    ),
+                    Center(
+                      child: limpo
+                          ? Icon(Icons.check, color: verde, size: 26)
+                          : Text(
+                              '${p.total - p.feitas}',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    titulo,
+                    key: ValueKey(titulo),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (resto.isNotEmpty)
+                  Text(
+                    resto.join(' · '),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: p.atrasadas > 0 ? scheme.error : scheme.onSurfaceVariant,
+                      fontWeight: p.atrasadas > 0 ? FontWeight.w600 : null,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Campo "Nova tarefa…" fixo embaixo. Ao digitar aparecem chips (Hoje,
+/// Amanhã, data, item, prioridade); Enter cria sem abrir folha (sem chip
+/// de dia = sem data). "Mais opções" (ao lado do campo) leva o que foi
+/// escrito pra folha.
+class _AdicionarRapido extends StatefulWidget {
+  const _AdicionarRapido();
+
+  @override
+  State<_AdicionarRapido> createState() => _AdicionarRapidoState();
+}
+
+class _AdicionarRapidoState extends State<_AdicionarRapido> {
+  final _texto = TextEditingController();
+  final _foco = FocusNode();
+  DateTime? _data;
+  String? _itemId;
+  Prioridade _prioridade = Prioridade.normal;
+
+  @override
+  void initState() {
+    super.initState();
+    _texto.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _texto.dispose();
+    _foco.dispose();
+    super.dispose();
+  }
+
+  bool get _escrevendo => _texto.text.trim().isNotEmpty;
+
+  void _limpar() {
+    _texto.clear();
+    setState(() {
+      _data = null;
+      _itemId = null;
+      _prioridade = Prioridade.normal;
+    });
+  }
+
+  Future<void> _criar() async {
+    final titulo = _texto.text.trim();
+    if (titulo.isEmpty) return;
+    final state = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final evento = Evento.novo(
+      titulo: titulo,
+      inicio: _data ?? inicioDoDia(DateTime.now()),
+      diaInteiro: true,
+      semData: _data == null,
+      tipo: TipoEvento.tarefa.rotulo,
+      itemId: _itemId,
+      prioridade: _prioridade,
+    );
+    _limpar();
+    _foco.requestFocus(); // pronto pra próxima
+    final ok = await state.adicionarEvento(evento, salvarEm: state.agendaDestinoPadrao);
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Salvo no app, mas não deu pra gravar no Google Agenda.')),
+      );
+    }
+  }
+
+  Future<void> _maisOpcoes() async {
+    final rascunho = (titulo: _texto.text.trim(), data: _data, prioridade: _prioridade);
+    final itemId = _itemId;
+    _limpar();
+    _foco.unfocus();
+    await abrirFolhaDeEvento(context, tipo: TipoEvento.tarefa, itemId: itemId, rascunho: rascunho);
+  }
+
+  Future<void> _escolherData() async {
+    final hoje = inicioDoDia(DateTime.now());
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _data ?? hoje,
+      firstDate: hoje.subtract(const Duration(days: 365)),
+      lastDate: hoje.add(const Duration(days: 365 * 3)),
+    );
+    if (d != null) setState(() => _data = inicioDoDia(d));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final scheme = Theme.of(context).colorScheme;
+    final hoje = inicioDoDia(DateTime.now());
+    final amanha = hoje.add(const Duration(days: 1));
+    final outroDia = _data != null && _data != hoje && _data != amanha;
+    final itens = [for (final i in state.itens) if (!i.arquivado) i];
+    final item = state.itemPorId(_itemId);
+
+    void dia(DateTime d) => setState(() => _data = _data == d ? null : d);
+
+    return Material(
+      color: scheme.surfaceContainer,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                alignment: Alignment.bottomCenter,
+                child: !_escrevendo
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              FilterChip(
+                                label: const Text('Hoje'),
+                                selected: _data == hoje,
+                                onSelected: (_) => dia(hoje),
+                              ),
+                              const SizedBox(width: 6),
+                              FilterChip(
+                                label: const Text('Amanhã'),
+                                selected: _data == amanha,
+                                onSelected: (_) => dia(amanha),
+                              ),
+                              const SizedBox(width: 6),
+                              FilterChip(
+                                avatar: outroDia ? null : const Icon(Icons.event, size: 18),
+                                label: Text(outroDia ? '${diaAbreviado(_data!)} ${diaMes(_data!)}' : 'Data'),
+                                selected: outroDia,
+                                onSelected: (_) => _escolherData(),
+                              ),
+                              if (itens.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                PopupMenuButton<String?>(
+                                  tooltip: 'Item',
+                                  onSelected: (id) => setState(() => _itemId = id == '' ? null : id),
+                                  itemBuilder: (_) => [
+                                    if (_itemId != null) const PopupMenuItem(value: '', child: Text('Nenhum')),
+                                    for (final i in itens)
+                                      PopupMenuItem(
+                                        value: i.id,
+                                        child: Row(
+                                          children: [
+                                            ItemSwatch(
+                                              cor: i.cor,
+                                              densidade: state.densidade,
+                                              texto: i.sigla,
+                                              altura: 22,
+                                              tamanhoTexto: 11,
+                                              raio: 5,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Flexible(child: Text(i.nome, overflow: TextOverflow.ellipsis)),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                  child: IgnorePointer(
+                                    child: FilterChip(
+                                      avatar: item == null ? const Icon(Icons.label_outline, size: 18) : null,
+                                      label: Text(item?.sigla ?? 'Item'),
+                                      selected: item != null,
+                                      onSelected: (_) {},
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(width: 6),
+                              PopupMenuButton<Prioridade>(
+                                tooltip: 'Prioridade',
+                                initialValue: _prioridade,
+                                onSelected: (p) => setState(() => _prioridade = p),
+                                itemBuilder: (_) => [
+                                  for (final p in Prioridade.values)
+                                    PopupMenuItem(value: p, child: Text(p.rotulo)),
+                                ],
+                                child: IgnorePointer(
+                                  child: FilterChip(
+                                    avatar: Icon(
+                                      iconeDaPrioridade(_prioridade) ?? Icons.flag_outlined,
+                                      size: 18,
+                                      color: _prioridade == Prioridade.alta ? scheme.error : null,
+                                    ),
+                                    label: Text(_prioridade == Prioridade.normal ? 'Prioridade' : _prioridade.rotulo),
+                                    selected: _prioridade != Prioridade.normal,
+                                    onSelected: (_) {},
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _texto,
+                      focusNode: _foco,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _criar(),
+                      decoration: InputDecoration(
+                        hintText: 'Nova tarefa…',
+                        prefixIcon: const Icon(Icons.add_task),
+                        filled: true,
+                        fillColor: scheme.surfaceContainerHighest,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: _escrevendo
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Fora da fila de chips, que rola: sempre à vista.
+                              IconButton(
+                                onPressed: _maisOpcoes,
+                                tooltip: 'Mais opções',
+                                icon: const Icon(Icons.tune),
+                              ),
+                              IconButton.filled(
+                                onPressed: _criar,
+                                tooltip: 'Criar',
+                                icon: const Icon(Icons.arrow_upward),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

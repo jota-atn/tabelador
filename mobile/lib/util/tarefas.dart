@@ -71,16 +71,22 @@ List<LinhaTarefa> organizarTarefas(Iterable<Evento> tarefas, DateTime agora) {
     if (o == null) continue;
     linhas.add(LinhaTarefa(o, o.feita ? SecaoTarefa.concluidas : secaoPelaData(o, agora)));
   }
-  linhas.sort((a, b) {
-    final s = a.secao.index.compareTo(b.secao.index);
-    if (s != 0) return s;
-    // Pendentes: alta primeiro, baixa por último; depois pela data.
-    if (a.secao != SecaoTarefa.concluidas) {
-      final p = a.ocorrencia.evento.prioridade.index.compareTo(b.ocorrencia.evento.prioridade.index);
-      if (p != 0) return p;
-    }
-    final c = a.ocorrencia.inicio.compareTo(b.ocorrencia.inicio);
-    return a.secao == SecaoTarefa.concluidas ? -c : c;
-  });
+  linhas.sort(compararLinhas);
   return linhas;
+}
+
+/// Ordem das linhas: seção; pendentes pela prioridade (alta primeiro) e
+/// depois pela data; concluídas da mais recente pra trás. Empate fica pelo
+/// id — ordem fixa, pra uma recém-concluída (que a página segura riscada
+/// na seção de antes) não trocar de lugar com a vizinha.
+int compararLinhas(LinhaTarefa a, LinhaTarefa b) {
+  final s = a.secao.index.compareTo(b.secao.index);
+  if (s != 0) return s;
+  if (a.secao != SecaoTarefa.concluidas) {
+    final p = a.ocorrencia.evento.prioridade.index.compareTo(b.ocorrencia.evento.prioridade.index);
+    if (p != 0) return p;
+  }
+  final c = a.ocorrencia.inicio.compareTo(b.ocorrencia.inicio);
+  if (c != 0) return a.secao == SecaoTarefa.concluidas ? -c : c;
+  return a.ocorrencia.evento.id.compareTo(b.ocorrencia.evento.id);
 }

@@ -23,6 +23,7 @@ Future<void> abrirFolhaDeEvento(
   DateTime? fim,
   String? tabelaId,
   TipoEvento? tipo,
+  Rascunho? rascunho,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -42,9 +43,14 @@ Future<void> abrirFolhaDeEvento(
       fim: fim,
       tabelaId: tabelaId,
       tipoInicial: tipo,
+      rascunho: rascunho,
     ),
   );
 }
+
+/// Tarefa começada no "adicionar rápido": título, dia (nulo = sem data) e
+/// prioridade. "Mais opções" leva isso pra folha.
+typedef Rascunho = ({String titulo, DateTime? data, Prioridade prioridade});
 
 class FolhaDeEvento extends StatefulWidget {
   const FolhaDeEvento({
@@ -55,7 +61,11 @@ class FolhaDeEvento extends StatefulWidget {
     this.fim,
     this.tabelaId,
     this.tipoInicial,
+    this.rascunho,
   });
+
+  /// O que já foi escrito no "adicionar rápido" da página de Tarefas.
+  final Rascunho? rascunho;
 
   /// Tipo já escolhido ao abrir ("Nova tarefa" na página de Tarefas).
   final TipoEvento? tipoInicial;
@@ -166,6 +176,17 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
     }
     if (widget.tipoInicial != null) escolherTipo(widget.tipoInicial);
     if (widget.itemId != null) escolherItem(widget.itemId);
+    if (widget.rascunho case final r?) {
+      titulo.text = r.titulo;
+      prioridade = r.prioridade;
+      if (r.data == null) {
+        semData = true;
+      } else {
+        data = r.data!;
+        diaTodo = true;
+      }
+      _quandoAuto = false;
+    }
   }
 
   @override

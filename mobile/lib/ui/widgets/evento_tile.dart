@@ -108,13 +108,16 @@ class EventoTile extends StatelessWidget {
           ? SizedBox(
               width: 48,
               child: Center(
-                child: Checkbox(
+                child: _Pulso(
+                  ativo: feita,
+                  child: Checkbox(
                   value: feita,
                   activeColor: corDoTipo(TipoEvento.tarefa, scheme.brightness),
                   shape: const CircleBorder(),
                   onChanged: (v) => aoMarcar != null
                       ? aoMarcar!(v ?? false)
                       : marcarTarefa(context, ocorrencia, v ?? false),
+                  ),
                 ),
               ),
             )
@@ -236,11 +239,21 @@ class EventoTile extends StatelessWidget {
     if (!colorido) return tile;
 
     final escuro = scheme.brightness == Brightness.dark;
-    final (alfa, faixa) = switch (state.densidade) {
+    var (alfa, faixa) = switch (state.densidade) {
       ColorDensity.discreto => (0.0, 3.0),
       ColorDensity.suave => (escuro ? 0.12 : 0.07, 4.0),
       ColorDensity.solido => (escuro ? 0.22 : 0.14, 4.0),
     };
+    // Tarefa: a faixa diz a prioridade (alta vermelha, normal neutra,
+    // baixa apagada) e o fundo fica neutro, pra não brigar com ela.
+    final corDaFaixa = !tarefa
+        ? corFaixa
+        : switch (evento.prioridade) {
+            Prioridade.alta => scheme.error,
+            Prioridade.normal => scheme.outline,
+            Prioridade.baixa => scheme.outlineVariant,
+          };
+    if (tarefa) alfa = 0;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: ClipRRect(
@@ -257,7 +270,7 @@ class EventoTile extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 width: faixa,
-                child: ColoredBox(color: esmaecido || feita ? corFaixa.withValues(alpha: 0.4) : corFaixa),
+                child: ColoredBox(color: esmaecido || feita ? corDaFaixa.withValues(alpha: 0.4) : corDaFaixa),
               ),
             ],
           ),
@@ -267,3 +280,37 @@ class EventoTile extends StatelessWidget {
   }
 }
 
+/// O pequeno momento de concluir: a caixinha cresce e volta num pulso
+/// curto quando [ativo] liga. Desligar não anima.
+class _Pulso extends StatefulWidget {
+  const _Pulso({required this.ativo, required this.child});
+
+  final bool ativo;
+  final Widget child;
+
+  @override
+  State<_Pulso> createState() => _PulsoState();
+}
+
+class _PulsoState extends State<_Pulso> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 360));
+  late final _escala = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.3).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
+    TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1).chain(CurveTween(curve: Curves.easeIn)), weight: 60),
+  ]).animate(_c);
+
+  @override
+  void didUpdateWidget(_Pulso old) {
+    super.didUpdateWidget(old);
+    if (widget.ativo && !old.ativo) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ScaleTransition(scale: _escala, child: widget.child);
+}
