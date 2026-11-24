@@ -5,26 +5,22 @@ import 'package:provider/provider.dart';
 
 import '../../model/evento.dart';
 import '../../state/app_state.dart';
-import '../../theme/tipo_evento_visual.dart';
 import '../../util/formato_data.dart';
 import '../calendario_screen.dart';
 import '../tarefas_screen.dart';
 import 'evento_tile.dart';
 
-/// Quantas linhas o resumo abaixo da grade mostra, somando tarefas e
-/// eventos. O resumo nunca cresce dentro da tela: o resto fica na folha
-/// "Ver a semana toda". Provisório — o usuário está testando o tamanho.
+/// Quantos eventos o resumo abaixo da grade mostra. O resumo nunca cresce
+/// dentro da tela: o resto fica na folha "Ver a semana toda". Provisório —
+/// o usuário está testando o tamanho. Tarefas não entram (têm a página
+/// delas, pelo botão "Tarefas").
 const int kLinhasDoResumo = 6;
 
-/// Quantas dessas linhas são de tarefas quando também há eventos. Sem
-/// eventos, as tarefas ficam com o espaço todo (e vice-versa).
-const int kTarefasNoResumo = 2;
-
-/// Abrir/fechar os blocos do resumo.
+/// Abrir/fechar a lista de eventos do resumo.
 const _kAnimacao = Duration(milliseconds: 300);
 
-/// O que a semana [segunda] tem pra mostrar: tarefas pendentes (atrasadas
-/// primeiro) e eventos, cada um em ordem de início.
+/// Os eventos que a semana [segunda] tem pra mostrar, em ordem de início
+/// (tarefas ficam de fora).
 class _Semana {
   _Semana(AppState state, DateTime? segunda, this.agora) {
     hoje = inicioDoDia(agora);
@@ -33,13 +29,14 @@ class _Semana {
     atual = inicio == segundaAtual;
     final fim = DateTime(inicio.year, inicio.month, inicio.day + 7);
     final ocorrencias = atual
-        ? state.ocorrenciasEntre(hoje, fim).where((o) => _naoPassou(o, agora) && !o.feita).toList()
+        ? state.ocorrenciasEntre(hoje, fim).where((o) => _naoPassou(o, agora))
         : state.ocorrenciasEntre(inicio, fim);
-    atrasadas = atual ? state.tarefasAtrasadas(agora) : const [];
-    tarefas = [...atrasadas, ...ocorrencias.where((o) => o.evento.ehTarefa)];
     eventos = ocorrencias.where((o) => !o.evento.ehTarefa).toList();
     proximaSemana = atual && hoje.weekday >= DateTime.saturday
-        ? state.ocorrenciasEntre(fim, fim.add(const Duration(days: 7))).length
+        ? state
+            .ocorrenciasEntre(fim, fim.add(const Duration(days: 7)))
+            .where((o) => !o.evento.ehTarefa)
+            .length
         : 0;
   }
 
@@ -47,29 +44,14 @@ class _Semana {
   late final DateTime hoje;
   late final DateTime inicio;
   late final bool atual;
-  late final List<Ocorrencia> atrasadas;
-  late final List<Ocorrencia> tarefas;
   late final List<Ocorrencia> eventos;
   late final int proximaSemana;
 
-  int get total => tarefas.length + eventos.length;
+  int get total => eventos.length;
 
   static bool _naoPassou(Ocorrencia o, DateTime agora) =>
       o.evento.diaInteiro ||
       (o.fim.isAfter(o.inicio) ? o.fim.isAfter(agora) : !o.inicio.isBefore(agora));
-
-  /// "1 atrasada · 3 hoje · 2 na semana".
-  String resumoDasTarefas() {
-    final deHoje = tarefas
-        .where((o) => !atrasadas.contains(o) && atual && inicioDoDia(o.inicio) == hoje)
-        .length;
-    final resto = tarefas.length - atrasadas.length - deHoje;
-    return [
-      if (atrasadas.isNotEmpty) '${atrasadas.length} ${atrasadas.length == 1 ? 'atrasada' : 'atrasadas'}',
-      if (deHoje > 0) '$deHoje hoje',
-      if (resto > 0) '$resto na semana',
-    ].join(' · ');
-  }
 }
 
 class ProximosEventos extends StatelessWidget {
@@ -83,14 +65,9 @@ class ProximosEventos extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final semana = _Semana(state, segunda, DateTime.now());
 
-    // Orçamento: tarefas pegam até kTarefasNoResumo, eventos o resto; o que
-    // um lado não usa vai pro outro.
-    // Eventos recolhidos: as tarefas ficam com o orçamento todo.
     final ocultos = state.eventosDoResumoOcultos && semana.eventos.isNotEmpty;
-    var nTarefas = min(semana.tarefas.length, kTarefasNoResumo);
-    final nEventos = ocultos ? 0 : min(semana.eventos.length, kLinhasDoResumo - nTarefas);
-    nTarefas = min(semana.tarefas.length, kLinhasDoResumo - nEventos);
-    final escondidos = semana.tarefas.length - nTarefas + (ocultos ? 0 : semana.eventos.length - nEventos);
+    final nEventos = ocultos ? 0 : min(semana.eventos.length, kLinhasDoResumo);
+    final escondidos = ocultos ? 0 : semana.eventos.length - nEventos;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,9 +99,7 @@ class ProximosEventos extends StatelessWidget {
                 ),
               ],
               const Spacer(),
-              // Com tarefas na semana, o cabeçalho do bloco já leva pra elas.
-              if (semana.tarefas.isEmpty)
-                TextButton.icon(
+              TextButton.icon(
                   onPressed: () => _abrirTarefas(context),
                   icon: const Icon(Icons.task_alt, size: 18),
                   label: const Text('Tarefas'),
@@ -147,28 +122,11 @@ class ProximosEventos extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
             ),
           ),
-        if (semana.tarefas.isNotEmpty) ...[
-          _CabecalhoTarefas(key: const ValueKey('cabecalho-tarefas'), texto: semana.resumoDasTarefas()),
-          // Recolher os eventos dá linhas às tarefas: elas crescem no mesmo
-          // ritmo em que os eventos fecham, em vez de pular.
-          AnimatedSize(
-            key: const ValueKey('lista-tarefas'),
-            duration: _kAnimacao,
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final o in semana.tarefas.take(nTarefas))
-                  EventoTile(key: ValueKey('${o.evento.id}@${o.inicio}'), ocorrencia: o, colorido: true),
-              ],
-            ),
-          ),
-        ],
         if (semana.eventos.isNotEmpty)
           _CabecalhoEventos(
-            // Chaves fixas: o número de tarefas acima muda ao recolher, e sem
-            // elas o Flutter recriaria os dois (e a animação não rodaria).
+            // Chaves fixas: o que vem abaixo muda ao recolher ("Ver a semana
+            // toda" some), e sem elas o Flutter recriaria os dois (e a
+            // animação não rodaria).
             key: const ValueKey('cabecalho-eventos'),
             quantos: semana.eventos.length,
             ocultos: ocultos,
@@ -238,43 +196,6 @@ List<Widget> _eventosPorDia(_Semana semana, List<Ocorrencia> eventos, ColorSchem
       for (final o in dia.value) EventoTile(ocorrencia: o, mostrarData: false, colorido: true),
     ],
   ];
-}
-
-/// "Tarefas · 1 atrasada · 3 hoje  ›" — tocar abre a página de Tarefas.
-class _CabecalhoTarefas extends StatelessWidget {
-  const _CabecalhoTarefas({super.key, required this.texto});
-
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final cor = corDoTipo(TipoEvento.tarefa, scheme.brightness);
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => _abrirTarefas(context),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-        child: Row(
-          children: [
-            Icon(Icons.task_alt, size: 16, color: cor),
-            const SizedBox(width: 6),
-            Text('Tarefas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cor)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                texto,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// "Eventos  5  (⌃)" — tocar recolhe e mostra os eventos do resumo; a
@@ -356,10 +277,6 @@ Future<void> _abrirSemanaToda(BuildContext context, DateTime? segunda) {
               tituloDaSemana(semana.inicio, semana.agora),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
-            if (semana.tarefas.isNotEmpty) ...[
-              _CabecalhoTarefas(texto: semana.resumoDasTarefas()),
-              for (final o in semana.tarefas) EventoTile(ocorrencia: o, colorido: true),
-            ],
             ..._eventosPorDia(semana, semana.eventos, scheme),
             if (semana.total == 0)
               Padding(

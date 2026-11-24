@@ -818,7 +818,7 @@ Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem co
 ### Ponto 3.1 — Resumo abaixo da grade na Semana (decidido, em teste)
 
 - **Cor**: faixa à esquerda e ícone na cor do **tipo**; fundo da linha clarinho puxado pro tipo; a intensidade segue a densidade de cor. Evento/tarefa ligado a item mostra a **sigla num chip na cor do item** (clarinho, como na grade).
-- **Tarefas separadas dos eventos**: um bloco "Tarefas" (contagem de hoje e atrasadas + as primeiras marcáveis ali) e, abaixo, os eventos agrupados por dia.
+- **Sem tarefas (após teste, 2026-11-23)**: o bloco de tarefas saiu do resumo ("muito poluído"); o resumo mostra só eventos e o botão "Tarefas" no topo, ao lado de "Mês", fica sempre visível. ~~Tarefas separadas dos eventos~~ (descartado): um bloco "Tarefas" (contagem de hoje e atrasadas + as primeiras marcáveis ali) e, abaixo, os eventos agrupados por dia.
 - **Tamanho fixo**: o resumo nunca cresce dentro da tela. Limite de linhas (tarefas e eventos; o que sobra de um vai pro outro), ordem: atrasadas, hoje, próximos dias. "Ver a semana toda" abre uma **folha por cima** com a lista completa; a rolagem acontece nela. Substitui o "Ver mais N eventos" que abria a lista ali mesmo.
 - O limite é provisório: o usuário quer testar e talvez mude.
 - **Eventos recolhíveis** (pedido após teste, 2026-11-23): cabeçalho "Eventos  N" com seta grande num círculo (gira ao tocar) e a lista abre e fecha deslizando; tocar oculta todos os eventos do resumo e tocar de novo mostra. A escolha fica salva no aparelho (fora do backup). Recolhidos, as tarefas ficam com o limite de linhas todo.

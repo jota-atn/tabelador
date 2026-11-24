@@ -168,15 +168,16 @@ void main() {
       ));
       await tester.pump();
 
-      // 1 tarefa + (limite − 1) eventos; os 3 últimos ficam pra folha.
-      expect(find.text('Pagar boleto'), findsOneWidget);
+      // Só eventos (tarefa fica na página dela); os 2 além do limite vão
+      // pra folha.
+      expect(find.text('Pagar boleto'), findsNothing);
       expect(find.text('Evento 0'), findsOneWidget);
-      expect(find.text('Evento ${kLinhasDoResumo - 2}'), findsOneWidget);
-      expect(find.text('Evento ${kLinhasDoResumo - 1}'), findsNothing);
+      expect(find.text('Evento ${kLinhasDoResumo - 1}'), findsOneWidget);
+      expect(find.text('Evento $kLinhasDoResumo'), findsNothing);
       expect(find.text('Já foi'), findsNothing);
 
-      await tester.ensureVisible(find.text('Ver a semana toda · +3'));
-      await tester.tap(find.text('Ver a semana toda · +3'));
+      await tester.ensureVisible(find.text('Ver a semana toda · +2'));
+      await tester.tap(find.text('Ver a semana toda · +2'));
       await tester.pumpAndSettle();
       final rolagemDaFolha = find
           .descendant(of: find.byType(DraggableScrollableSheet), matching: find.byType(Scrollable))
@@ -195,22 +196,10 @@ void main() {
       ));
       final logo = DateTime.now().add(const Duration(minutes: 5));
       await state.adicionarEvento(Evento.novo(titulo: 'Reunião', inicio: logo));
-      for (var i = 0; i < kLinhasDoResumo - 1; i++) {
+      // Mais eventos que o limite: recolher tira o "Ver a semana toda" de
+      // baixo, e o cabeçalho e a lista precisam continuar os mesmos.
+      for (var i = 0; i < kLinhasDoResumo; i++) {
         await state.adicionarEvento(Evento.novo(titulo: 'Evento $i', inicio: logo.add(Duration(seconds: i + 1))));
-      }
-      await state.adicionarEvento(Evento.novo(
-        titulo: 'Pagar boleto',
-        tipo: TipoEvento.tarefa.rotulo,
-        inicio: logo,
-      ));
-      // Recolher dá as linhas dos eventos às tarefas: a lista acima cresce
-      // e o "Ver a semana toda" some — o cabeçalho e a lista mudam de lugar.
-      for (var i = 0; i < kLinhasDoResumo - 3; i++) {
-        await state.adicionarEvento(Evento.novo(
-          titulo: 'Tarefa $i',
-          tipo: TipoEvento.tarefa.rotulo,
-          inicio: logo.add(Duration(seconds: i + 1)),
-        ));
       }
       await tester.pump();
       expect(find.text('Reunião'), findsOneWidget);
@@ -224,7 +213,7 @@ void main() {
       expect(tester.widget<AnimatedRotation>(seta).turns, 0.5);
       await tester.pumpAndSettle();
       expect(find.text('Reunião'), findsNothing);
-      expect(find.text('Pagar boleto'), findsOneWidget);
+      expect(find.textContaining('Ver a semana toda'), findsNothing);
       expect(state.eventosDoResumoOcultos, isTrue);
 
       await tester.tap(find.text('Eventos'));
