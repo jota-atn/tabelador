@@ -203,14 +203,14 @@ void main() {
       await tester.pump();
       expect(find.text('Reunião'), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.expand_less));
-      await tester.pump();
+      await tester.tap(find.text('Eventos'));
+      await tester.pumpAndSettle();
       expect(find.text('Reunião'), findsNothing);
       expect(find.text('Pagar boleto'), findsOneWidget);
       expect(state.eventosDoResumoOcultos, isTrue);
 
-      await tester.tap(find.byIcon(Icons.expand_more));
-      await tester.pump();
+      await tester.tap(find.text('Eventos'));
+      await tester.pumpAndSettle();
       expect(find.text('Reunião'), findsOneWidget);
     });
 

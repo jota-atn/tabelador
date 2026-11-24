@@ -821,7 +821,7 @@ Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem co
 - **Tarefas separadas dos eventos**: um bloco "Tarefas" (contagem de hoje e atrasadas + as primeiras marcáveis ali) e, abaixo, os eventos agrupados por dia.
 - **Tamanho fixo**: o resumo nunca cresce dentro da tela. Limite de linhas (tarefas e eventos; o que sobra de um vai pro outro), ordem: atrasadas, hoje, próximos dias. "Ver a semana toda" abre uma **folha por cima** com a lista completa; a rolagem acontece nela. Substitui o "Ver mais N eventos" que abria a lista ali mesmo.
 - O limite é provisório: o usuário quer testar e talvez mude.
-- **Eventos recolhíveis** (pedido após teste, 2026-11-23): cabeçalho "Eventos · N" com seta; tocar oculta todos os eventos do resumo e tocar de novo mostra. A escolha fica salva no aparelho (fora do backup). Recolhidos, as tarefas ficam com o limite de linhas todo.
+- **Eventos recolhíveis** (pedido após teste, 2026-11-23): cabeçalho "Eventos  N" com seta grande num círculo (gira ao tocar) e a lista abre e fecha deslizando; tocar oculta todos os eventos do resumo e tocar de novo mostra. A escolha fica salva no aparelho (fora do backup). Recolhidos, as tarefas ficam com o limite de linhas todo.
 
 ### Ponto 3.2 — Aba Eventos (decidido)
 

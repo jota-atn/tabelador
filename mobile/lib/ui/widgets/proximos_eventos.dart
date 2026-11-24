@@ -154,7 +154,16 @@ class ProximosEventos extends StatelessWidget {
             ocultos: ocultos,
             aoTocar: () => state.definirEventosDoResumoOcultos(!ocultos),
           ),
-        ..._eventosPorDia(semana, semana.eventos.take(nEventos).toList(), scheme),
+        // Abre e fecha deslizando; recolhido, a lista some de vez.
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _eventosPorDia(semana, semana.eventos.take(nEventos).toList(), scheme),
+          ),
+        ),
         if (escondidos > 0)
           Align(
             alignment: Alignment.centerLeft,
@@ -247,7 +256,8 @@ class _CabecalhoTarefas extends StatelessWidget {
   }
 }
 
-/// "Eventos · 5  ⌄" — a seta recolhe e mostra os eventos do resumo.
+/// "Eventos  5  (⌃)" — tocar recolhe e mostra os eventos do resumo; a
+/// seta gira junto.
 class _CabecalhoEventos extends StatelessWidget {
   const _CabecalhoEventos({required this.quantos, required this.ocultos, required this.aoTocar});
 
@@ -258,25 +268,45 @@ class _CabecalhoEventos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: aoTocar,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-        child: Row(
-          children: [
-            Icon(Icons.event, size: 16, color: scheme.onSurfaceVariant),
-            const SizedBox(width: 6),
-            Text('Eventos', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                '$quantos',
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: aoTocar,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 6, 0, 6),
+          child: Row(
+            children: [
+              Icon(Icons.event, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Eventos',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: scheme.onSurface),
               ),
-            ),
-            Icon(ocultos ? Icons.expand_more : Icons.expand_less, size: 20, color: scheme.onSurfaceVariant),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                '$quantos',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+              ),
+              const Spacer(),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: scheme.secondaryContainer, shape: BoxShape.circle),
+                child: AnimatedRotation(
+                  turns: ocultos ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  child: Icon(
+                    Icons.expand_less,
+                    size: 24,
+                    color: scheme.onSecondaryContainer,
+                    semanticLabel: ocultos ? 'Mostrar eventos' : 'Ocultar eventos',
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
