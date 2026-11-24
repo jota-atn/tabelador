@@ -26,7 +26,7 @@ void main() {
 
     EventosDaSemana distribuir(List<Evento> eventos, {Tabela? t}) => distribuirEventos(
           tabela: t ?? tabela,
-          segunda: _segunda,
+          inicio: _segunda,
           ocorrencias: eventos.map(_oc),
         );
 

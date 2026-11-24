@@ -37,17 +37,17 @@ void main() {
       final hoje = DateTime.now();
       final atual = DateTime(hoje.year, hoje.month, hoje.day - (hoje.weekday - 1));
 
-      expect(state.segundaMostrada(), atual);
+      expect(state.inicioMostrado(), atual);
       expect(state.mostrandoSemanaAtual(), isTrue);
 
       state.andarSemanas(2);
-      expect(state.segundaMostrada(), DateTime(atual.year, atual.month, atual.day + 14));
+      expect(state.inicioMostrado(), DateTime(atual.year, atual.month, atual.day + 14));
       expect(state.mostrandoSemanaAtual(), isFalse);
       expect(state.pedidosDeSemana, 0);
 
       // Qualquer dia da semana leva pra segunda dela.
       state.mostrarSemana(DateTime(2027, 3, 11), irPraTela: true);
-      expect(state.segundaMostrada(), DateTime(2027, 3, 8));
+      expect(state.inicioMostrado(), DateTime(2027, 3, 8));
       expect(state.pedidosDeSemana, 1);
 
       state.mostrarSemana(hoje);

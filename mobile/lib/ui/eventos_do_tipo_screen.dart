@@ -10,6 +10,7 @@ import '../util/eventos_na_grade.dart';
 import '../util/formato_data.dart';
 import 'detalhes_evento.dart';
 import 'widgets/item_swatch.dart';
+import '../util/semana.dart';
 
 /// Tipo de uma ocorrência: evento sem tipo conta como Outro.
 TipoEvento _tipoDe(Evento e) => TipoEvento.doTexto(e.tipo) ?? TipoEvento.outro;
@@ -464,7 +465,6 @@ String _capitalizar(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substrin
 
 // ---------------------------------------------------------- mini calendário
 
-const _kIniciais = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
 class _MiniCalendario extends StatelessWidget {
   const _MiniCalendario({
@@ -489,7 +489,8 @@ class _MiniCalendario extends StatelessWidget {
     final agora = DateTime.now();
     final hoje = inicioDoDia(agora);
     final diasNoMes = DateTime(mes.year, mes.month + 1, 0).day;
-    final vazios = DateTime(mes.year, mes.month).weekday - 1;
+    final primeiro = context.watch<AppState>().primeiroDiaDaSemana;
+    final vazios = (DateTime(mes.year, mes.month).weekday - primeiro) % 7;
     final sobre = ThemeData.estimateBrightnessForColor(cor) == Brightness.dark ? Colors.white : Colors.black;
 
     return Card.filled(
@@ -523,7 +524,7 @@ class _MiniCalendario extends StatelessWidget {
             ),
             Row(
               children: [
-                for (final l in _kIniciais)
+                for (final l in iniciaisDaSemana(primeiro))
                   Expanded(
                     child: Text(
                       l,

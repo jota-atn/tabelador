@@ -102,7 +102,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
   Future<void> _marcar(LinhaTarefa l, bool feita) async {
     if (feita) {
-      final secao = secaoPelaData(l.ocorrencia, DateTime.now());
+      final secao = secaoPelaData(l.ocorrencia, DateTime.now(), context.read<AppState>().primeiroDiaDaSemana);
       _recentes[l.chave]?.$2.cancel();
       _recentes[l.chave] = (
         LinhaTarefa(l.ocorrencia, secao),
@@ -264,7 +264,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
     ];
 
     final termo = _busca.text.trim().toLowerCase();
-    var todas = organizarTarefas(tarefas, agora);
+    var todas = organizarTarefas(tarefas, agora, state.primeiroDiaDaSemana);
     // Recém-concluída fica riscada na seção de antes.
     todas = [
       for (final l in todas) _recentesPorEvento(l) ?? l,

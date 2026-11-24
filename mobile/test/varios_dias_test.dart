@@ -74,7 +74,7 @@ void main() {
 
     test('aparece na faixa de dia todo de cada dia que ocupa', () {
       final ocs = _viagem().ocorrenciasEntre(_proxima, _proxima.add(const Duration(days: 7)));
-      final r = distribuirEventos(tabela: tabela, segunda: _proxima, ocorrencias: ocs);
+      final r = distribuirEventos(tabela: tabela, inicio: _proxima, ocorrencias: ocs);
       expect(r.diaTodo('SEGUNDA'), hasLength(1));
       expect(r.diaTodo('TERÇA'), hasLength(1));
       expect(r.diaTodo('QUARTA'), hasLength(1));
@@ -176,7 +176,7 @@ void main() {
             tabela: tabela,
             densidade: ColorDensity.suave,
             itemPorId: (_) => null,
-            eventos: distribuirEventos(tabela: tabela, segunda: _proxima, ocorrencias: ocs),
+            eventos: distribuirEventos(tabela: tabela, inicio: _proxima, ocorrencias: ocs),
           ),
         ),
       ),
@@ -219,7 +219,7 @@ void main() {
       // Tabela de 8h, blocos de 2h, seg a dom.
       final tabela = Tabela.nova(nome: 'T', dias: kTodosDias);
       final ocs = comHora().ocorrenciasEntre(_segunda, _proxima);
-      final r = distribuirEventos(tabela: tabela, segunda: _segunda, ocorrencias: ocs);
+      final r = distribuirEventos(tabela: tabela, inicio: _segunda, ocorrencias: ocs);
       expect(r.folga('SEXTA'), isNull);
       expect(r.apagado('SEXTA', 0), isFalse); // 8-10
       expect(r.apagado('SEXTA', 5), isTrue); // 18-20

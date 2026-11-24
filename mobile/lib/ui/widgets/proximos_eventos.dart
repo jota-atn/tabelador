@@ -9,6 +9,7 @@ import '../../util/formato_data.dart';
 import '../calendario_screen.dart';
 import '../tarefas_screen.dart';
 import 'evento_tile.dart';
+import '../../util/semana.dart';
 
 /// Quantos eventos o resumo abaixo da grade mostra por padrão (Ajustes →
 /// Eventos e Tarefas muda). O resumo nunca cresce dentro da tela: o resto
@@ -19,20 +20,22 @@ const int kLinhasDoResumo = 6;
 /// Abrir/fechar a lista de eventos do resumo.
 const _kAnimacao = Duration(milliseconds: 300);
 
-/// Os eventos que a semana [segunda] tem pra mostrar, em ordem de início
-/// (tarefas ficam de fora).
+/// Os eventos que a semana que começa em [pedido] (nulo = a atual) tem pra
+/// mostrar, em ordem de início (tarefas ficam de fora).
 class _Semana {
-  _Semana(AppState state, DateTime? segunda, this.agora) {
+  _Semana(AppState state, DateTime? pedido, this.agora) {
     hoje = inicioDoDia(agora);
-    final segundaAtual = DateTime(hoje.year, hoje.month, hoje.day - (hoje.weekday - 1));
-    inicio = segunda ?? segundaAtual;
-    atual = inicio == segundaAtual;
+    final inicioAtual = inicioDaSemana(hoje, state.primeiroDiaDaSemana);
+    inicio = pedido ?? inicioAtual;
+    atual = inicio == inicioAtual;
     final fim = DateTime(inicio.year, inicio.month, inicio.day + 7);
     final ocorrencias = atual
         ? state.ocorrenciasEntre(hoje, fim).where((o) => _naoPassou(o, agora))
         : state.ocorrenciasEntre(inicio, fim);
     eventos = ocorrencias.where((o) => !o.evento.ehTarefa).toList();
-    proximaSemana = atual && hoje.weekday >= DateTime.saturday
+    // Nos dois últimos dias da semana (sáb/dom, ou sex/sáb começando no
+    // domingo), já vale olhar a próxima.
+    proximaSemana = atual && hoje.difference(inicio).inDays >= 5
         ? state
             .ocorrenciasEntre(fim, fim.add(const Duration(days: 7)))
             .where((o) => !o.evento.ehTarefa)
@@ -55,15 +58,15 @@ class _Semana {
 }
 
 class ProximosEventos extends StatelessWidget {
-  const ProximosEventos({super.key, this.segunda});
+  const ProximosEventos({super.key, this.inicio});
 
-  final DateTime? segunda;
+  final DateTime? inicio;
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
-    final semana = _Semana(state, segunda, DateTime.now());
+    final semana = _Semana(state, inicio, DateTime.now());
 
     final ocultos = state.eventosDoResumoOcultos && semana.eventos.isNotEmpty;
     final nEventos = ocultos ? 0 : min(semana.eventos.length, state.linhasDoResumo);
@@ -147,7 +150,7 @@ class ProximosEventos extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => _abrirSemanaToda(context, segunda),
+              onPressed: () => _abrirSemanaToda(context, inicio),
               icon: const Icon(Icons.expand_less),
               label: Text('Ver a semana toda · +$escondidos'),
             ),
@@ -256,7 +259,7 @@ class _CabecalhoEventos extends StatelessWidget {
 }
 
 /// A semana inteira numa folha por cima da tela; a rolagem fica nela.
-Future<void> _abrirSemanaToda(BuildContext context, DateTime? segunda) {
+Future<void> _abrirSemanaToda(BuildContext context, DateTime? inicio) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -268,7 +271,7 @@ Future<void> _abrirSemanaToda(BuildContext context, DateTime? segunda) {
       builder: (context, controle) {
         final state = context.watch<AppState>();
         final scheme = Theme.of(context).colorScheme;
-        final semana = _Semana(state, segunda, DateTime.now());
+        final semana = _Semana(state, inicio, DateTime.now());
         return ListView(
           controller: controle,
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),

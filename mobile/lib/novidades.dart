@@ -1,9 +1,15 @@
 /// Versão mostrada em Ajustes. Um teste confere que bate com o
 /// `pubspec.yaml` (sem pacote nativo só pra ler isso).
-const String kVersao = '1.17.0';
+const String kVersao = '1.18.0';
 
 /// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
 const List<(String, List<String>)> kNovidades = [
+  (
+    '1.18',
+    [
+      'Cada tabela escolhe se a semana começa na segunda ou no domingo; a grade, a navegação, "Esta semana" e os calendários seguem a tabela ativa.',
+    ],
+  ),
   (
     '1.17',
     [
