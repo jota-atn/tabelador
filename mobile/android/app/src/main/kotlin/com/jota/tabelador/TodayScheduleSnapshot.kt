@@ -34,6 +34,20 @@ data class ScheduleEvent(
     val barDark: String,
 )
 
+/** Tarefa pendente pro widget de Tarefas, na ordem da página do app. */
+data class ScheduleTask(
+    /** `LinhaTarefa.chave` do Flutter: `id@início`. */
+    val key: String,
+    val title: String,
+    /** `yyyy-MM-dd`; null = sem data. */
+    val date: String?,
+    /** Minutos desde meia-noite; null = dia todo (ou sem data). */
+    val startMin: Int?,
+    val high: Boolean,
+    val barLight: String,
+    val barDark: String,
+)
+
 /**
  * Espelho Kotlin do JSON `today_schedule_json` escrito pelo Flutter (ver
  * `lib/native_widget/today_schedule_snapshot.dart`). Carrega a semana
@@ -50,6 +64,9 @@ data class TodayScheduleSnapshot(
     val folgas: Map<String, String> = emptyMap(),
     /** Data -> horários (`ScheduleSlot.time`) apagados por viagem com hora. */
     val apagados: Map<String, Set<String>> = emptyMap(),
+    val tasks: List<ScheduleTask> = emptyList(),
+    /** `DateTime.monday` (1) ou `DateTime.sunday` (7), como no Dart. */
+    val firstDay: Int = 1,
 ) {
     companion object {
         val vazio = TodayScheduleSnapshot(tableName = "", week = emptyMap())
@@ -76,6 +93,8 @@ data class TodayScheduleSnapshot(
                         val f = obj.optJSONObject("folgas")
                         if (f != null) for (k in f.keys()) put(k, f.optString(k))
                     },
+                    tasks = parseTasks(obj.optJSONArray("tasks")),
+                    firstDay = obj.optInt("firstDay", 1),
                     apagados = buildMap {
                         val a = obj.optJSONObject("apagados")
                         if (a != null) {
@@ -88,6 +107,26 @@ data class TodayScheduleSnapshot(
                 )
             } catch (e: Exception) {
                 vazio
+            }
+        }
+
+        private fun parseTasks(array: JSONArray?): List<ScheduleTask> {
+            if (array == null) return emptyList()
+            return buildList {
+                for (i in 0 until array.length()) {
+                    val t = array.getJSONObject(i)
+                    add(
+                        ScheduleTask(
+                            key = t.optString("key"),
+                            title = t.optString("title"),
+                            date = if (t.has("date")) t.optString("date") else null,
+                            startMin = if (t.has("startMin")) t.optInt("startMin") else null,
+                            high = t.optBoolean("high", false),
+                            barLight = t.optString("barLight", "#888888"),
+                            barDark = t.optString("barDark", "#888888"),
+                        ),
+                    )
+                }
             }
         }
 

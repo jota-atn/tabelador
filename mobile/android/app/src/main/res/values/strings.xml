@@ -2,4 +2,5 @@
 <resources>
     <string name="widget_label">Tabelador</string>
     <string name="widget_proximo_label">Próximo</string>
+    <string name="widget_tarefas_label">Tarefas</string>
 </resources>

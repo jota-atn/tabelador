@@ -52,6 +52,7 @@
 | **v1.17** ✅ (2026-11-23) | Hora do aviso de dia todo, dias do lembrete de presente, esconder tipos de evento |
 | **v1.18** ✅ (2026-11-23) | Semana começando no domingo (por tabela) |
 | **v1.19** ✅ (2026-11-23) | Widget "Próximo" 2×2 |
+| **v1.20** ✅ (2026-11-23) | Widget de Tarefas |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -917,6 +918,27 @@ tarefas" já previsto em Tarefas.
 - Visual minimalista: cores neutras do sistema, cor só num filete da
   disciplina/tipo, sem emoji nem gradiente. Trabalhar o visual com calma
   quando chegar a vez.
+- **v1.20 implementado (2026-11-23)**: `TasksWidget.kt` (Glance,
+  `LazyColumn`), 3×3 por padrão. Seções iguais às do app (Atrasadas, Hoje,
+  Esta semana, Mais tarde, Sem data), **recalculadas no nativo** a cada
+  redesenho (`TarefasCalculo.kt`, testes JVM), com o primeiro dia da semana
+  da tabela ativa (`firstDay` no snapshot). Snapshot ganhou `tasks` (até 60
+  pendentes, ordem da página: chave `id@início`, título, data, hora,
+  prioridade alta, filete na cor do item / vermelho se alta / neutro).
+  Cabeçalho "Tarefas · N pra hoje"; vazio "Nada pendente"; tocar no texto
+  abre o app.
+- **Marcar no widget**: `AlternarTarefa` (ActionCallback) grava a chave em
+  `tarefas_riscadas_widget` (risca na hora), espera 2 s e passa pra
+  `tarefas_feitas_widget` (some). Segundo toque nos 2 s desfaz. O widget
+  não mexe nos dados do app: `HomeWidgetSync` conclui de verdade
+  (`AppState.concluirPeloWidget`, `ocorrenciaPelaChave`) na próxima
+  sincronização (abrir/voltar pro app) e limpa as duas listas. Evita dois
+  processos gravando o mesmo arquivo. Efeito colateral aceito: o lembrete
+  da tarefa ainda pode tocar se o app não for aberto depois de marcar.
+- **R8**: ações do Glance (`ActionCallback`) são criadas por reflexão pelo
+  construtor vazio; o release tirava o construtor e a caixinha não fazia
+  nada. `android/app/proguard-rules.pro` mantém. Testes JVM não pegam isso
+  (rodam sem R8): conferir no aparelho com build de release.
 
 ### Widget da semana (decidido)
 

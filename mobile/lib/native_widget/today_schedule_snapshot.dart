@@ -7,6 +7,7 @@ import '../model/item.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
 import '../util/eventos_na_grade.dart';
+import '../util/tarefas.dart';
 
 /// Monta o JSON enviado ao widget nativo (`today_schedule_json`) a partir da
 /// tabela ativa, densidade e os dois esquemas de cor (claro/escuro).
@@ -32,6 +33,8 @@ String construirSnapshotJson({
   List<Ocorrencia> ocorrencias = const [],
   DateTime? hoje,
   int dias = 8,
+  List<LinhaTarefa> tarefas = const [],
+  int primeiroDia = DateTime.monday,
 }) {
   final week = <String, dynamic>{};
   if (tabelaAtiva != null) {
@@ -122,7 +125,35 @@ String construirSnapshotJson({
     'events': events,
     if (folgas.isNotEmpty) 'folgas': folgas,
     if (apagados.isNotEmpty) 'apagados': apagados,
+    // Widget de Tarefas: pendentes na ordem da página, a seção o nativo
+    // recalcula pela data (pra virar "Atrasadas" sem o app rodar).
+    'tasks': [
+      for (final l in tarefas.where((l) => l.secao != SecaoTarefa.concluidas).take(kTarefasNoWidget))
+        _tarefa(l, itemPorId(l.ocorrencia.evento.itemId), claro, escuro),
+    ],
+    'firstDay': primeiroDia,
   });
+}
+
+/// Quantas tarefas pendentes vão pro widget (a lista rola; mais que isso
+/// é melhor ver no app).
+const kTarefasNoWidget = 60;
+
+Map<String, dynamic> _tarefa(LinhaTarefa l, Item? item, ColorScheme claro, ColorScheme escuro) {
+  final o = l.ocorrencia;
+  final e = o.evento;
+  final alta = e.prioridade == Prioridade.alta;
+  return {
+    'key': l.chave,
+    'title': e.titulo,
+    if (!e.semData) 'date': _iso(o.inicio),
+    if (!e.semData && !e.diaInteiro) 'startMin': o.inicio.hour * 60 + o.inicio.minute,
+    if (alta) 'high': true,
+    // Filete: a cor do item vinculado; sem item, vermelho na prioridade
+    // alta e neutro no resto.
+    'barLight': _hex(item?.cor.tone(40) ?? _corExterna(e) ?? (alta ? claro.error : claro.outlineVariant)),
+    'barDark': _hex(item?.cor.tone(80) ?? _corExterna(e) ?? (alta ? escuro.error : escuro.outlineVariant)),
+  };
 }
 
 /// Campos de um dia de evento de vários dias: a data dele e, com hora,

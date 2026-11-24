@@ -93,3 +93,27 @@ int compararLinhas(LinhaTarefa a, LinhaTarefa b) {
   if (c != 0) return a.secao == SecaoTarefa.concluidas ? -c : c;
   return a.ocorrencia.evento.id.compareTo(b.ocorrencia.evento.id);
 }
+
+/// A ocorrência que [chave] (ver [LinhaTarefa.chave]) aponta, ou null se a
+/// tarefa sumiu ou a data não bate mais. Usado pelo widget de Tarefas, que
+/// guarda a chave do que foi marcado até o app abrir.
+Ocorrencia? ocorrenciaPelaChave(Iterable<Evento> tarefas, String chave) {
+  final arroba = chave.lastIndexOf('@');
+  if (arroba < 0) return null;
+  final id = chave.substring(0, arroba);
+  final inicio = DateTime.tryParse(chave.substring(arroba + 1));
+  if (inicio == null) return null;
+  for (final e in tarefas) {
+    if (e.id != id) continue;
+    if (e.semData) return Ocorrencia.semData(e);
+    if (e.repeticao == Repeticao.nenhuma) {
+      return e.inicio == inicio ? Ocorrencia(e, e.inicio, e.inicio.add(e.duracao)) : null;
+    }
+    final dia = DateTime(inicio.year, inicio.month, inicio.day);
+    for (final o in e.ocorrenciasEntre(dia, DateTime(dia.year, dia.month, dia.day + 1))) {
+      if (o.inicio == inicio) return o;
+    }
+    return null;
+  }
+  return null;
+}

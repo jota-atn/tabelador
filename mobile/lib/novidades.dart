@@ -1,9 +1,15 @@
 /// Versão mostrada em Ajustes. Um teste confere que bate com o
 /// `pubspec.yaml` (sem pacote nativo só pra ler isso).
-const String kVersao = '1.19.0';
+const String kVersao = '1.20.0';
 
 /// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
 const List<(String, List<String>)> kNovidades = [
+  (
+    '1.20',
+    [
+      'Widget novo "Tarefas": as pendentes por seção, como na aba Tarefas; tocar na caixinha risca e a tarefa some.',
+    ],
+  ),
   (
     '1.19',
     [
