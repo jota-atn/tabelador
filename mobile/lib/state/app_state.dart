@@ -68,6 +68,9 @@ class AppState extends ChangeNotifier {
   bool _resumoVisivel = true;
   int _linhasDoResumo = 6;
   bool _concluidasVisiveis = false;
+  int _avisoDiaTodoMin = kAvisoDiaTodoPadrao;
+  int _diasAvisoPresente = kDiasAvisoPresentePadrao;
+  Set<TipoEvento> _tiposEscondidos = {};
   bool _carregado = false;
 
   /// Segunda-feira da semana que a tela inicial mostra; nulo = a atual. Só
@@ -105,6 +108,17 @@ class AppState extends ChangeNotifier {
 
   /// Filtro "Mostrar concluídas" da página de Tarefas, lembrado.
   bool get concluidasVisiveis => _concluidasVisiveis;
+
+  /// Hora do aviso de evento de dia todo que não tem a sua (minutos desde a
+  /// meia-noite).
+  int get avisoDiaTodoMin => _avisoDiaTodoMin;
+
+  /// Quantos dias antes do aniversário vem o lembrete de presente.
+  int get diasAvisoPresente => _diasAvisoPresente;
+
+  /// Tipos escondidos: somem da aba Eventos e da criação de evento; os
+  /// eventos que já existem continuam na Semana e na grade.
+  Set<TipoEvento> get tiposEscondidos => Set.unmodifiable(_tiposEscondidos);
   bool get carregado => _carregado;
   int get pedidosDeSemana => _pedidosDeSemana;
 
@@ -207,6 +221,9 @@ class AppState extends ChangeNotifier {
     _resumoVisivel = dados.resumoVisivel;
     _linhasDoResumo = dados.linhasDoResumo;
     _concluidasVisiveis = dados.concluidasVisiveis;
+    _avisoDiaTodoMin = dados.avisoDiaTodoMin;
+    _diasAvisoPresente = dados.diasAvisoPresente;
+    _tiposEscondidos = _tiposDe(dados.tiposEscondidos);
     _agendas = {...dados.agendas};
     _feitasExternas = {...dados.feitasExternas};
     _ocultasExternas = {...dados.ocultasExternas};
@@ -1023,6 +1040,35 @@ class AppState extends ChangeNotifier {
     await _store.salvarPreferencia(TabeladorStore.kConcluidasVisiveis, visiveis);
   }
 
+  Future<void> definirAvisoDiaTodoMin(int minutos) async {
+    if (_avisoDiaTodoMin == minutos) return;
+    _avisoDiaTodoMin = minutos;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kAvisoDiaTodo, minutos);
+  }
+
+  Future<void> definirDiasAvisoPresente(int dias) async {
+    if (_diasAvisoPresente == dias) return;
+    _diasAvisoPresente = dias;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kDiasAvisoPresente, dias);
+  }
+
+  Future<void> definirTipoEscondido(TipoEvento tipo, bool escondido) async {
+    if (_tiposEscondidos.contains(tipo) == escondido) return;
+    _tiposEscondidos = {..._tiposEscondidos};
+    escondido ? _tiposEscondidos.add(tipo) : _tiposEscondidos.remove(tipo);
+    notifyListeners();
+    await _store.salvarPreferencia(
+      TabeladorStore.kTiposEscondidos,
+      [for (final t in _tiposEscondidos) t.name]..sort(),
+    );
+  }
+
+  static Set<TipoEvento> _tiposDe(Iterable<String> nomes) => {
+        for (final n in nomes) ?TipoEvento.values.where((t) => t.name == n).firstOrNull,
+      };
+
   Future<void> definirEventosDoResumoOcultos(bool ocultos) async {
     if (_eventosDoResumoOcultos == ocultos) return;
     _eventosDoResumoOcultos = ocultos;
@@ -1044,6 +1090,9 @@ class AppState extends ChangeNotifier {
         'notificacoesAtivas': _notificacoesAtivas,
         'antecedenciaMinutos': _antecedenciaMinutos,
         'notificarEventos': _notificarEventos,
+        'avisoDiaTodoMin': _avisoDiaTodoMin,
+        'diasAvisoPresente': _diasAvisoPresente,
+        'tiposEscondidos': [for (final t in _tiposEscondidos) t.name]..sort(),
         // O que o app guarda sobre eventos do Google (a agenda não guarda).
         'externos': {
           'feitas': _feitasExternas.toList()..sort(),
@@ -1092,6 +1141,11 @@ class AppState extends ChangeNotifier {
     _notificacoesAtivas = dados['notificacoesAtivas'] as bool? ?? false;
     _antecedenciaMinutos = dados['antecedenciaMinutos'] as int? ?? 15;
     _notificarEventos = dados['notificarEventos'] as bool? ?? true;
+    _avisoDiaTodoMin = dados['avisoDiaTodoMin'] as int? ?? kAvisoDiaTodoPadrao;
+    _diasAvisoPresente = dados['diasAvisoPresente'] as int? ?? kDiasAvisoPresentePadrao;
+    _tiposEscondidos = _tiposDe([
+      if (dados['tiposEscondidos'] is List) for (final n in dados['tiposEscondidos'] as List) n as String,
+    ]);
     // Backup de antes da v1.5 não tem a chave: tudo vazio.
     final externos = dados['externos'] is Map ? dados['externos'] as Map : const {};
     Set<String> ids(Object? l) => {if (l is List) for (final x in l) x as String};
@@ -1112,6 +1166,12 @@ class AppState extends ChangeNotifier {
     await _store.salvarNotificacoesAtivas(_notificacoesAtivas);
     await _store.salvarAntecedenciaMinutos(_antecedenciaMinutos);
     await _store.salvarNotificarEventos(_notificarEventos);
+    await _store.salvarPreferencia(TabeladorStore.kAvisoDiaTodo, _avisoDiaTodoMin);
+    await _store.salvarPreferencia(TabeladorStore.kDiasAvisoPresente, _diasAvisoPresente);
+    await _store.salvarPreferencia(
+      TabeladorStore.kTiposEscondidos,
+      [for (final t in _tiposEscondidos) t.name]..sort(),
+    );
     await _store.salvarFeitasExternas(_feitasExternas);
     await _store.salvarOcultasExternas(_ocultasExternas);
     await _store.salvarFolgasExternas(_folgasExternas);

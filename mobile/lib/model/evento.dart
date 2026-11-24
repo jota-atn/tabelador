@@ -51,6 +51,10 @@ enum DuracaoPadrao { diaTodo, prazo, umaHora, horarioDoItem }
 /// 7:00, cedo o bastante pra dar tempo de fazer no dia.
 const int kAvisoDiaTodoPadrao = 7 * 60;
 
+/// Quantos dias antes do aniversário vem o lembrete de presente, por
+/// padrão (Ajustes → Avisos muda).
+const int kDiasAvisoPresentePadrao = 7;
+
 /// [Evento.agendaId] dos feriados embutidos (calculados pelo app, ver
 /// `util/feriados.dart`). Contam como externos: só leitura, nunca
 /// persistidos nem no backup.
@@ -197,7 +201,7 @@ class Evento {
   final Set<DateTime> feitas;
 
   /// Hora do aviso de evento de dia inteiro, em minutos desde a meia-noite.
-  /// Nulo = padrão ([kAvisoDiaTodoPadrao]).
+  /// Nulo = o padrão de Ajustes (`AppState.avisoDiaTodoMin`).
   final int? avisoMin;
 
   /// Feriado que é só data comemorativa (não é folga): aparece, mas não

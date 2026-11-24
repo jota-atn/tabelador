@@ -1,9 +1,16 @@
 /// Versão mostrada em Ajustes. Um teste confere que bate com o
 /// `pubspec.yaml` (sem pacote nativo só pra ler isso).
-const String kVersao = '1.16.0';
+const String kVersao = '1.17.0';
 
 /// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
 const List<(String, List<String>)> kNovidades = [
+  (
+    '1.17',
+    [
+      'Avisos: escolha a hora do aviso de dia todo e quantos dias antes vem o lembrete de presente.',
+      'Eventos e Tarefas: esconda os tipos de evento que você não usa.',
+    ],
+  ),
   (
     '1.16',
     [

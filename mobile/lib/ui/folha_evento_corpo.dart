@@ -98,7 +98,10 @@ class CorpoDaFolha extends StatelessWidget {
                   resumo: f.tipo?.rotulo,
                   filhos: [
                     GradeDeChips(opcoes: [
+                      // Tipo escondido em Ajustes não aparece (a não ser o
+                      // do próprio evento, ao editar).
                       for (final t in TipoEvento.values)
+                        if (!context.read<AppState>().tiposEscondidos.contains(t) || f.tipo == t)
                         OpcaoChip(
                           rotulo: t.rotulo,
                           icone: iconeDoTipo(t),

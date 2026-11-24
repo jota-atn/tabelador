@@ -136,7 +136,7 @@ class DetalhesDoEvento extends StatelessWidget {
         ocorrencia.fim.isBefore(agora) &&
         !(e.diaInteiro && inicioDoDia(ocorrencia.inicio) == inicioDoDia(agora));
 
-    final aviso = e.avisoMin ?? kAvisoDiaTodoPadrao;
+    final aviso = e.avisoMin ?? context.read<AppState>().avisoDiaTodoMin;
     final textoAviso =
         '${(aviso ~/ 60).toString().padLeft(2, '0')}:${(aviso % 60).toString().padLeft(2, '0')}';
     final horario = e.diaInteiro

@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
+import '../model/evento.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/color_density.dart';
 import '../theme/item_palette.dart';
+import '../theme/tipo_evento_visual.dart';
 import '../novidades.dart';
 import 'agendas_screen.dart';
 import 'widgets/item_swatch.dart';
@@ -104,7 +106,11 @@ class AjustesScreen extends StatelessWidget {
               icone: Icons.event_note_outlined,
               cor: const Color(0xFF2E7D32),
               titulo: 'Eventos e Tarefas',
-              resumo: state.resumoVisivel ? 'Resumo da Semana: ${state.linhasDoResumo} eventos' : 'Sem resumo na Semana',
+              resumo: [
+                state.resumoVisivel ? 'Resumo: ${state.linhasDoResumo} eventos' : 'Sem resumo',
+                if (state.tiposEscondidos.isNotEmpty)
+                  state.tiposEscondidos.length == 1 ? '1 tipo escondido' : '${state.tiposEscondidos.length} tipos escondidos',
+              ].join(' · '),
               aoTocar: () => abrir(const _EventosETarefasPagina()),
             ),
             _Secao(
@@ -368,10 +374,30 @@ class _EventosETarefasPagina extends StatelessWidget {
               ),
             ],
           ),
+        const _Rotulo('TIPOS DE EVENTO'),
+        for (final t in TipoEvento.values)
+          if (t != TipoEvento.tarefa)
+            Tooltip(
+              message: 'Escondido: some da aba Eventos e da criação. Os eventos que já existem continuam na Semana.',
+              triggerMode: TooltipTriggerMode.longPress,
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: Icon(iconeDoTipo(t), color: corDoTipo(t, Theme.of(context).brightness)),
+                title: Text(pluralDoTipo(t)),
+                value: !state.tiposEscondidos.contains(t),
+                onChanged: (visivel) => state.definirTipoEscondido(t, !visivel),
+              ),
+            ),
       ],
     );
   }
 }
+
+/// Quantos dias antes do aniversário o lembrete de presente pode vir.
+const List<int> kOpcoesDiasPresente = [1, 2, 3, 5, 7, 10, 14];
+
+String _hhmm(int minutos) =>
+    '${(minutos ~/ 60).toString().padLeft(2, '0')}:${(minutos % 60).toString().padLeft(2, '0')}';
 
 class _AvisosPagina extends StatelessWidget {
   const _AvisosPagina();
@@ -404,8 +430,39 @@ class _AvisosPagina extends StatelessWidget {
               ),
             ],
           ),
+          Row(
+            children: [
+              const Expanded(child: Text('Aviso de dia todo')),
+              TextButton(
+                onPressed: () async {
+                  final m = state.avisoDiaTodoMin;
+                  final h = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60),
+                  );
+                  if (h != null) state.definirAvisoDiaTodoMin(h.hour * 60 + h.minute);
+                },
+                child: Text(_hhmm(state.avisoDiaTodoMin)),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              const Expanded(child: Text('Lembrete de presente')),
+              DropdownButton<int>(
+                value: kOpcoesDiasPresente.contains(state.diasAvisoPresente) ? state.diasAvisoPresente : null,
+                items: [
+                  for (final d in kOpcoesDiasPresente)
+                    DropdownMenuItem(value: d, child: Text(d == 1 ? '1 dia antes' : '$d dias antes')),
+                ],
+                onChanged: (d) {
+                  if (d != null) state.definirDiasAvisoPresente(d);
+                },
+              ),
+            ],
+          ),
           Tooltip(
-            message: 'Com hora: na mesma antecedência. Dia todo: às 7h do dia.',
+            message: 'Com hora: na mesma antecedência. Dia todo: na hora do aviso de dia todo.',
             triggerMode: TooltipTriggerMode.longPress,
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
