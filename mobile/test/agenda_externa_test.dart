@@ -187,7 +187,9 @@ void main() {
   group('gravar no Google', () {
     Future<(AppState, _FonteFalsa)> montar() async {
       final fonte = _FonteFalsa(const []);
-      final state = AppState(fonteExterna: fonte);
+      // Sem feriados embutidos: "amanhã" pode ser feriado e contar como
+      // mais uma ocorrência.
+      final state = AppState(fonteExterna: fonte, feriadosEmbutidos: false);
       await state.carregar();
       await state.definirAgendas({
         'principal': const AgendaEscolhida(nome: 'eu@gmail.com', gravavel: true),

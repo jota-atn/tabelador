@@ -8,6 +8,7 @@ import '../../util/link_reuniao.dart';
 import '../../theme/tipo_evento_visual.dart';
 import '../detalhes_evento.dart';
 import '../tarefas_acoes.dart';
+import '../../theme/color_density.dart';
 import 'item_swatch.dart';
 
 /// Uma ocorrência de evento numa lista: bloco de data à esquerda, título e
@@ -27,7 +28,12 @@ class EventoTile extends StatelessWidget {
     this.aoTocar,
     this.aoSegurar,
     this.selecionado = false,
+    this.colorido = false,
   });
+
+  /// Linha com faixa e fundo clarinho na cor do tipo, ícone do tipo à
+  /// direita e a sigla do item num chip na cor dele (resumo da Semana).
+  final bool colorido;
 
   /// A página de Tarefas cuida do concluir (risca antes de descer); sem
   /// isto, a caixinha conclui com Desfazer direto.
@@ -80,7 +86,7 @@ class EventoTile extends StatelessWidget {
         faixaHorario(ocorrencia),
       // "Em viagem" já diz o tipo.
       if (evento.tipo.isNotEmpty && !tarefa && !(ocorrencia.variosDias && emViagem)) evento.tipo,
-      if (mostrarItem && item != null) item.sigla,
+      if (mostrarItem && item != null && !colorido) item.sigla,
       if (evento.repeticao != Repeticao.nenhuma) evento.repeticao.rotulo.toLowerCase(),
       if (evento.presenteEm(ocorrencia.inicio) case final p?)
         p.comprado ? 'presente comprado' : 'presente: ${p.ideia}',
@@ -88,8 +94,12 @@ class EventoTile extends StatelessWidget {
     ].join(' · ');
 
     final corTexto = esmaecido || feita ? scheme.onSurfaceVariant : scheme.onSurface;
-
-    return ListTile(
+    final corFaixa = tipo != null
+        ? corDoTipo(tipo, scheme.brightness)
+        : evento.corExterna != null
+            ? Color(evento.corExterna!)
+            : scheme.outline;
+    final tile = ListTile(
       selected: selecionado,
       selectedTileColor: scheme.secondaryContainer,
       onLongPress: aoSegurar,
@@ -166,6 +176,17 @@ class EventoTile extends StatelessWidget {
               ),
             ),
           ),
+          if (colorido && mostrarItem && item != null) ...[
+            const SizedBox(width: 6),
+            ItemSwatch(
+              cor: item.cor,
+              densidade: state.densidade,
+              texto: item.sigla,
+              altura: 18,
+              tamanhoTexto: 10.5,
+              raio: 5,
+            ),
+          ],
         ],
       ),
       subtitle: detalhes.isEmpty
@@ -191,6 +212,8 @@ class EventoTile extends StatelessWidget {
               icon: const Icon(Icons.videocam_outlined),
               tooltip: 'Entrar',
             )
+          : colorido
+          ? (tarefa ? null : Icon(tipo == null ? Icons.event_outlined : iconeDoTipo(tipo), size: 20, color: corFaixa))
           : item == null
           ? (evento.externo && evento.corExterna != null
               ? CircleAvatar(
@@ -209,6 +232,37 @@ class EventoTile extends StatelessWidget {
             ),
       // Tocar mostra o card; editar é o lápis dentro dele.
       onTap: aoTocar ?? () => abrirDetalhesDoEvento(context, ocorrencia),
+    );
+    if (!colorido) return tile;
+
+    final escuro = scheme.brightness == Brightness.dark;
+    final (alfa, faixa) = switch (state.densidade) {
+      ColorDensity.discreto => (0.0, 3.0),
+      ColorDensity.suave => (escuro ? 0.12 : 0.07, 4.0),
+      ColorDensity.solido => (escuro ? 0.22 : 0.14, 4.0),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Material(
+          color: alfa == 0
+              ? scheme.surfaceContainerLow
+              : Color.alphaBlend(corFaixa.withValues(alpha: alfa), scheme.surface),
+          child: Stack(
+            children: [
+              Padding(padding: EdgeInsets.only(left: faixa + 4), child: tile),
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: faixa,
+                child: ColoredBox(color: esmaecido || feita ? corFaixa.withValues(alpha: 0.4) : corFaixa),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

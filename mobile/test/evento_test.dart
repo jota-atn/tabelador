@@ -143,7 +143,7 @@ void main() {
       return state;
     }
 
-    testWidgets('"Esta semana" mostra o próximo; botão embaixo abre o resto',
+    testWidgets('"Esta semana" tem tamanho fixo; o resto abre numa folha',
         (tester) async {
       final state = await montar(tester, const SingleChildScrollView(
         child: ProximosEventos(),
@@ -151,10 +151,16 @@ void main() {
       // Daqui a pouco: sempre cai nesta semana (salvo rodar o teste nos
       // últimos minutos de domingo).
       final logo = DateTime.now().add(const Duration(minutes: 5));
-      await state.adicionarEvento(Evento.novo(titulo: 'Aniversário de Pedro', inicio: logo));
+      for (var i = 0; i < kLinhasDoResumo + 2; i++) {
+        await state.adicionarEvento(Evento.novo(
+          titulo: 'Evento $i',
+          inicio: logo.add(Duration(seconds: i)),
+        ));
+      }
       await state.adicionarEvento(Evento.novo(
-        titulo: 'Dentista',
-        inicio: logo.add(const Duration(minutes: 1)),
+        titulo: 'Pagar boleto',
+        tipo: TipoEvento.tarefa.rotulo,
+        inicio: logo,
       ));
       await state.adicionarEvento(Evento.novo(
         titulo: 'Já foi',
@@ -162,18 +168,57 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('Aniversário de Pedro'), findsOneWidget);
-      expect(find.text('Dentista'), findsNothing);
-
-      await tester.tap(find.text('Ver mais 1 evento da semana'));
-      await tester.pump();
-      expect(find.text('Dentista'), findsOneWidget);
+      // Só eventos (tarefa fica na página dela); os 2 além do limite vão
+      // pra folha.
+      expect(find.text('Pagar boleto'), findsNothing);
+      expect(find.text('Evento 0'), findsOneWidget);
+      expect(find.text('Evento ${kLinhasDoResumo - 1}'), findsOneWidget);
+      expect(find.text('Evento $kLinhasDoResumo'), findsNothing);
       expect(find.text('Já foi'), findsNothing);
-      expect(state.semanaAberta, isTrue); // lembrado
 
-      await tester.tap(find.text('Mostrar só o próximo'));
+      await tester.ensureVisible(find.text('Ver a semana toda · +2'));
+      await tester.tap(find.text('Ver a semana toda · +2'));
+      await tester.pumpAndSettle();
+      final rolagemDaFolha = find
+          .descendant(of: find.byType(DraggableScrollableSheet), matching: find.byType(Scrollable))
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('Evento ${kLinhasDoResumo + 1}'),
+        200,
+        scrollable: rolagemDaFolha,
+      );
+      expect(find.text('Evento ${kLinhasDoResumo + 1}'), findsOneWidget);
+    });
+
+    testWidgets('a seta de Eventos recolhe e mostra os eventos do resumo', (tester) async {
+      final state = await montar(tester, const SingleChildScrollView(
+        child: ProximosEventos(),
+      ));
+      final logo = DateTime.now().add(const Duration(minutes: 5));
+      await state.adicionarEvento(Evento.novo(titulo: 'Reunião', inicio: logo));
+      // Mais eventos que o limite: recolher tira o "Ver a semana toda" de
+      // baixo, e o cabeçalho e a lista precisam continuar os mesmos.
+      for (var i = 0; i < kLinhasDoResumo; i++) {
+        await state.adicionarEvento(Evento.novo(titulo: 'Evento $i', inicio: logo.add(Duration(seconds: i + 1))));
+      }
       await tester.pump();
-      expect(find.text('Dentista'), findsNothing);
+      expect(find.text('Reunião'), findsOneWidget);
+
+      final seta = find.byType(AnimatedRotation);
+      final antes = tester.element(seta);
+      await tester.tap(find.text('Eventos'));
+      await tester.pump(const Duration(milliseconds: 100));
+      // Mesma seta, no meio do giro (não recriada).
+      expect(tester.element(seta), same(antes));
+      expect(tester.widget<AnimatedRotation>(seta).turns, 0.5);
+      await tester.pumpAndSettle();
+      expect(find.text('Reunião'), findsNothing);
+      expect(find.textContaining('Ver a semana toda'), findsNothing);
+      expect(state.eventosDoResumoOcultos, isTrue);
+
+      await tester.tap(find.text('Eventos'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reunião'), findsOneWidget);
     });
 
     testWidgets('tela do item separa próximos de passados', (tester) async {
