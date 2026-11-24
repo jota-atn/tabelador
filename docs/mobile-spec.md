@@ -935,6 +935,10 @@ tarefas" já previsto em Tarefas.
   sincronização (abrir/voltar pro app) e limpa as duas listas. Evita dois
   processos gravando o mesmo arquivo. Efeito colateral aceito: o lembrete
   da tarefa ainda pode tocar se o app não for aberto depois de marcar.
+- **R8**: ações do Glance (`ActionCallback`) são criadas por reflexão pelo
+  construtor vazio; o release tirava o construtor e a caixinha não fazia
+  nada. `android/app/proguard-rules.pro` mantém. Testes JVM não pegam isso
+  (rodam sem R8): conferir no aparelho com build de release.
 
 ### Widget da semana (decidido)
 
