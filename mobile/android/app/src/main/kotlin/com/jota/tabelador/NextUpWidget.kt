@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
@@ -39,6 +40,7 @@ import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import es.antonborri.home_widget.HomeWidgetGlanceWidgetReceiver
 import es.antonborri.home_widget.actionStartActivity
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -51,6 +53,11 @@ import java.time.ZoneId
  * ("em 24:59") é um `Chronometer` regressivo, que o próprio sistema
  * desenha; e um alarme inexato redesenha quando algo começa ou termina.
  */
+private const val PADDING_DP = 12
+// Título (até 2 linhas) + dia/faixa + contagem.
+private const val ALTURA_PRINCIPAL_DP = 46 + 2 + 18 + 17
+private const val ALTURA_LINHA_DEPOIS_DP = 15
+
 class NextUpWidget : GlanceAppWidget() {
     override val stateDefinition = HomeWidgetGlanceStateDefinition()
     override val sizeMode = SizeMode.Exact
@@ -69,12 +76,15 @@ class NextUpWidget : GlanceAppWidget() {
     @Composable
     private fun Content(context: Context, p: Proximo, agora: LocalDateTime) {
         val secundario = TextStyle(fontSize = 11.sp, color = neutralOnSurfaceVariant(context))
+        val principal = neutralOnSurface(context)
+        // Altura que sobra depois do bloco principal vira a lista "Depois".
+        var sobra = LocalSize.current.height.value.toInt() - 2 * PADDING_DP
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(neutralBackground(context))
                 .cornerRadius(16.dp)
-                .padding(12.dp)
+                .padding(PADDING_DP.dp)
                 .clickable(actionStartActivity<MainActivity>(context)),
             verticalAlignment = Alignment.Vertical.Top,
         ) {
@@ -98,6 +108,7 @@ class NextUpWidget : GlanceAppWidget() {
                         style = secundario,
                     )
                     Spacer(modifier = GlanceModifier.height(6.dp))
+                    sobra -= 22
                 }
                 if (proximo == null) {
                     Text(
@@ -110,31 +121,51 @@ class NextUpWidget : GlanceAppWidget() {
                 Text(
                     text = proximo.titulo,
                     maxLines = 2,
-                    style = TextStyle(
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = neutralOnSurface(context),
-                    ),
+                    style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = principal),
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
-                val quando = if (proximo.data == hoje) {
-                    "às ${horaMin(proximo.inicioMin)}"
-                } else {
-                    "${rotuloDoDia(proximo.data, hoje)} às ${horaMin(proximo.inicioMin)}"
-                }
                 Text(
-                    text = quando,
-                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = neutralOnSurface(context)),
+                    text = "${rotuloDoDia(proximo.data, hoje)} · ${faixa(proximo)}",
+                    maxLines = 1,
+                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = principal),
                 )
-                if (proximo.data == hoje) Contagem(context, proximo.inicio)
-                val detalhe = proximo.local?.takeIf { it.isNotBlank() }?.let { "Local: $it" } ?: proximo.tipo
-                if (detalhe != null) {
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-                    Text(text = detalhe, maxLines = 2, style = secundario)
+                val falta = Duration.between(agora, proximo.inicio).toMinutes()
+                if (falta < MINUTOS_CONTAGEM) {
+                    Contagem(context, proximo.inicio)
+                } else {
+                    Text(text = faltaAproximada(falta), style = TextStyle(fontSize = 12.sp, color = neutralOnSurfaceVariant(context)))
+                }
+                sobra -= ALTURA_PRINCIPAL_DP
+                val detalhe = listOfNotNull(proximo.tipo, proximo.local?.takeIf { it.isNotBlank() })
+                if (detalhe.isNotEmpty()) {
+                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Text(text = detalhe.joinToString(" · "), maxLines = 2, style = secundario)
+                    sobra -= 34
+                }
+                // "Depois": o resto do mesmo dia, quantos couberem.
+                val cabem = ((sobra - 10 - ALTURA_LINHA_DEPOIS_DP) / ALTURA_LINHA_DEPOIS_DP).coerceAtLeast(0)
+                val depois = p.depois.take(cabem)
+                if (depois.isNotEmpty()) {
+                    Spacer(modifier = GlanceModifier.height(10.dp))
+                    Text(
+                        text = if (p.depois.size > depois.size) "Depois (+${p.depois.size - depois.size})" else "Depois",
+                        style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = neutralOnSurfaceVariant(context)),
+                    )
+                    for (m in depois) {
+                        Text(
+                            text = "${horaMin(m.inicioMin)}  ${m.titulo}",
+                            maxLines = 1,
+                            style = TextStyle(fontSize = 11.sp, color = principal),
+                        )
+                    }
                 }
             }
         }
     }
+
+    /** "10:00–12:00", ou só o começo se não tiver fim. */
+    private fun faixa(m: Momento): String =
+        if (m.fimMin > m.inicioMin) "${horaMin(m.inicioMin)}–${horaMin(m.fimMin)}" else horaMin(m.inicioMin)
 
     /** "em 24:59", contando sozinho até [inicio]. */
     @Composable

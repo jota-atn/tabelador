@@ -36,7 +36,19 @@ class ProximoCalculoTest {
         val p = calcularProximo(snapshot, LocalDateTime.of(2026, 11, 25, 8, 15))
         assertEquals("Cálculo II", p.agora?.titulo)
         assertEquals("Monitoria", p.proximo?.titulo)
+        assertEquals(listOf("Sistemas Operacionais"), p.depois.map { it.titulo })
         assertEquals(LocalDateTime.of(2026, 11, 25, 9, 0), p.mudaEm)
+    }
+
+    @Test
+    fun longeVaiTextoEMudaNaUltimaHora() {
+        val p = calcularProximo(snapshot, LocalDateTime.of(2026, 11, 25, 6, 0))
+        assertEquals("Cálculo II", p.proximo?.titulo)
+        // 8:00 menos 1 h: vira contagem.
+        assertEquals(LocalDateTime.of(2026, 11, 25, 7, 0), p.mudaEm)
+        assertEquals("em ~2 h", faltaAproximada(120))
+        assertEquals("em ~3 h", faltaAproximada(150))
+        assertEquals("em ~2 d", faltaAproximada(40 * 60))
     }
 
     @Test

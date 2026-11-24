@@ -975,6 +975,12 @@ Local: Sala 3 · Bloco B
   receiver quando algo começa/termina. Cores compartilhadas em
   `WidgetCores.kt`; a contagem usa `@color/widget_texto_secundario`
   (values/-night/-v31).
+- **Ajuste após teste no aparelho (2026-11-23)**: "poucas infos" com o
+  próximo amanhã. Agora: dia + faixa ("Amanhã · 14:00–16:00"); falta
+  aproximada quando passa de 1 h ("em ~15 h", redesenha ao entrar na
+  última hora pra virar contagem); tipo e local juntos ("Aula · Sala 3");
+  lista **Depois** com o resto do mesmo dia ("16:00  Álgebra"), quantas
+  linhas couberem na altura, "+N" se sobrar.
 - Ordem: v1.19 Próximo · v1.20 Tarefas · v1.21 Semana. As opções de widget
   de Ajustes (fundo, mostrar eventos, dia seguinte) entram numa seção
   Widget conforme fizerem sentido.

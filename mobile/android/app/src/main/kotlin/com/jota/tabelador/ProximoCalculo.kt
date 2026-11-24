@@ -23,7 +23,16 @@ data class Momento(
  * e o [proximo] a começar. [mudaEm] é quando isso muda (algo começa ou
  * termina) — o widget agenda um redesenho pra essa hora.
  */
-data class Proximo(val agora: Momento?, val proximo: Momento?, val mudaEm: LocalDateTime?)
+data class Proximo(
+    val agora: Momento?,
+    val proximo: Momento?,
+    val mudaEm: LocalDateTime?,
+    /** O que vem depois do [proximo] no mesmo dia, em ordem. */
+    val depois: List<Momento> = emptyList(),
+)
+
+/** A partir de quanto falta a contagem vira relógio ("em 24:59"). */
+const val MINUTOS_CONTAGEM = 60
 
 private val NOMES_DIA = listOf("SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO")
 
@@ -87,14 +96,28 @@ fun calcularProximo(snapshot: TodayScheduleSnapshot, agora: LocalDateTime): Prox
     // evento mostra o evento).
     val emAndamento = deHoje.filter { !it.inicio.isAfter(agora) && it.fim.isAfter(agora) }.maxByOrNull { it.inicioMin }
     var proximo: Momento? = null
+    var depois = emptyList<Momento>()
     for (k in 0..DIAS_A_FRENTE) {
         val dia = hoje.plusDays(k.toLong())
-        val lista = if (k == 0) deHoje else momentosDoDia(snapshot, dia)
-        proximo = lista.firstOrNull { it.inicio.isAfter(agora) }
-        if (proximo != null) break
+        val lista = (if (k == 0) deHoje else momentosDoDia(snapshot, dia)).filter { it.inicio.isAfter(agora) }
+        proximo = lista.firstOrNull()
+        if (proximo != null) {
+            depois = lista.drop(1)
+            break
+        }
     }
-    val mudaEm = listOfNotNull(emAndamento?.fim, proximo?.inicio).minOrNull()
-    return Proximo(emAndamento, proximo, mudaEm)
+    // Muda quando o atual termina, o próximo começa, ou o próximo entra na
+    // última hora (o texto "em ~2 h" vira contagem).
+    val entraNaContagem = proximo?.inicio?.minusMinutes(MINUTOS_CONTAGEM.toLong())?.takeIf { it.isAfter(agora) }
+    val mudaEm = listOfNotNull(emAndamento?.fim, proximo?.inicio, entraNaContagem).minOrNull()
+    return Proximo(emAndamento, proximo, mudaEm, depois)
+}
+
+/** "em ~3 h" pra quando falta mais de uma hora (o widget redesenha a cada
+ *  ~30 min, então hora cheia arredondada é o que dá pra manter certo). */
+fun faltaAproximada(minutos: Long): String {
+    val horas = ((minutos + 30) / 60).coerceAtLeast(1)
+    return if (horas < 24) "em ~$horas h" else "em ~${(horas + 12) / 24} d"
 }
 
 /** "10:00" ou "8:30". */
