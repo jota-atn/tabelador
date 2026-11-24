@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -52,9 +53,10 @@ class EventosScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        // Segurar o título abre o menu escondido de dados de exemplo.
+        // Segurar o título abre o menu escondido de dados de exemplo — só
+        // no build de desenvolvimento; a versão instalada não tem.
         title: GestureDetector(
-          onLongPress: () => _menuDeExemplos(context),
+          onLongPress: kDebugMode ? () => _menuDeExemplos(context) : null,
           child: const Text('Eventos'),
         ),
         actions: [

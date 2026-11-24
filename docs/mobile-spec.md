@@ -47,7 +47,8 @@
 | **v1.10** ✅ (2026-11-12) | Uber/99 em Consulta e Compromisso (card de detalhes, ícone dos apps; destino pelo localizador do Android); "Até" só em Viagem/Feriado/Outro |
 | **v1.11–v1.13** ✅ (2026-11-23) | Rodada 1 de uso: resumo da Semana (só eventos, recolhível), seed, aba Eventos sem rolagem, página do tipo |
 | **v1.14** ✅ (2026-11-23) | Tela de Tarefas: progresso do dia, linhas com prioridade, adicionar rápido |
-| **v1.15** (2026-11-23) | Ajustes em seções; tema e cor do app salvos; resumo da Semana configurável; Sobre com novidades |
+| **v1.15** ✅ (2026-11-23) | Ajustes em seções; tema e cor do app salvos; resumo da Semana configurável; Sobre com novidades |
+| **v1.16** (2026-11-23) | Introdução nova (itens, eventos e tarefas, visual do app); menu de exemplos só em debug — fecha a rodada 1 |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -818,6 +819,7 @@ Caminho híbrido: o tour explica **conceitos** com ilustrações simples (sem co
 7. Widget e avisos
 
 "Pular" sempre visível; Google e widget puláveis um a um; telas 2 e 4 de leitura rápida. Tirar o texto "muda em Aparência". Implementar **por último** na rodada, depois que 1, 3 e 4 mudarem as telas.
+- **v1.16 implementado (2026-11-23)**: 7 páginas. Itens: grade 5×3 com algumas células ocupadas e um chip "CÁLC" que cai (quique) em três horários, some e recomeça. Eventos e Tarefas: chips com ícone e cor de cada tipo + três tarefas de mentira (uma riscada). Do seu jeito: miniatura da grade (o mesmo componente do cabeçalho de Ajustes) e os controles de tema, cor do app e densidade, aplicados na hora. Google Agenda, Widget e avisos como antes ("Continuar" já pula). Fim da rodada: o menu de exemplos (segurar o título da aba Eventos) só existe no build de debug.
 
 ### Ponto 3.1 — Resumo abaixo da grade na Semana (decidido, em teste)
 

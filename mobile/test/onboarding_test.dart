@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabelador/main.dart';
 import 'package:tabelador/model/tabela.dart';
@@ -11,9 +12,19 @@ void main() {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();
 
+    // A página de Itens anima sem parar: pumpAndSettle não serviria.
+    Future<void> continuar() async {
+      await tester.tap(find.text('Continuar'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
     expect(find.text('Bem-vindo ao Tabelador'), findsOneWidget);
-    await tester.tap(find.text('Continuar'));
-    await tester.pumpAndSettle();
+    await continuar();
+    expect(find.text('Itens'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 600)); // o ticker conta do 1º quadro
+    expect(find.text('CÁLC'), findsWidgets); // o chip caindo
+    await continuar();
 
     expect(find.text('Sua primeira tabela'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Faculdade');
@@ -22,11 +33,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('"Faculdade" criada'), findsOneWidget);
 
-    await tester.tap(find.text('Continuar'));
+    await continuar();
+    expect(find.text('Eventos e Tarefas'), findsOneWidget);
+    await continuar();
+    expect(find.text('Do seu jeito'), findsOneWidget);
+    await tester.tap(find.text('Escuro'));
     await tester.pumpAndSettle();
+    expect(tester.element(find.text('Do seu jeito')).read<AppState>().tema, ThemeMode.dark);
+    await continuar();
     expect(find.text('Conectar Google Agenda'), findsOneWidget);
-    await tester.tap(find.text('Continuar'));
-    await tester.pumpAndSettle();
+    await continuar();
     expect(find.text('Avisar antes de cada horário'), findsOneWidget);
     expect(find.text('Pular'), findsNothing); // última página
     await tester.tap(find.text('Começar'));
