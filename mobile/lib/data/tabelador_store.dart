@@ -29,6 +29,9 @@ class DadosSalvos {
     this.resumoVisivel = true,
     this.linhasDoResumo = 6,
     this.concluidasVisiveis = false,
+    this.avisoDiaTodoMin = kAvisoDiaTodoPadrao,
+    this.diasAvisoPresente = kDiasAvisoPresentePadrao,
+    this.tiposEscondidos = const {},
     this.agendas = const {},
     this.agendasConfiguradas = false,
     this.agendaDestino,
@@ -100,6 +103,15 @@ class DadosSalvos {
   final bool resumoVisivel;
   final int linhasDoResumo;
   final bool concluidasVisiveis;
+
+  /// Hora padrão do aviso de dia todo, em minutos desde a meia-noite.
+  final int avisoDiaTodoMin;
+
+  /// Quantos dias antes do aniversário vem o lembrete de presente.
+  final int diasAvisoPresente;
+
+  /// Tipos de evento escondidos (`TipoEvento.name`).
+  final Set<String> tiposEscondidos;
 
   /// Agendas do aparelho escolhidas: id -> (nome, cor). Nome e cor ficam
   /// guardados pra mostrar evento externo sem consultar o Android de novo.
@@ -219,6 +231,9 @@ class TabeladorStore {
   static const kResumoVisivel = 'summary_visible';
   static const kLinhasDoResumo = 'summary_rows';
   static const kConcluidasVisiveis = 'tasks_show_done';
+  static const kAvisoDiaTodo = 'all_day_alert_min';
+  static const kDiasAvisoPresente = 'gift_alert_days';
+  static const kTiposEscondidos = 'hidden_event_types';
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
   static const _kOnboarding = 'onboarding_seen';
@@ -249,6 +264,9 @@ class TabeladorStore {
       resumoVisivel: prefs.getBool(kResumoVisivel) ?? true,
       linhasDoResumo: prefs.getInt(kLinhasDoResumo) ?? 6,
       concluidasVisiveis: prefs.getBool(kConcluidasVisiveis) ?? false,
+      avisoDiaTodoMin: prefs.getInt(kAvisoDiaTodo) ?? kAvisoDiaTodoPadrao,
+      diasAvisoPresente: prefs.getInt(kDiasAvisoPresente) ?? kDiasAvisoPresentePadrao,
+      tiposEscondidos: {...?prefs.getStringList(kTiposEscondidos)},
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
@@ -329,6 +347,8 @@ class TabeladorStore {
         await prefs.setInt(chave, i);
       case final String t:
         await prefs.setString(chave, t);
+      case final List<String> l:
+        await prefs.setStringList(chave, l);
       default:
         throw ArgumentError('Preferência de tipo não suportado: $valor');
     }

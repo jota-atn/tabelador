@@ -284,9 +284,6 @@ class _AvisoUnico {
 /// (7 × 100 + slot), pra nunca colidir.
 const int _kBaseIdEvento = 100000;
 
-/// Quantos dias antes do aniversário vem o lembrete do presente.
-const int kDiasAvisoPresente = 7;
-
 /// Um aviso por ocorrência de evento nos próximos [kDiasAvisoEventos] dias,
 /// de **todos** os eventos — ao contrário da grade, não filtra pela tabela
 /// ativa: o aniversário escondido da tabela da academia continua merecendo
@@ -308,7 +305,7 @@ List<_AvisoUnico> _construirAvisosDeEvento(
     // Tarefa já feita não precisa de lembrete; feriado embutido não é
     // compromisso, é calendário.
     if (o.feita || e.embutido) continue;
-    final aviso = e.avisoMin ?? kAvisoDiaTodoPadrao;
+    final aviso = e.avisoMin ?? state.avisoDiaTodoMin;
     final quando = e.diaInteiro
         ? DateTime(o.inicio.year, o.inicio.month, o.inicio.day, aviso ~/ 60, aviso % 60)
         : o.inicio.subtract(Duration(minutes: antecedenciaMinutos));
@@ -337,21 +334,21 @@ List<_AvisoUnico> _construirAvisosDeEvento(
     );
   }
 
-  // Presente de aniversário ainda não comprado: um aviso 7 dias antes, na
+  // Presente de aniversário ainda não comprado: um aviso N dias antes, na
   // hora de aviso de dia todo. Janela própria (o aniversário pode estar
   // além dos dias de aviso normais).
   final aniversarios = state.ocorrenciasEntre(
     hoje,
-    DateTime(hoje.year, hoje.month, hoje.day + kDiasAvisoPresente + kDiasAvisoEventos),
+    DateTime(hoje.year, hoje.month, hoje.day + state.diasAvisoPresente + kDiasAvisoEventos),
   );
   for (final o in aniversarios) {
     final presente = o.evento.presenteEm(o.inicio);
     if (!o.evento.ehAniversario || presente == null || presente.comprado) continue;
-    final aviso = o.evento.avisoMin ?? kAvisoDiaTodoPadrao;
+    final aviso = o.evento.avisoMin ?? state.avisoDiaTodoMin;
     final quando = DateTime(
       o.inicio.year,
       o.inicio.month,
-      o.inicio.day - kDiasAvisoPresente,
+      o.inicio.day - state.diasAvisoPresente,
       aviso ~/ 60,
       aviso % 60,
     );

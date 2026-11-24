@@ -114,7 +114,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
   TimeOfDay horaVolta = const TimeOfDay(hour: 18, minute: 0);
 
   /// Hora do aviso quando é dia todo, em minutos desde a meia-noite.
-  int avisoMin = kAvisoDiaTodoPadrao;
+  late int avisoMin = _state.avisoDiaTodoMin;
 
   /// 0 = prazo (um momento, sem faixa).
   int minutos = 60;
@@ -148,7 +148,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       semData = o.semData;
       folga = !o.comemorativa;
       prioridade = o.prioridade;
-      avisoMin = o.avisoMin ?? kAvisoDiaTodoPadrao;
+      avisoMin = o.avisoMin ?? state.avisoDiaTodoMin;
       if (semData) data = inicioDoDia(DateTime.now());
       minutos = o.diaInteiro ? 0 : o.duracao.inMinutes;
       if (o.variosDias && o.diaInteiro) ate = o.ultimoDia;
@@ -564,7 +564,7 @@ class FolhaDeEventoState extends State<FolhaDeEvento> {
       // O formulário não mexe em "feito": herda do que estava salvo.
       feito: widget.original?.feito ?? false,
       feitas: widget.original?.feitas ?? const {},
-      avisoMin: diaTodoFinal && !semDataFinal && avisoMin != kAvisoDiaTodoPadrao ? avisoMin : null,
+      avisoMin: diaTodoFinal && !semDataFinal && avisoMin != _state.avisoDiaTodoMin ? avisoMin : null,
       // Feriado: comemorativa; Viagem: mantém as aulas.
       comemorativa: (tipo == TipoEvento.feriado || tipo == TipoEvento.viagem) && !folga,
       prioridade: ehTarefa ? prioridade : Prioridade.normal,

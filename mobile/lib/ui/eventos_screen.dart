@@ -72,7 +72,11 @@ class EventosScreen extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, c) {
           final colunas = c.maxWidth >= 720 ? 4 : 2;
-          final tipos = [for (final t in TipoEvento.values) if (t != TipoEvento.tarefa) t];
+          final escondidos = state.tiposEscondidos;
+          final tipos = [
+            for (final t in TipoEvento.values)
+              if (t != TipoEvento.tarefa && !escondidos.contains(t)) t,
+          ];
           final usados = [for (final t in tipos) if (porTipo[t]?.isNotEmpty ?? false) t];
           final vazios = [for (final t in tipos) if (!usados.contains(t)) t];
           final scheme = Theme.of(context).colorScheme;
