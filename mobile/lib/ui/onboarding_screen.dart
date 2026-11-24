@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../native_widget/home_widget_sync.dart';
 import '../state/app_state.dart';
 import 'agendas_screen.dart';
-import 'aparencia_screen.dart';
+import 'ajustes_screen.dart';
 import 'tabelas_screen.dart';
 import 'widgets/grade_de_chips.dart';
 import 'widgets/largura_maxima.dart';
@@ -475,7 +475,7 @@ class _WidgetEAvisosState extends State<_WidgetEAvisos> {
           contentPadding: EdgeInsets.zero,
           title: const Text('Avisar antes de cada horário'),
           subtitle: Text(
-            '${state.antecedenciaMinutos} min antes — muda em Aparência.',
+            '${state.antecedenciaMinutos} min antes',
             style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
           ),
           value: state.notificacoesAtivas,

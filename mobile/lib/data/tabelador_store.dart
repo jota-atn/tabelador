@@ -24,6 +24,11 @@ class DadosSalvos {
     required this.antecedenciaMinutos,
     this.notificarEventos = true,
     this.eventosDoResumoOcultos = false,
+    this.tema,
+    this.corDoApp,
+    this.resumoVisivel = true,
+    this.linhasDoResumo = 6,
+    this.concluidasVisiveis = false,
     this.agendas = const {},
     this.agendasConfiguradas = false,
     this.agendaDestino,
@@ -85,6 +90,16 @@ class DadosSalvos {
   /// Eventos do resumo da Semana recolhidos (só a seta fica). Do aparelho,
   /// fora do backup.
   final bool eventosDoResumoOcultos;
+
+  // Preferências do aparelho (Ajustes), fora do backup.
+  /// 'light' / 'dark'; nulo = seguir o sistema.
+  final String? tema;
+
+  /// Chave da cor do app na paleta; nulo = cores do sistema (Material You).
+  final String? corDoApp;
+  final bool resumoVisivel;
+  final int linhasDoResumo;
+  final bool concluidasVisiveis;
 
   /// Agendas do aparelho escolhidas: id -> (nome, cor). Nome e cor ficam
   /// guardados pra mostrar evento externo sem consultar o Android de novo.
@@ -199,6 +214,11 @@ class TabeladorStore {
   static const _kAntecedenciaMinutos = 'notifications_lead_minutes';
   static const _kNotificarEventos = 'notifications_events';
   static const _kEventosDoResumoOcultos = 'summary_events_hidden';
+  static const kTema = 'theme_mode';
+  static const kCorDoApp = 'app_color';
+  static const kResumoVisivel = 'summary_visible';
+  static const kLinhasDoResumo = 'summary_rows';
+  static const kConcluidasVisiveis = 'tasks_show_done';
   static const _kAgendas = 'device_calendars_json';
   static const _kAgendaDestino = 'device_calendar_target';
   static const _kOnboarding = 'onboarding_seen';
@@ -224,6 +244,11 @@ class TabeladorStore {
       antecedenciaMinutos: prefs.getInt(_kAntecedenciaMinutos) ?? 15,
       notificarEventos: prefs.getBool(_kNotificarEventos) ?? true,
       eventosDoResumoOcultos: prefs.getBool(_kEventosDoResumoOcultos) ?? false,
+      tema: prefs.getString(kTema),
+      corDoApp: prefs.getString(kCorDoApp),
+      resumoVisivel: prefs.getBool(kResumoVisivel) ?? true,
+      linhasDoResumo: prefs.getInt(kLinhasDoResumo) ?? 6,
+      concluidasVisiveis: prefs.getBool(kConcluidasVisiveis) ?? false,
       agendas: _decodificarAgendas(prefs.getString(_kAgendas)),
       agendasConfiguradas: prefs.getString(_kAgendas) != null,
       agendaDestino: prefs.getString(_kAgendaDestino),
@@ -290,6 +315,23 @@ class TabeladorStore {
   Future<void> salvarNotificarEventos(bool ativo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotificarEventos, ativo);
+  }
+
+  /// Preferência simples de Ajustes ([kTema], [kCorDoApp]…): nulo apaga.
+  Future<void> salvarPreferencia(String chave, Object? valor) async {
+    final prefs = await SharedPreferences.getInstance();
+    switch (valor) {
+      case null:
+        await prefs.remove(chave);
+      case final bool b:
+        await prefs.setBool(chave, b);
+      case final int i:
+        await prefs.setInt(chave, i);
+      case final String t:
+        await prefs.setString(chave, t);
+      default:
+        throw ArgumentError('Preferência de tipo não suportado: $valor');
+    }
   }
 
   Future<void> salvarEventosDoResumoOcultos(bool ocultos) async {

@@ -6,7 +6,7 @@ import '../state/app_state.dart';
 import '../util/eventos_na_grade.dart';
 import '../util/formato_data.dart';
 import 'agendas_screen.dart';
-import 'aparencia_screen.dart';
+import 'ajustes_screen.dart';
 import 'calendario_screen.dart';
 import 'dia_editor.dart';
 import 'folha_evento.dart';
@@ -96,10 +96,10 @@ class SemanaScreen extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const AparenciaScreen()),
+              MaterialPageRoute<void>(builder: (_) => const AjustesScreen()),
             ),
-            icon: const Icon(Icons.tune),
-            tooltip: 'Aparência',
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Ajustes',
           ),
         ],
       ),
@@ -128,7 +128,7 @@ class SemanaScreen extends StatelessWidget {
                 cabecalho: const _BarraDaSemana(),
                 rodape: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [const _CartaoGoogle(), ProximosEventos(segunda: segunda)],
+                  children: [const _CartaoGoogle(), if (state.resumoVisivel) ProximosEventos(segunda: segunda)],
                 ),
                 eventos: eventos,
               ),

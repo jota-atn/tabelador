@@ -72,7 +72,9 @@ class _TarefasScreenState extends State<TarefasScreen> {
   PeriodoTarefas _periodo = PeriodoTarefas.todas;
   String? _itemId;
   OrigemTarefas _origem = OrigemTarefas.todas;
-  bool _mostrarConcluidas = false;
+  /// Lembrado entre aberturas (preferência do aparelho).
+  bool get _mostrarConcluidas => context.read<AppState>().concluidasVisiveis;
+  set _mostrarConcluidas(bool v) => context.read<AppState>().definirConcluidasVisiveis(v);
   bool _buscando = false;
   final _busca = TextEditingController();
 
