@@ -52,7 +52,7 @@
 | **v1.17** ✅ (2026-11-23) | Hora do aviso de dia todo, dias do lembrete de presente, esconder tipos de evento |
 | **v1.18** ✅ (2026-11-23) | Semana começando no domingo (por tabela) |
 | **v1.19** ✅ (2026-11-23) | Widget "Próximo" 2×2 |
-| **v1.20** (2026-11-23) | Widget de Tarefas |
+| **v1.20** ✅ (2026-11-23) | Widget de Tarefas |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
