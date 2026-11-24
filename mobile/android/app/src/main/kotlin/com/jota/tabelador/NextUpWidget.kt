@@ -54,8 +54,6 @@ import java.time.ZoneId
  * desenha; e um alarme inexato redesenha quando algo começa ou termina.
  */
 private const val PADDING_DP = 12
-// Título (até 2 linhas) + dia/faixa + contagem.
-private const val ALTURA_PRINCIPAL_DP = 46 + 2 + 18 + 17
 private const val ALTURA_LINHA_DEPOIS_DP = 15
 
 class NextUpWidget : GlanceAppWidget() {
@@ -78,7 +76,10 @@ class NextUpWidget : GlanceAppWidget() {
         val secundario = TextStyle(fontSize = 11.sp, color = neutralOnSurfaceVariant(context))
         val principal = neutralOnSurface(context)
         // Altura que sobra depois do bloco principal vira a lista "Depois".
-        var sobra = LocalSize.current.height.value.toInt() - 2 * PADDING_DP
+        val tamanho = LocalSize.current
+        var sobra = tamanho.height.value.toInt() - 2 * PADDING_DP
+        // Largura do texto: tira margens e a barra lateral.
+        val larguraTexto = tamanho.width.value.toInt() - 2 * PADDING_DP - 14
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -125,25 +126,30 @@ class NextUpWidget : GlanceAppWidget() {
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Text(
-                    text = "${rotuloDoDia(proximo.data, hoje)} · ${faixa(proximo)}",
+                    text = faixa(proximo),
                     maxLines = 1,
                     style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = principal),
                 )
+                // "Amanhã · em ~9 h" ou "Hoje · em 24:59" (contagem do sistema).
+                val estiloQuando = TextStyle(fontSize = 12.sp, color = neutralOnSurfaceVariant(context))
                 val falta = Duration.between(agora, proximo.inicio).toMinutes()
-                if (falta < MINUTOS_CONTAGEM) {
-                    Contagem(context, proximo.inicio)
-                } else {
-                    Text(text = faltaAproximada(falta), style = TextStyle(fontSize = 12.sp, color = neutralOnSurfaceVariant(context)))
+                Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
+                    Text(text = "${rotuloDoDia(proximo.data, hoje)} · ", style = estiloQuando)
+                    if (falta < MINUTOS_CONTAGEM) {
+                        Contagem(context, proximo.inicio)
+                    } else {
+                        Text(text = faltaAproximada(falta), style = estiloQuando)
+                    }
                 }
-                sobra -= ALTURA_PRINCIPAL_DP
-                val detalhe = listOfNotNull(proximo.tipo, proximo.local?.takeIf { it.isNotBlank() })
+                sobra -= linhas(proximo.titulo, 17, larguraTexto, 2) * 23 + 2 + 18 + 16
+                val detalhe = listOfNotNull(proximo.tipo, proximo.local?.takeIf { it.isNotBlank() }).joinToString(" · ")
                 if (detalhe.isNotEmpty()) {
                     Spacer(modifier = GlanceModifier.height(4.dp))
-                    Text(text = detalhe.joinToString(" · "), maxLines = 2, style = secundario)
-                    sobra -= 34
+                    Text(text = detalhe, maxLines = 2, style = secundario)
+                    sobra -= 4 + linhas(detalhe, 11, larguraTexto, 2) * 15
                 }
                 // "Depois": o resto do mesmo dia, quantos couberem.
-                val cabem = ((sobra - 10 - ALTURA_LINHA_DEPOIS_DP) / ALTURA_LINHA_DEPOIS_DP).coerceAtLeast(0)
+                val cabem = ((sobra - 10 - 14) / ALTURA_LINHA_DEPOIS_DP).coerceAtLeast(0)
                 val depois = p.depois.take(cabem)
                 if (depois.isNotEmpty()) {
                     Spacer(modifier = GlanceModifier.height(10.dp))
@@ -161,6 +167,14 @@ class NextUpWidget : GlanceAppWidget() {
                 }
             }
         }
+    }
+
+    /** Linhas que [texto] ocupa em [sp] numa largura de [largura] dp
+     *  (estimativa: caractere médio ~0,55 do tamanho da fonte). */
+    private fun linhas(texto: String, sp: Int, largura: Int, max: Int): Int {
+        if (largura <= 0) return max
+        val porLinha = (largura / (sp * 0.55)).toInt().coerceAtLeast(1)
+        return ((texto.length + porLinha - 1) / porLinha).coerceIn(1, max)
     }
 
     /** "10:00–12:00", ou só o começo se não tiver fim. */
