@@ -150,12 +150,16 @@ class ProximosEventos extends StatelessWidget {
         ],
         if (semana.eventos.isNotEmpty)
           _CabecalhoEventos(
+            // Chaves fixas: o número de tarefas acima muda ao recolher, e sem
+            // elas o Flutter recriaria os dois (e a animação não rodaria).
+            key: const ValueKey('cabecalho-eventos'),
             quantos: semana.eventos.length,
             ocultos: ocultos,
             aoTocar: () => state.definirEventosDoResumoOcultos(!ocultos),
           ),
         // Abre e fecha deslizando; recolhido, a lista some de vez.
         AnimatedSize(
+          key: const ValueKey('lista-eventos'),
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
           alignment: Alignment.topCenter,
@@ -259,7 +263,7 @@ class _CabecalhoTarefas extends StatelessWidget {
 /// "Eventos  5  (⌃)" — tocar recolhe e mostra os eventos do resumo; a
 /// seta gira junto.
 class _CabecalhoEventos extends StatelessWidget {
-  const _CabecalhoEventos({required this.quantos, required this.ocultos, required this.aoTocar});
+  const _CabecalhoEventos({super.key, required this.quantos, required this.ocultos, required this.aoTocar});
 
   final int quantos;
   final bool ocultos;

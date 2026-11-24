@@ -195,15 +195,33 @@ void main() {
       ));
       final logo = DateTime.now().add(const Duration(minutes: 5));
       await state.adicionarEvento(Evento.novo(titulo: 'Reunião', inicio: logo));
+      for (var i = 0; i < kLinhasDoResumo - 1; i++) {
+        await state.adicionarEvento(Evento.novo(titulo: 'Evento $i', inicio: logo.add(Duration(seconds: i + 1))));
+      }
       await state.adicionarEvento(Evento.novo(
         titulo: 'Pagar boleto',
         tipo: TipoEvento.tarefa.rotulo,
         inicio: logo,
       ));
+      // Recolher dá as linhas dos eventos às tarefas: a lista acima cresce
+      // e o "Ver a semana toda" some — o cabeçalho e a lista mudam de lugar.
+      for (var i = 0; i < kLinhasDoResumo - 3; i++) {
+        await state.adicionarEvento(Evento.novo(
+          titulo: 'Tarefa $i',
+          tipo: TipoEvento.tarefa.rotulo,
+          inicio: logo.add(Duration(seconds: i + 1)),
+        ));
+      }
       await tester.pump();
       expect(find.text('Reunião'), findsOneWidget);
 
+      final seta = find.byType(AnimatedRotation);
+      final antes = tester.element(seta);
       await tester.tap(find.text('Eventos'));
+      await tester.pump(const Duration(milliseconds: 100));
+      // Mesma seta, no meio do giro (não recriada).
+      expect(tester.element(seta), same(antes));
+      expect(tester.widget<AnimatedRotation>(seta).turns, 0.5);
       await tester.pumpAndSettle();
       expect(find.text('Reunião'), findsNothing);
       expect(find.text('Pagar boleto'), findsOneWidget);
