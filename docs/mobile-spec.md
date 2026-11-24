@@ -832,6 +832,7 @@ Causa da rolagem: 8 cards quadrados (~170dp cada) em ordem fixa + card de Tarefa
 - **Cards mais largos que altos** (~2/3 da altura atual): ícone, nome, contagem, próximo evento numa linha, quando.
 - Tarefas continua sempre no topo.
 - Carrossel com os cards dos tipos foi descartado (troca rolagem vertical por horizontal e esconde a visão geral).
+- **Ajuste após teste (2026-11-23)**: ainda rolava no celular. Agora a aba mede a tela: chips e grade têm altura mínima, o card de Tarefas mostra quantas tarefas couberem (até 3; o total já está no cabeçalho, sem "Ver todas") e o que sobra estica os cards. Só rola se nem assim couber. Chips **alinhados em colunas iguais às dos cards**, cada linha ocupando a largura toda.
 
 ### Ponto 3.3 — Tela de Tarefas (decidido)
 
@@ -870,6 +871,79 @@ Acrescentar ao seed (`lib/dev/exemplos.dart`): Prova com nota lançada; Reunião
 4. v1.14 Tarefas (3.3)
 5. v1.15 Ajustes (1)
 6. v1.16 onboarding (2)
+
+## Widgets — rodada 1 (em discussão, 2026-11-23)
+
+Contexto: o usuário passou a usar um **Galaxy Tab S10 Lite** como
+gerenciador geral (estudos, trabalho) e montou as telas iniciais com
+widgets de vários apps. Quatro deles o Tabelador pode ocupar. Nada
+implementado; a ordem entra depois da rodada 1 de uso.
+
+### Pré-requisito: sincronização entre aparelhos (futuro, a discutir)
+
+Hoje tabela, itens e tarefas vivem **só no aparelho** (JSON local) e o
+widget lê do próprio aparelho. Eventos chegam ao tablet pela conta Google
+(o widget de calendário da Samsung já mostra a agenda Google se a conta
+estiver no Samsung Calendar, sem trabalho nosso). O resto não chega.
+
+- **Desejo**: editar no tablet e o celular receber, e vice-versa. Não só
+  backup manual.
+- Caminho a avaliar: arquivo na pasta oculta do app no Google Drive
+  (`appDataFolder`), já que o app usa a conta Google. Pontos a decidir:
+  conflito quando os dois editam offline, quando sincronizar (abrir o app,
+  salvar, de tempos em tempos), o que fica fora (preferências do aparelho).
+- Não implementar agora; voltar a isso antes dos widgets abaixo fazerem
+  sentido no tablet.
+
+### Widget de Tarefas (decidido)
+
+Substitui o widget de lembretes da Samsung. É o "widget separado só de
+tarefas" já previsto em Tarefas.
+
+- Lista com caixinha; tocar risca e a tarefa some depois de ~2s (mesmo
+  comportamento do app).
+- Visual minimalista: cores neutras do sistema, cor só num filete da
+  disciplina/tipo, sem emoji nem gradiente. Trabalhar o visual com calma
+  quando chegar a vez.
+
+### Widget da semana (decidido)
+
+Panorama da semana inteira, no espaço grande (o maior widget da tela).
+
+- Colunas = dias, linhas = horários, sigla na célula, na densidade de cor
+  escolhida no app (igual à grade).
+- **Rola na vertical** quando os horários não cabem. Sem troca de semana.
+- Convive com o widget de hoje, que continua existindo.
+
+### Widget de progresso de estudo (decidido, depende de Disciplina)
+
+Inspirado no widget do PoroApp ("Up next: Physics Final 12 days" +
+"Subject progress" com barras).
+
+- Topo: **próxima prova** e contagem ("Prova de SO em 12 dias"), a partir
+  dos eventos do tipo Prova.
+- Abaixo: uma barra por disciplina, **tópicos estudados ÷ total**, com a
+  cor da disciplina e a porcentagem.
+- **Sem streak** (sequência de dias): seria cobrança, contra o "registra,
+  não cobra" do Estudo.
+- Depende das disciplinas tipadas com tópicos (ver "Itens tipados — rodada
+  2": tópico de estudo pertence à Disciplina). Vem depois da v2.1.
+
+### Widget "Próximo" 2×2 (decidido)
+
+O próximo evento ou item do horário, **bem descritivo**, pra bater o olho
+e já saber:
+
+```
+SO em 25 minutos
+Local: Sala 3 · Bloco B
+```
+
+- Pega o que vier primeiro entre aula/item da tabela e evento.
+- Linhas extras conforme o tipo, se couber: professor, link de reunião,
+  endereço de consulta.
+- A definir: o que mostrar quando o próximo é amanhã ou não há nada;
+  se mostra o "agora" junto quando algo está em andamento.
 
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 
