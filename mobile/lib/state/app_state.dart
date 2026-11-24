@@ -12,6 +12,7 @@ import '../model/presente.dart';
 import '../model/tabela.dart';
 import '../theme/color_density.dart';
 import '../util/semana.dart';
+import '../util/tarefas.dart';
 import '../util/feriados.dart';
 
 /// Estado do app: a biblioteca de itens, as tabelas e as preferências.
@@ -561,6 +562,15 @@ class AppState extends ChangeNotifier {
     _eventos = [for (final x in _eventos) x.id == e.id ? novo : x];
     notifyListeners();
     await _store.salvarEventos(_eventos);
+  }
+
+  /// Conclui as tarefas marcadas no widget (chaves `id@início`, ver
+  /// `LinhaTarefa.chave`). As que não existem mais são ignoradas.
+  Future<void> concluirPeloWidget(Iterable<String> chaves) async {
+    for (final chave in chaves) {
+      final o = ocorrenciaPelaChave(tarefas, chave);
+      if (o != null) await marcarFeita(o, true);
+    }
   }
 
   /// Adiciona vários de uma vez (eventos de exemplo): um aviso e uma

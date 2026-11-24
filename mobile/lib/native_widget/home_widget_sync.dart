@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../model/evento.dart';
 import '../state/app_state.dart';
+import '../util/tarefas.dart';
 import 'today_schedule_snapshot.dart';
 
 /// Nome do receiver Android que recebe o broadcast de atualização — precisa
@@ -13,6 +15,15 @@ const String kTodayScheduleWidgetReceiver = 'TodayScheduleWidgetReceiver';
 
 /// Widget "Próximo" (2×2): lê o mesmo snapshot.
 const String kNextUpWidgetReceiver = 'NextUpWidgetReceiver';
+
+/// Widget de Tarefas: lê o mesmo snapshot (`tasks`).
+const String kTasksWidgetReceiver = 'TasksWidgetReceiver';
+
+/// Chaves (JSON, lista de `LinhaTarefa.chave`) que o widget de Tarefas
+/// grava ao marcar: riscadas (os ~2 s antes de sumir) e feitas. O app
+/// conclui de verdade na próxima sincronização e limpa as duas.
+const String kTarefasRiscadasKey = 'tarefas_riscadas_widget';
+const String kTarefasFeitasKey = 'tarefas_feitas_widget';
 
 const String kTodayScheduleJsonKey = 'today_schedule_json';
 
@@ -68,6 +79,7 @@ class HomeWidgetSync {
 
     _sincronizando = true;
     try {
+      await _aplicarFeitasNoWidget();
       var repetir = true;
       while (repetir) {
         repetir = false;
@@ -79,11 +91,13 @@ class HomeWidgetSync {
           escuro: escuro,
           ocorrencias: _ocorrenciasDaJanela(),
           dias: _diasAFrente + 1,
+          tarefas: organizarTarefas(_appState.tarefas, DateTime.now(), _appState.primeiroDiaDaSemana),
+          primeiroDia: _appState.primeiroDiaDaSemana,
         );
         if (json != _ultimoJson) {
           _ultimoJson = json;
           await HomeWidget.saveWidgetData<String>(kTodayScheduleJsonKey, json);
-          for (final receiver in [kTodayScheduleWidgetReceiver, kNextUpWidgetReceiver]) {
+          for (final receiver in [kTodayScheduleWidgetReceiver, kNextUpWidgetReceiver, kTasksWidgetReceiver]) {
             await HomeWidget.updateWidget(androidName: receiver);
           }
         }
@@ -95,6 +109,25 @@ class HomeWidgetSync {
     } finally {
       _sincronizando = false;
     }
+  }
+
+  /// Conclui o que foi marcado no widget de Tarefas enquanto o app estava
+  /// fechado. Riscadas contam: o widget só não terminou os ~2 s.
+  Future<void> _aplicarFeitasNoWidget() async {
+    final chaves = <String>{};
+    for (final k in [kTarefasRiscadasKey, kTarefasFeitasKey]) {
+      final bruto = await HomeWidget.getWidgetData<String>(k);
+      if (bruto == null || bruto.isEmpty) continue;
+      try {
+        chaves.addAll((jsonDecode(bruto) as List).cast<String>());
+      } on FormatException {
+        // Lixo: só descarta.
+      }
+    }
+    if (chaves.isEmpty) return;
+    await _appState.concluirPeloWidget(chaves);
+    await HomeWidget.saveWidgetData<String>(kTarefasRiscadasKey, null);
+    await HomeWidget.saveWidgetData<String>(kTarefasFeitasKey, null);
   }
 
   /// Hoje e os próximos [_diasAFrente] dias. A janela começa na meia-noite

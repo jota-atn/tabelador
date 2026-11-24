@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Caixinha vazia da prévia do widget de Tarefas. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <stroke android:width="2dp" android:color="#5C5C5C" />
+    <corners android:radius="3dp" />
+</shape>

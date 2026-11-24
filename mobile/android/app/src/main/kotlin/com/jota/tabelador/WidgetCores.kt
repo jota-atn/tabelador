@@ -60,3 +60,18 @@ internal fun neutralOnSurfaceVariant(context: Context): ColorProvider =
     } else {
         DiaNoite(day = Color(0xFF5C5C5C), night = Color(0xFFB0B0B0))
     }
+
+/** Cor de destaque do sistema (Monet) pra caixinha marcada. */
+internal fun accent(context: Context): ColorProvider =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        DiaNoite(
+            day = Color(context.getColor(android.R.color.system_accent1_600)),
+            night = Color(context.getColor(android.R.color.system_accent1_200)),
+        )
+    } else {
+        DiaNoite(day = Color(0xFF3A5BA0), night = Color(0xFFB0C6FF))
+    }
+
+/** Vermelho de "atrasada", discreto (o mesmo erro do Material 3). */
+internal fun atrasada(@Suppress("UNUSED_PARAMETER") context: Context): ColorProvider =
+    DiaNoite(day = Color(0xFFB3261E), night = Color(0xFFF2B8B5))
