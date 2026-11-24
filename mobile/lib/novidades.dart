@@ -1,0 +1,34 @@
+/// Versão mostrada em Ajustes. Um teste confere que bate com o
+/// `pubspec.yaml` (sem pacote nativo só pra ler isso).
+const String kVersao = '1.15.0';
+
+/// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
+const List<(String, List<String>)> kNovidades = [
+  (
+    '1.15',
+    [
+      'Ajustes organizados em seções.',
+      'Tema e cor do app escolhidos ficam salvos.',
+      'Resumo da Semana pode ser desligado, e você escolhe quantos eventos ele mostra.',
+      '"Mostrar concluídas" em Tarefas fica como você deixou.',
+    ],
+  ),
+  (
+    '1.14',
+    [
+      'Tarefas: progresso do dia, faixa de prioridade e campo de adicionar rápido.',
+    ],
+  ),
+  (
+    '1.13',
+    [
+      'Aba Eventos cabe na tela; página de cada tipo com o topo fixo.',
+    ],
+  ),
+  (
+    '1.11',
+    [
+      'Resumo da Semana com cor, só eventos e seta pra recolher.',
+    ],
+  ),
+];

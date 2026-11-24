@@ -41,10 +41,6 @@ class TabeladorApp extends StatefulWidget {
 }
 
 class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver {
-  /// Só existe pra comparar os dois temas na tela de laboratório. O app final
-  /// segue o tema do sistema.
-  ThemeMode _mode = ThemeMode.system;
-
   late final AppState _appState =
       AppState(fonteExterna: widget.agendasDoAparelho)..carregar();
   late final HomeWidgetSync _widgetSync = HomeWidgetSync(_appState);
@@ -94,11 +90,14 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
     }
   }
 
+  /// O sol/lua da Semana: troca pro oposto do que está na tela e salva
+  /// (é a mesma preferência de Ajustes → Aparência).
   void _toggleBrightness() {
-    final isDark = _mode == ThemeMode.dark ||
-        (_mode == ThemeMode.system &&
+    final modo = _appState.tema;
+    final isDark = modo == ThemeMode.dark ||
+        (modo == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-    setState(() => _mode = isDark ? ThemeMode.light : ThemeMode.dark);
+    _appState.definirTema(isDark ? ThemeMode.light : ThemeMode.dark);
   }
 
   @override
@@ -115,17 +114,20 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
         Provider<AgendasDoAparelho?>.value(value: widget.agendasDoAparelho),
       ],
       child: DynamicColorBuilder(
-        builder: (lightDynamic, darkDynamic) {
+        builder: (lightDynamic, darkDynamic) => Selector<AppState, (ThemeMode, String?)>(
+          selector: (_, s) => (s.tema, s.corDoApp),
+          builder: (context, prefs, _) {
+          final (modo, cor) = prefs;
           _widgetSync.atualizarEsquemas(
-            resolveColorScheme(lightDynamic, Brightness.light),
-            resolveColorScheme(darkDynamic, Brightness.dark),
+            resolveColorScheme(lightDynamic, Brightness.light, corDoApp: cor),
+            resolveColorScheme(darkDynamic, Brightness.dark, corDoApp: cor),
           );
           return MaterialApp(
             title: 'Tabelador',
             debugShowCheckedModeBanner: false,
-            theme: buildAppTheme(lightDynamic, Brightness.light),
-            darkTheme: buildAppTheme(darkDynamic, Brightness.dark),
-            themeMode: _mode,
+            theme: buildAppTheme(lightDynamic, Brightness.light, corDoApp: cor),
+            darkTheme: buildAppTheme(darkDynamic, Brightness.dark, corDoApp: cor),
+            themeMode: modo,
             // Só pt-BR: seletor de data/hora e textos padrão do Material
             // (OK/Cancelar, meses) no mesmo idioma do resto do app.
             locale: const Locale('pt', 'BR'),
@@ -141,7 +143,8 @@ class _TabeladorAppState extends State<TabeladorApp> with WidgetsBindingObserver
                       : const OnboardingScreen(),
             ),
           );
-        },
+          },
+        ),
       ),
     );
   }

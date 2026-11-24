@@ -10,9 +10,9 @@ import '../calendario_screen.dart';
 import '../tarefas_screen.dart';
 import 'evento_tile.dart';
 
-/// Quantos eventos o resumo abaixo da grade mostra. O resumo nunca cresce
-/// dentro da tela: o resto fica na folha "Ver a semana toda". Provisório —
-/// o usuário está testando o tamanho. Tarefas não entram (têm a página
+/// Quantos eventos o resumo abaixo da grade mostra por padrão (Ajustes →
+/// Eventos e Tarefas muda). O resumo nunca cresce dentro da tela: o resto
+/// fica na folha "Ver a semana toda". Tarefas não entram (têm a página
 /// delas, pelo botão "Tarefas").
 const int kLinhasDoResumo = 6;
 
@@ -66,7 +66,7 @@ class ProximosEventos extends StatelessWidget {
     final semana = _Semana(state, segunda, DateTime.now());
 
     final ocultos = state.eventosDoResumoOcultos && semana.eventos.isNotEmpty;
-    final nEventos = ocultos ? 0 : min(semana.eventos.length, kLinhasDoResumo);
+    final nEventos = ocultos ? 0 : min(semana.eventos.length, state.linhasDoResumo);
     final escondidos = ocultos ? 0 : semana.eventos.length - nEventos;
 
     return Column(

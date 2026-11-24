@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 
 import '../agenda/agendas_do_aparelho.dart';
 import '../data/tabelador_store.dart';
@@ -62,6 +63,11 @@ class AppState extends ChangeNotifier {
   int _antecedenciaMinutos = 15;
   bool _notificarEventos = true;
   bool _eventosDoResumoOcultos = false;
+  ThemeMode _tema = ThemeMode.system;
+  String? _corDoApp;
+  bool _resumoVisivel = true;
+  int _linhasDoResumo = 6;
+  bool _concluidasVisiveis = false;
   bool _carregado = false;
 
   /// Segunda-feira da semana que a tela inicial mostra; nulo = a atual. Só
@@ -84,6 +90,21 @@ class AppState extends ChangeNotifier {
   int get antecedenciaMinutos => _antecedenciaMinutos;
   bool get notificarEventos => _notificarEventos;
   bool get eventosDoResumoOcultos => _eventosDoResumoOcultos;
+
+  /// Tema escolhido (Ajustes → Aparência, ou o sol/lua da Semana).
+  ThemeMode get tema => _tema;
+
+  /// Chave da cor do app em `kCoresDoApp`; nulo = Material You.
+  String? get corDoApp => _corDoApp;
+
+  /// O resumo de eventos abaixo da grade da Semana.
+  bool get resumoVisivel => _resumoVisivel;
+
+  /// Quantos eventos o resumo mostra antes do "Ver a semana toda".
+  int get linhasDoResumo => _linhasDoResumo;
+
+  /// Filtro "Mostrar concluídas" da página de Tarefas, lembrado.
+  bool get concluidasVisiveis => _concluidasVisiveis;
   bool get carregado => _carregado;
   int get pedidosDeSemana => _pedidosDeSemana;
 
@@ -177,6 +198,15 @@ class AppState extends ChangeNotifier {
     _antecedenciaMinutos = dados.antecedenciaMinutos;
     _notificarEventos = dados.notificarEventos;
     _eventosDoResumoOcultos = dados.eventosDoResumoOcultos;
+    _tema = switch (dados.tema) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+    _corDoApp = dados.corDoApp;
+    _resumoVisivel = dados.resumoVisivel;
+    _linhasDoResumo = dados.linhasDoResumo;
+    _concluidasVisiveis = dados.concluidasVisiveis;
     _agendas = {...dados.agendas};
     _feitasExternas = {...dados.feitasExternas};
     _ocultasExternas = {...dados.ocultasExternas};
@@ -949,6 +979,48 @@ class AppState extends ChangeNotifier {
     _notificarEventos = ativo;
     notifyListeners();
     await _store.salvarNotificarEventos(ativo);
+  }
+
+  Future<void> definirTema(ThemeMode tema) async {
+    if (_tema == tema) return;
+    _tema = tema;
+    notifyListeners();
+    await _store.salvarPreferencia(
+      TabeladorStore.kTema,
+      switch (tema) {
+        ThemeMode.light => 'light',
+        ThemeMode.dark => 'dark',
+        ThemeMode.system => null,
+      },
+    );
+  }
+
+  Future<void> definirCorDoApp(String? cor) async {
+    if (_corDoApp == cor) return;
+    _corDoApp = cor;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kCorDoApp, cor);
+  }
+
+  Future<void> definirResumoVisivel(bool visivel) async {
+    if (_resumoVisivel == visivel) return;
+    _resumoVisivel = visivel;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kResumoVisivel, visivel);
+  }
+
+  Future<void> definirLinhasDoResumo(int linhas) async {
+    if (_linhasDoResumo == linhas) return;
+    _linhasDoResumo = linhas;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kLinhasDoResumo, linhas);
+  }
+
+  Future<void> definirConcluidasVisiveis(bool visiveis) async {
+    if (_concluidasVisiveis == visiveis) return;
+    _concluidasVisiveis = visiveis;
+    notifyListeners();
+    await _store.salvarPreferencia(TabeladorStore.kConcluidasVisiveis, visiveis);
   }
 
   Future<void> definirEventosDoResumoOcultos(bool ocultos) async {

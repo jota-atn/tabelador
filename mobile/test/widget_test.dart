@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+
 import 'package:tabelador/main.dart';
+import 'package:tabelador/novidades.dart';
 import 'package:tabelador/state/app_state.dart';
 import 'package:tabelador/theme/color_density.dart';
 
@@ -21,9 +24,12 @@ void main() {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Aparência'));
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aparência'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Sólido'), 100);
     await tester.tap(find.text('Sólido'));
     await tester.pumpAndSettle();
 
@@ -38,7 +44,9 @@ void main() {
     await tester.pumpWidget(const TabeladorApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Aparência'));
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Avisos'));
     await tester.pumpAndSettle();
 
     expect(find.text('Com quanto tempo de antecedência'), findsNothing);
@@ -108,5 +116,51 @@ void main() {
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NavigationRail), findsNothing);
     });
+  });
+
+  testWidgets('o tema do sol/lua fica salvo', (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Alternar tema'));
+    await tester.pumpAndSettle();
+
+    final salvo = AppState();
+    await salvo.carregar();
+    expect(salvo.tema, isNot(ThemeMode.system));
+  });
+
+  testWidgets('Ajustes: tema, cor do app e resumo da Semana', (tester) async {
+    await tester.pumpWidget(const TabeladorApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Versão $kVersao'), findsOneWidget);
+
+    await tester.tap(find.text('Aparência'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escuro'));
+    await tester.tap(find.byTooltip('Verde'));
+    await tester.pumpAndSettle();
+    expect(Theme.of(tester.element(find.text('TEMA'))).brightness, Brightness.dark);
+    await tester.tap(find.byType(BackButton).last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Eventos e Tarefas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Resumo de eventos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quantos eventos'), findsNothing);
+
+    final salvo = AppState();
+    await salvo.carregar();
+    expect(salvo.tema, ThemeMode.dark);
+    expect(salvo.corDoApp, 'verde');
+    expect(salvo.resumoVisivel, isFalse);
+  });
+
+  test('a versão de Ajustes bate com o pubspec', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final versao = RegExp(r'^version: ([\d.]+)\+', multiLine: true).firstMatch(pubspec)!.group(1);
+    expect(kVersao, versao);
   });
 }

@@ -46,7 +46,8 @@
 | **v1.9** ✅ (2026-11-12) | Prioridade em Tarefa (alta/normal/baixa, ordem na seção, marca na linha; Classroom pelo card) |
 | **v1.10** ✅ (2026-11-12) | Uber/99 em Consulta e Compromisso (card de detalhes, ícone dos apps; destino pelo localizador do Android); "Até" só em Viagem/Feriado/Outro |
 | **v1.11–v1.13** ✅ (2026-11-23) | Rodada 1 de uso: resumo da Semana (só eventos, recolhível), seed, aba Eventos sem rolagem, página do tipo |
-| **v1.14** (2026-11-23) | Tela de Tarefas: progresso do dia, linhas com prioridade, adicionar rápido |
+| **v1.14** ✅ (2026-11-23) | Tela de Tarefas: progresso do dia, linhas com prioridade, adicionar rápido |
+| **v1.15** (2026-11-23) | Ajustes em seções; tema e cor do app salvos; resumo da Semana configurável; Sobre com novidades |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -793,6 +794,7 @@ Incômodos anotados pelo usuário no uso diário, discutidos um por vez:
 | Dados | exportar/importar backup |
 | Sobre | versão, novidades da versão, rever a introdução |
 
+- **v1.15 implementado (2026-11-23)**: tela Ajustes (engrenagem na Semana) com cabeçalho (nome, versão, miniatura da grade na densidade atual) e seções com ícone colorido e resumo dos valores atuais: Aparência (tema Sistema/Claro/Escuro em botões segmentados, cor do app = Material You ou uma de 6 — Azul, Verde, Roxo, Terracota, Rosa, Grafite — com o nome ao segurar, densidade), Eventos e Tarefas (resumo de eventos liga/desliga e quantos: 3, 4, 5, 6, 8, 10), Avisos (o que já existia; a explicação de "Avisar eventos também" foi pro toque longo), Google Agenda (abre direto as agendas: uma opção só), Dados (backup), Sobre (versão, novidades por versão em `lib/novidades.dart`, rever a introdução). Tema, cor, resumo e "Mostrar concluídas" são preferências **do aparelho, fora do backup**. Versão vem de `kVersao` (teste confere com o `pubspec.yaml`, sem pacote nativo). Ficam pra depois: aviso padrão de dia todo e dias do lembrete de presente, esconder tipos, opções do widget, semana começando no domingo.
 - **Semana começa no domingo ou na segunda** não fica em Ajustes: é configuração **da tabela** (folha de config da tabela, junto dos dias).
 
 Em aberto:
