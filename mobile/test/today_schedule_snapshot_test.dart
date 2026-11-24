@@ -84,6 +84,7 @@ void main() {
 
       final slot = slots[0] as Map<String, dynamic>;
       expect(slot['sigla'], 'CALC');
+      expect(slot['nome'], 'Cálculo II');
       expect(slot['tipo'], 'Aula');
       expect(slot['local'], 'Bloco C');
       expect(slot['time'], tabela.horarios[0]);

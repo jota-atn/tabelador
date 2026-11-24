@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texto secundário dos widgets, pra views RemoteViews puras (a contagem
+     do widget Próximo), que não recebem as cores do Glance. -->
+<resources>
+    <color name="widget_texto_secundario">#5C5C5C</color>
+</resources>
