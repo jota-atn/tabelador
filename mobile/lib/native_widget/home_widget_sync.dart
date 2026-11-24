@@ -11,6 +11,9 @@ import 'today_schedule_snapshot.dart';
 /// bater com o `<receiver>` do AndroidManifest.
 const String kTodayScheduleWidgetReceiver = 'TodayScheduleWidgetReceiver';
 
+/// Widget "Próximo" (2×2): lê o mesmo snapshot.
+const String kNextUpWidgetReceiver = 'NextUpWidgetReceiver';
+
 const String kTodayScheduleJsonKey = 'today_schedule_json';
 
 /// Mantém o widget nativo sincronizado com o [AppState].
@@ -80,9 +83,9 @@ class HomeWidgetSync {
         if (json != _ultimoJson) {
           _ultimoJson = json;
           await HomeWidget.saveWidgetData<String>(kTodayScheduleJsonKey, json);
-          await HomeWidget.updateWidget(
-            androidName: kTodayScheduleWidgetReceiver,
-          );
+          for (final receiver in [kTodayScheduleWidgetReceiver, kNextUpWidgetReceiver]) {
+            await HomeWidget.updateWidget(androidName: receiver);
+          }
         }
         if (_pendente) {
           _pendente = false;

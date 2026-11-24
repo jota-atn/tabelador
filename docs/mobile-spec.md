@@ -50,7 +50,8 @@
 | **v1.15** ✅ (2026-11-23) | Ajustes em seções; tema e cor do app salvos; resumo da Semana configurável; Sobre com novidades |
 | **v1.16** ✅ (2026-11-23) | Introdução nova (itens, eventos e tarefas, visual do app); menu de exemplos só em debug — fecha a rodada 1 |
 | **v1.17** ✅ (2026-11-23) | Hora do aviso de dia todo, dias do lembrete de presente, esconder tipos de evento |
-| **v1.18** (2026-11-23) | Semana começando no domingo (por tabela) |
+| **v1.18** ✅ (2026-11-23) | Semana começando no domingo (por tabela) |
+| **v1.19** ✅ (2026-11-23) | Widget "Próximo" 2×2 |
 | — | **Fase de uso e testes** (a partir de 2026-11-12): o usuário anota problemas do dia a dia antes da v2.0 |
 | **v2.0** | Junção das tabelas na tela inicial (régua de horas, conflito, vigência, edição pela junção) |
 | **v2.1** | Itens tipados — Disciplina primeiro (Histórico, "Cursar de novo") |
@@ -953,8 +954,36 @@ Local: Sala 3 · Bloco B
 - Pega o que vier primeiro entre aula/item da tabela e evento.
 - Linhas extras conforme o tipo, se couber: professor, link de reunião,
   endereço de consulta.
-- A definir: o que mostrar quando o próximo é amanhã ou não há nada;
-  se mostra o "agora" junto quando algo está em andamento.
+- **Decidido (2026-11-23)**: o Android não redesenha widget a cada minuto
+  (mínimo garantido ~30 min), então "em 25 minutos" em texto ficaria
+  errado. Fica **hora fixa + contagem do sistema**: "SO às 10:00" e embaixo
+  "em 24:59" num `Chronometer` regressivo (o sistema desenha, sempre
+  certo, sem custo de bateria; formato mm:ss não muda). Um alarme inexato
+  redesenha o widget quando o próximo começa/termina.
+- **Em andamento**: linha pequena em cima, "Agora: SO · até 10:00"; o
+  próximo continua sendo o destaque.
+- **Nada mais hoje**: o primeiro de amanhã ("Amanhã: SO às 8:00"); nada
+  nos próximos dias, "Nada pela frente".
+- **v1.19 implementado (2026-11-23)**: `NextUpWidget.kt` (Glance) +
+  `NextUpWidgetReceiver`; lógica pura em `ProximoCalculo.kt` (testes JVM em
+  `android/app/src/test`, `./gradlew :app:testDebugUnitTest`). Título é o
+  nome por extenso do item (snapshot ganhou `nome` no slot) ou o título do
+  evento; eventos de dia todo não entram. Folga e horários apagados por
+  viagem saem. Contagem só quando o próximo é hoje; outro dia mostra
+  "Amanhã às 8:00" / "Sexta às 8:00". Linha de detalhe: "Local: …" ou o
+  tipo. Alarme `setWindow` (janela de 1 min) manda `APPWIDGET_UPDATE` pro
+  receiver quando algo começa/termina. Cores compartilhadas em
+  `WidgetCores.kt`; a contagem usa `@color/widget_texto_secundario`
+  (values/-night/-v31).
+- **Ajuste após teste no aparelho (2026-11-23)**: "poucas infos" com o
+  próximo amanhã. Agora: dia + faixa ("Amanhã · 14:00–16:00"); falta
+  aproximada quando passa de 1 h ("em ~15 h", redesenha ao entrar na
+  última hora pra virar contagem); tipo e local juntos ("Aula · Sala 3");
+  lista **Depois** com o resto do mesmo dia ("16:00  Álgebra"), quantas
+  linhas couberem na altura, "+N" se sobrar.
+- Ordem: v1.19 Próximo · v1.20 Tarefas · v1.21 Semana. As opções de widget
+  de Ajustes (fundo, mostrar eventos, dia seguinte) entram numa seção
+  Widget conforme fizerem sentido.
 
 ## Uber/99 em Consulta e Compromisso (v1.10, implementado 2026-11-12, PR #10)
 

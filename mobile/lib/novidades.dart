@@ -1,9 +1,15 @@
 /// Versão mostrada em Ajustes. Um teste confere que bate com o
 /// `pubspec.yaml` (sem pacote nativo só pra ler isso).
-const String kVersao = '1.18.0';
+const String kVersao = '1.19.0';
 
 /// O que mudou, da versão mais nova pra trás — Ajustes → Sobre.
 const List<(String, List<String>)> kNovidades = [
+  (
+    '1.19',
+    [
+      'Widget novo "Próximo": o próximo horário ou evento, com contagem, local e o que está acontecendo agora.',
+    ],
+  ),
   (
     '1.18',
     [

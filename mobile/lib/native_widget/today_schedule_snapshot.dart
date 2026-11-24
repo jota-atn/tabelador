@@ -55,6 +55,7 @@ String construirSnapshotJson({
         slots.add({
           'time': tabelaAtiva.horarios[slot],
           'sigla': item.sigla,
+          'nome': item.nome,
           'tipo': item.tipo,
           if (item.local != null) 'local': item.local,
           'bgLight': _hex(estiloClaro.background),

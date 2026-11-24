@@ -56,4 +56,6 @@ dependencies {
     // versão usada pelo widget nativo (Jetpack Glance).
     implementation("androidx.glance:glance-appwidget:1.1.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Testes JVM da lógica dos widgets (`./gradlew :app:testDebugUnitTest`).
+    testImplementation("junit:junit:4.13.2")
 }

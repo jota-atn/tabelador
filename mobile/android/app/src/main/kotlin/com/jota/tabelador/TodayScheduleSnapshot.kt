@@ -9,6 +9,8 @@ data class ScheduleSlot(
     val sigla: String,
     val tipo: String,
     val local: String?,
+    /** Nome por extenso do item (o widget Próximo mostra ele). */
+    val nome: String? = null,
     val bgLight: String,
     val bgDark: String,
     val fgLight: String,
@@ -123,6 +125,7 @@ data class TodayScheduleSnapshot(
                             sigla = s.optString("sigla"),
                             tipo = s.optString("tipo"),
                             local = if (s.has("local")) s.optString("local") else null,
+                            nome = if (s.has("nome")) s.optString("nome") else null,
                             bgLight = s.optString("bgLight", "#FFFFFF"),
                             bgDark = s.optString("bgDark", "#000000"),
                             fgLight = s.optString("fgLight", "#000000"),
